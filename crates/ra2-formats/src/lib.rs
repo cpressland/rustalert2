@@ -7,3 +7,4 @@ pub mod csf;
 pub mod ini;
 pub mod mix;
 pub mod pal;
+pub mod shp;

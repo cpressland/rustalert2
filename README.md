@@ -31,6 +31,7 @@ cargo run -p ra2tool -- ini get rulesmd.ini General BuildSpeed
 cargo run -p ra2tool -- ini stats rulesmd.ini artmd.ini
 cargo run -p ra2tool -- csf get Name:E1 NAME:GAPOWR
 cargo run -p ra2tool -- pal ramp DarkRed Gold -o /tmp/ramps.png
+cargo run -p ra2tool -- shp png gi.shp --house DarkBlue --count 8 -o /tmp/gi.png
 ```
 
 These list an archive (nested archives are separated by `/`), extract files
