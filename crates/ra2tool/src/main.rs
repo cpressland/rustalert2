@@ -1,5 +1,8 @@
 //! `ra2tool`: command-line tools for working with a game install.
 
+// Surveys and the dispatch table are long but flat.
+#![allow(clippy::too_many_lines)]
+
 mod csf;
 mod image;
 mod ini;
@@ -288,8 +291,6 @@ enum MixCommand {
     },
 }
 
-// One arm per subcommand: long, but flat.
-#[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {
     match Cli::parse().command {
         Command::Doctor { game_dir } => doctor(game_dir),
