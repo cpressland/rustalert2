@@ -8,6 +8,9 @@ use std::fmt;
 
 const HEADER_LEN: usize = 8;
 const FRAME_HEADER_LEN: usize = 24;
+const MAX_CANVAS_PIXELS: u32 = 4096 * 4096;
+/// A two-byte zero run covers at most 255 pixels, plus overshoot.
+const MAX_EXPANSION: usize = 128;
 
 /// How a frame's pixels are stored.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -125,6 +128,11 @@ impl<'a> Shp<'a> {
         if count == 0 {
             return Err(Error::NotShp("no frames"));
         }
+        // Far larger than any sprite the game draws; stops a forged header
+        // from asking for gigabytes of canvas.
+        if u32::from(width) * u32::from(height) > MAX_CANVAS_PIXELS {
+            return Err(Error::NotShp("canvas larger than 4096 x 4096"));
+        }
         let table_end = HEADER_LEN + count * FRAME_HEADER_LEN;
         if data.len() < table_end {
             return Err(Error::NotShp("frame table runs past the end"));
@@ -165,18 +173,23 @@ impl<'a> Shp<'a> {
     /// Decode one frame's pixels.
     pub fn frame(&self, index: usize) -> Result<Frame, Error> {
         let h = *self.frames.get(index).ok_or(Error::NoSuchFrame(index))?;
-        let (w, rows) = (usize::from(h.width), usize::from(h.height));
-        let mut pixels = vec![0u8; w * rows];
         if h.is_empty() {
+            // Nothing to draw, whatever size the header claims.
             return Ok(Frame {
                 x: h.x,
                 y: h.y,
-                width: h.width,
-                height: h.height,
-                pixels,
+                width: 0,
+                height: 0,
+                pixels: Vec::new(),
             });
         }
+        let (w, rows) = (usize::from(h.width), usize::from(h.height));
         let mut at = usize::try_from(h.offset).map_err(|_| Error::Truncated)?;
+        // The frame's data can't expand to more than this.
+        if w * rows > (self.data.len() - at).saturating_mul(MAX_EXPANSION) {
+            return Err(Error::Truncated);
+        }
+        let mut pixels = vec![0u8; w * rows];
         let data = self.data;
         match h.compression() {
             Compression::Raw => {
@@ -337,6 +350,7 @@ pub(crate) mod tests {
             assert_eq!(f.pixels, sample(), "flags {flags}");
             assert!(shp.frames[1].is_empty());
             assert_eq!(shp.frame(1).unwrap().pixels, Vec::<u8>::new());
+            assert_eq!(shp.frame(1).unwrap().width, 0);
             let canvas = shp.frame_on_canvas(0).unwrap();
             assert_eq!(&canvas[8 + 1..8 + 6], &sample()[..5]);
             assert_eq!(shp.frames[0].radar_color, [1, 2, 3, 0]);
@@ -380,6 +394,13 @@ pub(crate) mod tests {
         empty_off[8 + 6..8 + 8].copy_from_slice(&3u16.to_le_bytes());
         let shp = Shp::parse(&empty_off).unwrap();
         assert_eq!(shp.frame_on_canvas(0).unwrap(), vec![0; 16]);
+        // Found by fuzzing: an empty frame claiming 65280 x 65535 pixels
+        // allocated 4 GB.
+        let mut huge = encode(49, 1, &[(0, 0, 0, 0, vec![])], 1);
+        huge[8 + 4..8 + 8].copy_from_slice(&[0, 255, 255, 255]);
+        assert_eq!(Shp::parse(&huge).unwrap().frame(0).unwrap().pixels.len(), 0);
+        // And a canvas no sprite has.
+        assert!(Shp::parse(&encode(5000, 5000, &[(0, 0, 0, 0, vec![])], 1)).is_err());
     }
 
     #[test]
