@@ -1,6 +1,6 @@
 # Sprites, objects and draw order
 
-**Status:** Implemented (static frames; animations and damage to come)
+**Status:** Implemented (static frames, voxel lighting; animations and damage to come)
 **Crate:** `ra2-render` (`scene`, `voxel`)
 **Issues:** #30, #31, #32
 
@@ -42,13 +42,45 @@ and vehicles in their starting state. Animation is left to the game loop
   its facing (0–255, clockwise from north).
   - Each voxel is plotted 2 pixels wide with a depth test. `[recomp]`
   - Voxel scale is 256/36 leptons per voxel unit. `[hypothesis]`
-  - Voxels are flat-shaded with `voxels.vpl` section 8, the section that
-    leaves colours unchanged. `[hypothesis]` (stand-in for normal lighting)
+  - Voxels are lit by their normals; see "Voxel lighting" below.
+
+## Voxel lighting
+
+- **Normals.** The normal sets live in `gamemd.exe`, not in the data files.
+  Pointers to the sets are at `0x8469E0 + mode×4` and their counts at
+  `0x8469F4 + mode×4`. The counts are 16, 36, 64 and 245 for modes 1–4.
+  `[recomp 0x00758670]`
+  - We read them from the player's own `gamemd.exe` 1.001 when a map is
+    drawn. Nothing from the executable is kept in the repository.
+  - Without the executable, voxels are flat-shaded with `voxels.vpl` section
+    8, which leaves colours unchanged.
+- **The light.** `(−1/√2, −1/√2, 0)` rotated by 0.785375 rad (`0x7E1E68`)
+  about y gives `(−0.5, −0.7071, 0.5)`. `[recomp 0x00754C00]` Units turn
+  it into their own frame with the inverse of their matrix.
+  `[recomp 0x00753D00]`
+- **The view vector** is the model's up axis `(0, 0, 1)`. `[recomp 0x00753D00]`
+- **Shade table.** Once per render, the game builds a 256-entry table that
+  maps normal index to shade level. `[recomp 0x007586F0]` For each normal `n`
+  in the section's mode:
+  - `d = max(n·L, 0)`;
+  - `H = normalize(L + V)`, `s = n·H`;
+  - `spec = s / (k − k·s + s)` with `k = 3.0`, or 0 if negative;
+  - level `= trunc(16 × (d + spec))`.
+
+  Indices past the set keep 0. Indices 253–255 are always 16.
+- **Colour.** A voxel's colour is `voxels.vpl[level][palette index]`.
+  `[recomp 0x007DFAB0]`
+- **HVA rotations.** A section's HVA rotation moves its voxels but doesn't
+  turn the light. The table is built once for the whole unit. `[recomp]`
 
 ## Open questions
 
-- Lighting voxels by their normals (needs the game's normals tables), and
-  the 256/36 scale, against recomp frames.
+- Which world axes the light's x and y are. We take map x and y; the
+  shading looks right (lit tops, darker camera-facing sides), but a
+  close-up recomp frame would confirm it. The same goes for the 256/36
+  voxel scale.
+- A level of 32 (full diffuse and full specular) indexes past `voxels.vpl`'s
+  32 sections. We clamp it to 31; the game reads whatever follows the table.
 - Damaged frames, `ActiveAnim`/`IdleAnim`, bibs and building anims. These
   need the game loop's timers.
 - Bridges, which are overlays drawn on their own layer.

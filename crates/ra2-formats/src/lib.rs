@@ -12,6 +12,7 @@ pub mod map;
 pub mod mix;
 pub mod pal;
 pub mod pcx;
+pub mod pe;
 pub mod shp;
 pub mod tmp;
 pub mod vxl;

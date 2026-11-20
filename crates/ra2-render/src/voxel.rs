@@ -1,11 +1,11 @@
 //! Vehicles: voxel models projected to the screen, as palette-indexed
 //! sprites. See `docs/spec/voxel.md`.
 //!
-//! This is a first, flat-shaded renderer: every voxel takes `voxels.vpl`'s
-//! neutral shade level (8: it maps 199 of 256 colours to themselves; levels
-//! above brighten, below darken), because the normals tables the game
-//! lights voxels with aren't in yet. Positions and colours are right; the
-//! lighting by normal comes later.
+//! Each voxel is lit by its normal: the game builds a 256-entry table of
+//! shade levels for the unit's facing (diffuse plus a specular term) and
+//! looks each voxel's colour up in `voxels.vpl` at its normal's level. The
+//! normals themselves are read from the player's `gamemd.exe`; without it,
+//! voxels are flat-shaded at the neutral level.
 
 use ra2_formats::vxl::{Hva, Vxl};
 use ra2_sim::coords::{
@@ -16,6 +16,108 @@ use ra2_sim::coords::{
 /// leptons forward) against its turret model's reach (about 32.5 units).
 /// `[hypothesis]`: to be confirmed against a recomp frame.
 pub const LEPTONS_PER_VOXEL: f32 = 256.0 / 36.0;
+
+/// The light, in the world frame (map x and y, z up), as the game sets it:
+/// `(-1/sqrt 2, -1/sqrt 2, 0)` turned a quarter of pi about y.
+/// `[recomp 0x00754C00]`
+pub const LIGHT: [f32; 3] = [-0.5, -std::f32::consts::FRAC_1_SQRT_2, 0.5];
+
+/// The specular term's sharpness. `[recomp 0x00706F23]`
+const SPECULAR_K: f64 = 3.0;
+
+/// Shade levels per unit of light. `[recomp 0x007F6960]`
+const SHADE_SCALE: f64 = 16.0;
+
+/// The voxel normal sets, by a section's normals mode (1–4).
+#[derive(Debug, Clone, Default)]
+pub struct Normals {
+    sets: Vec<Vec<[f32; 3]>>,
+}
+
+impl Normals {
+    /// Where `gamemd.exe` 1.001 keeps the pointers to its normal sets, and
+    /// their counts, one per normals mode. `[recomp 0x00758670]`
+    const POINTERS: u32 = 0x0084_69E0;
+    const COUNTS: u32 = 0x0084_69F4;
+
+    /// Read the normal sets out of `gamemd.exe` 1.001. `None` for any other
+    /// file, or if a table doesn't look like unit vectors.
+    pub fn from_gamemd(exe: &[u8]) -> Option<Normals> {
+        let pe = ra2_formats::pe::Pe::parse(exe)?;
+        let mut sets = Vec::with_capacity(5);
+        for mode in 0..5u32 {
+            let ptr = pe.u32(Self::POINTERS + mode * 4)?;
+            let count = pe.u32(Self::COUNTS + mode * 4)?;
+            if ptr == 0 || count == 0 {
+                sets.push(Vec::new());
+                continue;
+            }
+            if count > 256 {
+                return None;
+            }
+            let mut set = Vec::with_capacity(count as usize);
+            for i in 0..count {
+                let n = [0, 1, 2].map(|k| pe.f32(ptr + i * 12 + k * 4));
+                let [Some(x), Some(y), Some(z)] = n else {
+                    return None;
+                };
+                if !(0.9..=1.1).contains(&(x * x + y * y + z * z)) {
+                    return None;
+                }
+                set.push([x, y, z]);
+            }
+            sets.push(set);
+        }
+        Some(Normals { sets })
+    }
+
+    /// How many normals mode `mode` has.
+    pub fn count(&self, mode: u8) -> usize {
+        self.sets.get(usize::from(mode)).map_or(0, Vec::len)
+    }
+
+    /// The shade level of each normal index for a section of normals mode
+    /// `mode`, lit by `light` (in the model's frame) and viewed from the
+    /// model's up axis. `[recomp 0x007586F0]`
+    ///
+    /// For each normal `n`: diffuse `d = max(n·L, 0)`; with `H` the
+    /// normalised `L + V`, `s = n·H` and specular `s / (k − k·s + s)`
+    /// (Schlick's approximation, `k = 3`), dropped below 0. The level is
+    /// `16 × (d + specular)`, truncated. Indices past the set are 0, but the
+    /// last three are always 16.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    pub fn shade_table(&self, mode: u8, light: [f32; 3]) -> [u8; 256] {
+        let mut table = [0u8; 256];
+        let l = light.map(f64::from);
+        let v = [0.0, 0.0, 1.0];
+        let h = [l[0] + v[0], l[1] + v[1], l[2] + v[2]];
+        let len = (h[0] * h[0] + h[1] * h[1] + h[2] * h[2]).sqrt();
+        let h = if len == 0.0 { h } else { h.map(|c| c / len) };
+        let dot = |n: &[f32; 3], a: [f64; 3]| {
+            f64::from(n[0]) * a[0] + f64::from(n[1]) * a[1] + f64::from(n[2]) * a[2]
+        };
+        for (i, n) in self
+            .sets
+            .get(usize::from(mode))
+            .into_iter()
+            .flatten()
+            .enumerate()
+            .take(256)
+        {
+            let s = dot(n, h);
+            let spec = s / (SPECULAR_K - SPECULAR_K * s + s);
+            let spec = if spec < 0.0 { 0.0 } else { spec };
+            let level = dot(n, l).max(0.0) + spec;
+            table[i] = if level < 0.0 {
+                0
+            } else {
+                (level * SHADE_SCALE) as u8
+            };
+        }
+        table[253..].fill(16);
+        table
+    }
+}
 
 /// `voxels.vpl`: a shade table, palette index × 32 shade levels.
 #[derive(Debug, Clone)]
@@ -34,7 +136,7 @@ impl ShadeTable {
         })
     }
 
-    /// The level that leaves colours as they are.
+    /// The level that leaves colours as they are, for unlit voxels.
     pub const NEUTRAL: usize = 8;
 
     fn shade(&self, level: usize, index: u8) -> u8 {
@@ -60,17 +162,37 @@ struct Model<'a> {
 }
 
 /// Project points of several models with one facing into a sprite.
-pub fn render(models: &[(&Vxl, Option<&Hva>)], facing: u8, shades: Option<&ShadeTable>) -> Sprite {
+///
+/// With `normals`, each voxel is lit by its normal for this facing (the
+/// light is turned into the model's frame; sections' own HVA rotations
+/// don't turn it further, as in the game); without, it's flat-shaded.
+pub fn render(
+    models: &[(&Vxl, Option<&Hva>)],
+    facing: u8,
+    shades: Option<&ShadeTable>,
+    normals: Option<&Normals>,
+) -> Sprite {
     let models: Vec<Model> = models
         .iter()
         .map(|(vxl, hva)| Model { vxl, hva: *hva })
         .collect();
     let angle = f32::from(facing) * std::f32::consts::TAU / 256.0;
     let (fwd, right) = ((angle.sin(), -angle.cos()), (angle.cos(), angle.sin()));
-    // Each voxel to screen pixels and depth.
+    // The light in the model's frame: x forward, y to the left, z up.
+    let light = [
+        LIGHT[0] * fwd.0 + LIGHT[1] * fwd.1,
+        -(LIGHT[0] * right.0 + LIGHT[1] * right.1),
+        LIGHT[2],
+    ];
+    let mut tables: [Option<[u8; 256]>; 5] = [None; 5];
+    // Each voxel to screen pixels, depth and colour.
     let mut points: Vec<(i32, i32, f32, u8)> = Vec::new();
     for m in &models {
         for (si, s) in m.vxl.sections.iter().enumerate() {
+            let mode = usize::from(s.normals_mode).min(4);
+            let table = normals.map(|n| {
+                *tables[mode].get_or_insert_with(|| n.shade_table(s.normals_mode.min(4), light))
+            });
             let size = s.size.map(|v| f32::from(v.max(1)));
             let step = [0, 1, 2].map(|k| (s.max_bounds[k] - s.min_bounds[k]) / size[k]);
             let t = m
@@ -104,8 +226,15 @@ pub fn render(models: &[(&Vxl, Option<&Hva>)], facing: u8, shades: Option<&Shade
                 let lpl = f32::from(i16::try_from(LEPTONS_PER_LEVEL).expect("small"));
                 let sx = (wx - wy) * half_w / lpc;
                 let sy = (wx + wy) * half_h / lpc - wz * ppl / lpl;
+                let color = match (shades, table) {
+                    (Some(t), Some(levels)) => {
+                        t.shade(usize::from(levels[usize::from(v.normal)]), v.color)
+                    }
+                    (Some(t), None) => t.shade(ShadeTable::NEUTRAL, v.color),
+                    (None, _) => v.color,
+                };
                 #[allow(clippy::cast_possible_truncation)]
-                points.push((sx.round() as i32, sy.round() as i32, wx + wy + wz, v.color));
+                points.push((sx.round() as i32, sy.round() as i32, wx + wy + wz, color));
             }
         }
     }
@@ -127,7 +256,7 @@ pub fn render(models: &[(&Vxl, Option<&Hva>)], facing: u8, shades: Option<&Shade
     let mut pixels = vec![0u8; w * h];
     let mut depth = vec![f32::MIN; w * h];
     for (x, y, d, c) in points {
-        let color = shades.map_or(c, |t| t.shade(ShadeTable::NEUTRAL, c));
+        let color = c;
         // Each voxel is plotted two pixels wide, as the game's rasterizers do.
         for dx in 0..2 {
             let (px, py) = (
@@ -189,7 +318,7 @@ mod tests {
     #[test]
     fn cube_projects_around_its_anchor() {
         let v = cube();
-        let s = render(&[(&v, None)], 0, None);
+        let s = render(&[(&v, None)], 0, None, None);
         assert!(s.width > 4 && s.height > 4);
         assert!(s.pixels.contains(&20));
         // The base sits at the anchor; the top of the cube is above it.
@@ -199,7 +328,30 @@ mod tests {
         );
         assert!(ax < s.width && ay < s.height);
         // Rotating a cube by a quarter turn gives the same footprint.
-        let r = render(&[(&v, None)], 64, None);
+        let r = render(&[(&v, None)], 64, None, None);
         assert_eq!((r.width, r.height), (s.width, s.height));
+    }
+
+    #[test]
+    fn shade_table_lights_faces_towards_the_light() {
+        let n = Normals {
+            sets: vec![
+                vec![],
+                vec![
+                    [0.0, 0.0, 1.0],
+                    [0.0, 0.0, -1.0],
+                    LIGHT,
+                    [0.5, 0.707_106_77, -0.5],
+                ],
+            ],
+        };
+        let t = n.shade_table(1, LIGHT);
+        // Straight up: diffuse 0.5, plus specular from the half vector.
+        assert!(t[0] > 8 && t[0] < 32, "up {}", t[0]);
+        assert_eq!(t[1], 0, "facing down gets no light");
+        assert!(t[2] >= 16, "facing the light gets the full diffuse");
+        assert_eq!(t[3], 0, "facing away gets nothing");
+        assert_eq!(t[4], 0, "past the set");
+        assert_eq!(&t[253..], &[16, 16, 16]);
     }
 }
