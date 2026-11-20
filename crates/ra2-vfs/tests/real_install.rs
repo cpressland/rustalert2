@@ -208,3 +208,29 @@ fn yr_theater_tiles_parse() {
         assert!(parsed > 100, "{theater:?}: {parsed}");
     }
 }
+
+#[test]
+fn yr_maps_decode() {
+    use ra2_formats::ini::Ini;
+    use ra2_formats::map::{Map, OVERLAY_SIZE};
+    use ra2_vfs::install::Inspection;
+    use ra2_vfs::mount::Vfs;
+    let Some(install) = install() else { return };
+    let mut vfs = Vfs::new(Inspection::of(&install.inspection.root).unwrap());
+    vfs.mount_startup(Game::YurisRevenge);
+    let mut maps = 0;
+    for m in vfs.mounts() {
+        for e in &m.archive.index().entries {
+            let data = m.archive.read(*e).unwrap();
+            if !data.windows(5).take(200_000).any(|w| w == b"[Map]") {
+                continue;
+            }
+            let map = Map::from_ini(&Ini::parse(&data))
+                .unwrap_or_else(|err| panic!("{} {:08X}: {err}", m.name, e.id));
+            assert_eq!(map.overlay.map(|o| o.len()), Some(OVERLAY_SIZE));
+            assert_ne!(map.tiles.len(), 0);
+            maps += 1;
+        }
+    }
+    assert!(maps > 100, "{maps}");
+}

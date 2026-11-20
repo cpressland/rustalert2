@@ -18,7 +18,7 @@ notes from [TEMPLATE.md](TEMPLATE.md).
 | SHP sprites | [shp.md](shp.md) | Implemented |
 | VXL / HVA voxels | [voxel.md](voxel.md) | Implemented |
 | TMP tiles and theaters | [tmp.md](tmp.md) | Implemented |
-| Maps (MAP / YRM / MPR) | | Not started |
+| Maps (MAP / YRM / MPR) | [map.md](map.md) | Implemented |
 | Audio (AUD, IDX/BAG) | | Not started |
 | Bink video | | Not started |
 | Fonts | | Not started |
