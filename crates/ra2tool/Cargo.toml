@@ -14,3 +14,4 @@ workspace = true
 [dependencies]
 ra2-vfs.workspace = true
 clap.workspace = true
+ra2-formats.workspace = true

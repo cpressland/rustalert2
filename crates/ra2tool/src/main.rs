@@ -1,5 +1,7 @@
 //! `ra2tool`: command-line tools for working with a game install.
 
+mod mix;
+
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -21,11 +23,60 @@ enum Command {
         #[arg(long)]
         game_dir: Option<PathBuf>,
     },
+    /// Work with MIX archives. Archive paths are a file on disk or in the
+    /// game install, then any nested archives: `ra2md.mix/localmd.mix`.
+    #[command(subcommand)]
+    Mix(MixCommand),
+}
+
+#[derive(Subcommand)]
+enum MixCommand {
+    /// List an archive's files.
+    Ls {
+        archive: String,
+        /// A file of extra names to recognise, one per line.
+        #[arg(long)]
+        names: Option<PathBuf>,
+    },
+    /// Extract files by name, to a folder or to standard output.
+    X {
+        archive: String,
+        files: Vec<String>,
+        #[arg(short, long)]
+        out: Option<PathBuf>,
+    },
+    /// Open every archive in the install, and those nested in them, and
+    /// check their indexes and checksums.
+    Check {
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
 }
 
 fn main() -> ExitCode {
     match Cli::parse().command {
         Command::Doctor { game_dir } => doctor(game_dir),
+        Command::Mix(cmd) => {
+            let result = match cmd {
+                MixCommand::Ls { archive, names } => {
+                    mix::ls(&archive, names.as_deref()).map(|()| true)
+                }
+                MixCommand::X {
+                    archive,
+                    files,
+                    out,
+                } => mix::extract(&archive, &files, out.as_deref()).map(|()| true),
+                MixCommand::Check { game_dir } => mix::check(game_dir),
+            };
+            match result {
+                Ok(true) => ExitCode::SUCCESS,
+                Ok(false) => ExitCode::FAILURE,
+                Err(e) => {
+                    eprintln!("{e}");
+                    ExitCode::FAILURE
+                }
+            }
+        }
     }
 }
 
