@@ -50,6 +50,13 @@ tools/check_sim_deps.sh
 python3 -I tools/game_data_guard.py
 ```
 
+Every parser has a fuzz target in `fuzz/` (see `cargo fuzz list`). CI runs
+each for 30 seconds on nightly. Locally, with a nightly toolchain:
+
+```bash
+cd fuzz && cargo +nightly fuzz run shp -- -max_total_time=60
+```
+
 Tests that need a real install look for it the way the game does: `RA2_DATA`,
 then `config.toml`, then the usual install locations. `cargo run -p ra2tool --
 doctor` shows what it finds.

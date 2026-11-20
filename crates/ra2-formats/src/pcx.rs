@@ -77,6 +77,11 @@ pub fn decode(data: &[u8]) -> Result<Image, Error> {
     }
     // RLE: a byte with its top two bits set repeats the next byte.
     let total = bpl * planes * usize::from(height);
+    // RLE expands at most 63 bytes per 2 input bytes; refuse headers that
+    // claim more than the data could hold.
+    if total > data.len().saturating_mul(32) {
+        return Err(Error::Truncated);
+    }
     let mut raw = Vec::with_capacity(total);
     let mut at = 128;
     while raw.len() < total {
