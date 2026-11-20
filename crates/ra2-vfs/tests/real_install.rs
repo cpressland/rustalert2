@@ -106,3 +106,25 @@ fn yr_string_table_reads() {
             .all(|e| !e.text.contains("  ") && !e.text.ends_with(' '))
     );
 }
+
+#[test]
+fn yr_palettes_and_house_colours() {
+    use ra2_formats::ini::Ini;
+    use ra2_formats::pal::{Hsv, Palette, house_ramp};
+    use ra2_vfs::install::Inspection;
+    use ra2_vfs::mount::Vfs;
+    let Some(install) = install() else { return };
+    let mut vfs = Vfs::new(Inspection::of(&install.inspection.root).unwrap());
+    vfs.mount_startup(Game::YurisRevenge);
+    for name in ["unittem.pal", "temperat.pal", "anim.pal", "palette.pal"] {
+        let pal =
+            Palette::parse(&vfs.read(name).unwrap().unwrap()).unwrap_or_else(|| panic!("{name}"));
+        assert!(pal.colors.iter().flatten().all(|&v| v <= 63));
+    }
+    let rules = Ini::parse(&vfs.read("rulesmd.ini").unwrap().unwrap());
+    let colours = rules.section("Colors").unwrap();
+    assert!(colours.len() >= 20);
+    for (_, value) in colours.entries() {
+        let _ = house_ramp(Hsv::parse(value));
+    }
+}

@@ -28,6 +28,7 @@ blowfish = "0.10"
 num-bigint = "0.5"
 crc32fast = "1"
 sha1 = "0.11"
+png = "0.18"
 clap = { version = "4", features = ["derive"] }
 
 [workspace.lints.rust]
@@ -42,6 +43,7 @@ module_name_repetitions = "allow"
 must_use_candidate = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
+many_single_char_names = "allow"
 
 [profile.release]
 lto = "thin"

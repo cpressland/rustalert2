@@ -14,7 +14,7 @@ notes from [TEMPLATE.md](TEMPLATE.md).
 | File search order (VFS) | [vfs.md](vfs.md) | Implemented |
 | INI reading | [ini.md](ini.md) | Implemented |
 | CSF string tables | [csf.md](csf.md) | Implemented |
-| Palettes and house colours | | Not started |
+| Palettes and house colours | [palette.md](palette.md) | Implemented |
 | SHP sprites | | Not started |
 | VXL / HVA voxels | | Not started |
 | TMP tiles and theaters | | Not started |

@@ -30,12 +30,15 @@ cargo run -p ra2tool -- vfs which rulesmd.ini artmd.ini
 cargo run -p ra2tool -- ini get rulesmd.ini General BuildSpeed
 cargo run -p ra2tool -- ini stats rulesmd.ini artmd.ini
 cargo run -p ra2tool -- csf get Name:E1 NAME:GAPOWR
+cargo run -p ra2tool -- pal ramp DarkRed Gold -o /tmp/ramps.png
 ```
 
 These list an archive (nested archives are separated by `/`), extract files
 from it, open and verify every archive in your install, mount the archives the
 way the game does at startup, show which archive each file comes from, and
-read INI values and translated strings the way the game reads them.
+read INI values and translated strings the way the game reads them, and
+build house colours. Images go wherever you point `-o`; never commit them,
+since pictures of game data are game data.
 
 ## Documentation
 
