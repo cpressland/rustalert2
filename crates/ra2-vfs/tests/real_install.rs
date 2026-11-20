@@ -251,3 +251,29 @@ fn yr_sound_bank_decodes() {
         assert_ne!(s.samples.len(), 0, "{}", e.name);
     }
 }
+
+#[test]
+fn yr_font_maps_latin() {
+    use ra2_formats::fnt::Font;
+    use ra2_vfs::install::Inspection;
+    use ra2_vfs::mount::Vfs;
+    let Some(install) = install() else { return };
+    let mut vfs = Vfs::new(Inspection::of(&install.inspection.root).unwrap());
+    vfs.mount_startup(Game::YurisRevenge);
+    let data = vfs.read("game.fnt").unwrap().unwrap();
+    let f = Font::parse(&data).unwrap();
+    for c in ('!'..='~').chain(['é', 'ü']) {
+        let g = f
+            .glyph(f.index(c).unwrap_or_else(|| panic!("{c} unmapped")))
+            .unwrap();
+        assert!(g.width > 0 && g.mask.iter().any(|&p| p), "{c} is blank");
+    }
+    assert!(
+        f.glyph(f.index(' ').unwrap())
+            .unwrap()
+            .mask
+            .iter()
+            .all(|&p| !p),
+        "space has pixels"
+    );
+}

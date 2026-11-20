@@ -21,7 +21,7 @@ notes from [TEMPLATE.md](TEMPLATE.md).
 | Maps (MAP / YRM / MPR) | [map.md](map.md) | Implemented |
 | Audio (AUD, IDX/BAG, WAV) | [audio.md](audio.md) | Implemented |
 | Bink video | | Not started |
-| Fonts | | Not started |
+| Fonts and UI art | [font.md](font.md) | Implemented |
 
 ## Presentation (M3)
 

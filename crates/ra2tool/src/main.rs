@@ -5,6 +5,7 @@
 
 mod audio;
 mod csf;
+mod font;
 mod image;
 mod ini;
 mod map;
@@ -67,6 +68,37 @@ enum Command {
     /// Sounds, music and the sound bank.
     #[command(subcommand)]
     Audio(AudioCommand),
+    /// The game's bitmap font.
+    #[command(subcommand)]
+    Font(FontCommand),
+}
+
+#[derive(Subcommand)]
+enum FontCommand {
+    /// Describe game.fnt and check every glyph it maps.
+    Check {
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
+    /// Decode every PCX image in the mounted game.
+    Pcx {
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
+    /// Render a line of text.
+    Render {
+        text: String,
+        #[arg(short, long)]
+        out: PathBuf,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -319,6 +351,16 @@ enum MixCommand {
 fn main() -> ExitCode {
     match Cli::parse().command {
         Command::Doctor { game_dir } => doctor(game_dir),
+        Command::Font(cmd) => exit(match cmd {
+            FontCommand::Check { game, game_dir } => font::check(game.into(), game_dir),
+            FontCommand::Pcx { game, game_dir } => font::check_pcx(game.into(), game_dir),
+            FontCommand::Render {
+                text,
+                out,
+                game,
+                game_dir,
+            } => font::render(game.into(), game_dir, &text, &out),
+        }),
         Command::Audio(cmd) => exit(match cmd {
             AudioCommand::Check { game, game_dir } => audio::check(game.into(), game_dir),
             AudioCommand::Export {
