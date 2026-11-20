@@ -1,11 +1,12 @@
 //! `ra2tool`: command-line tools for working with a game install.
 
 mod mix;
+mod vfs;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use ra2_vfs::install::{Candidate, Game, Inspection, Origin, SearchContext, find_in};
 
 #[derive(Parser)]
@@ -27,6 +28,43 @@ enum Command {
     /// game install, then any nested archives: `ra2md.mix/localmd.mix`.
     #[command(subcommand)]
     Mix(MixCommand),
+    /// The game's file system, mounted the way the game mounts it at startup.
+    #[command(subcommand)]
+    Vfs(VfsCommand),
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum GameArg {
+    Yr,
+    Ra2,
+}
+
+impl From<GameArg> for Game {
+    fn from(g: GameArg) -> Game {
+        match g {
+            GameArg::Yr => Game::YurisRevenge,
+            GameArg::Ra2 => Game::RedAlert2,
+        }
+    }
+}
+
+#[derive(Subcommand)]
+enum VfsCommand {
+    /// Mount the startup archives in order and show what each step did.
+    Mounts {
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
+    /// Show where files resolve: a loose file, or which mounted archive.
+    Which {
+        names: Vec<String>,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -56,6 +94,14 @@ enum MixCommand {
 fn main() -> ExitCode {
     match Cli::parse().command {
         Command::Doctor { game_dir } => doctor(game_dir),
+        Command::Vfs(cmd) => exit(match cmd {
+            VfsCommand::Mounts { game, game_dir } => vfs::mounts(game.into(), game_dir),
+            VfsCommand::Which {
+                names,
+                game,
+                game_dir,
+            } => vfs::which(game.into(), game_dir, &names),
+        }),
         Command::Mix(cmd) => {
             let result = match cmd {
                 MixCommand::Ls { archive, names } => {
@@ -76,6 +122,17 @@ fn main() -> ExitCode {
                     ExitCode::FAILURE
                 }
             }
+        }
+    }
+}
+
+fn exit(result: std::io::Result<bool>) -> ExitCode {
+    match result {
+        Ok(true) => ExitCode::SUCCESS,
+        Ok(false) => ExitCode::FAILURE,
+        Err(e) => {
+            eprintln!("{e}");
+            ExitCode::FAILURE
         }
     }
 }

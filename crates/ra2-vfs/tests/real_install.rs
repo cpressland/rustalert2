@@ -30,3 +30,39 @@ fn yr_archives_open_and_verify() {
         "rulesmd.ini should be the INI text"
     );
 }
+
+#[test]
+fn yr_startup_mounts_and_resolves() {
+    use ra2_vfs::install::Inspection;
+    use ra2_vfs::mount::{Location, Mounted, Vfs};
+    let Some(install) = install() else { return };
+    let mut vfs = Vfs::new(Inspection::of(&install.inspection.root).unwrap());
+    let results = vfs.mount_startup(Game::YurisRevenge);
+    assert!(
+        !results.iter().any(|r| matches!(r, Mounted::Failed { .. })),
+        "{results:?}"
+    );
+    for name in ["ra2md.mix", "localmd.mix", "langmd.mix", "conqmd.mix"] {
+        assert!(
+            vfs.mounts().iter().any(|m| m.name == name),
+            "{name} not mounted"
+        );
+    }
+    for file in [
+        "rulesmd.ini",
+        "artmd.ini",
+        "aimd.ini",
+        "ra2md.csf",
+        "mouse.sha",
+    ] {
+        assert!(
+            matches!(
+                vfs.locate(file),
+                Some(Location::Archive { .. } | Location::Loose(_))
+            ),
+            "{file}"
+        );
+    }
+    let rules = vfs.read("rulesmd.ini").unwrap().unwrap();
+    assert!(rules.starts_with(b";"), "rulesmd.ini should be INI text");
+}
