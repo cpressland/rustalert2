@@ -222,6 +222,11 @@ impl<'a> Shp<'a> {
         let f = self.frame(index)?;
         let cw = usize::from(self.width);
         let mut canvas = vec![0u8; cw * usize::from(self.height)];
+        // An empty frame draws nothing. Its rectangle isn't checked against
+        // the canvas at parse time, so it mustn't be used here.
+        if self.frames[index].is_empty() {
+            return Ok(canvas);
+        }
         for row in 0..usize::from(f.height) {
             let dst = (usize::from(f.y) + row) * cw + usize::from(f.x);
             let src = row * usize::from(f.width);
@@ -369,6 +374,12 @@ pub(crate) mod tests {
         let shp = Shp::parse(&file).unwrap();
         assert!(matches!(shp.frame(0), Err(Error::BadRow { .. })));
         assert_eq!(shp.frame(9).unwrap_err(), Error::NoSuchFrame(9));
+        // Found by fuzzing: an empty frame whose rectangle lies off the canvas.
+        let mut empty_off = encode(4, 4, &[(0, 0, 0, 0, vec![])], 1);
+        empty_off[8 + 4..8 + 6].copy_from_slice(&200u16.to_le_bytes());
+        empty_off[8 + 6..8 + 8].copy_from_slice(&3u16.to_le_bytes());
+        let shp = Shp::parse(&empty_off).unwrap();
+        assert_eq!(shp.frame_on_canvas(0).unwrap(), vec![0; 16]);
     }
 
     #[test]
