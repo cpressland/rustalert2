@@ -1,0 +1,14 @@
+[package]
+name = "ra2-render"
+description = "The wgpu renderer: isometric terrain, sprites, voxels, palettes, lighting, shroud."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]

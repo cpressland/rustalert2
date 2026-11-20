@@ -1,0 +1,4 @@
+//! Readers for the file formats of *Red Alert 2* and *Yuri's Revenge*.
+//!
+//! Every reader is pure: it takes bytes and returns typed data, with no file
+//! system or global state. Behaviour is specified in `docs/spec/` first.
