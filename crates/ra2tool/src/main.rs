@@ -3,6 +3,7 @@
 // Surveys and the dispatch table are long but flat.
 #![allow(clippy::too_many_lines)]
 
+mod audio;
 mod csf;
 mod image;
 mod ini;
@@ -63,6 +64,30 @@ enum Command {
     /// Scenario files.
     #[command(subcommand)]
     Map(MapCommand),
+    /// Sounds, music and the sound bank.
+    #[command(subcommand)]
+    Audio(AudioCommand),
+}
+
+#[derive(Subcommand)]
+enum AudioCommand {
+    /// Decode every WAV, AUD and bank sound in the mounted game.
+    Check {
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
+    /// Export a sound (a file name, or a bank sound's name) as a PCM WAV.
+    Export {
+        name: String,
+        #[arg(short, long)]
+        out: PathBuf,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -294,6 +319,15 @@ enum MixCommand {
 fn main() -> ExitCode {
     match Cli::parse().command {
         Command::Doctor { game_dir } => doctor(game_dir),
+        Command::Audio(cmd) => exit(match cmd {
+            AudioCommand::Check { game, game_dir } => audio::check(game.into(), game_dir),
+            AudioCommand::Export {
+                name,
+                out,
+                game,
+                game_dir,
+            } => audio::export(game.into(), game_dir, &name, &out),
+        }),
         Command::Map(cmd) => exit(match cmd {
             MapCommand::Check { game, game_dir } => map::check(game.into(), game_dir.as_deref()),
             MapCommand::Preview {
