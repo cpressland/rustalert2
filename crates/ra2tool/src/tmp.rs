@@ -58,7 +58,7 @@ pub(crate) fn check(game: Game, game_dir: Option<&Path>) -> io::Result<bool> {
             for n in 1..=set.tiles {
                 let file = format!("{}{n:02}.{}", set.file_name, t.ext());
                 let Some(data) = vfs.read(&file)? else {
-                    if set.is_editor_only() {
+                    if set.is_marble_madness() {
                         editor_missing += 1;
                     } else {
                         missing += 1;
@@ -82,7 +82,7 @@ pub(crate) fn check(game: Game, game_dir: Option<&Path>) -> io::Result<bool> {
         let tiles: u32 = sets.iter().map(|s| s.tiles).sum();
         println!(
             "{:<9} {}\n          {} sets, {tiles} tiles: {files} parse ({cells} cells, {extras} with extra art, {zs} with depth), \
-             {editor_missing} absent from editor-only sets, {missing} missing from game sets, {} failed",
+             {editor_missing} absent from Marble Madness sets, {missing} absent from others, {} failed",
             t.info().name,
             names.join(" "),
             sets.len(),

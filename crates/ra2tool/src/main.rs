@@ -3,6 +3,7 @@
 mod csf;
 mod image;
 mod ini;
+mod map;
 mod mix;
 mod pal;
 mod shp;
@@ -56,6 +57,30 @@ enum Command {
     /// Theaters and their terrain tiles.
     #[command(subcommand)]
     Tmp(TmpCommand),
+    /// Scenario files.
+    #[command(subcommand)]
+    Map(MapCommand),
+}
+
+#[derive(Subcommand)]
+enum MapCommand {
+    /// Decode every map in the game and check its tiles against its theater.
+    Check {
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
+    /// Write a map's embedded preview image.
+    Preview {
+        file: String,
+        #[arg(short, long)]
+        out: PathBuf,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -268,6 +293,15 @@ enum MixCommand {
 fn main() -> ExitCode {
     match Cli::parse().command {
         Command::Doctor { game_dir } => doctor(game_dir),
+        Command::Map(cmd) => exit(match cmd {
+            MapCommand::Check { game, game_dir } => map::check(game.into(), game_dir.as_deref()),
+            MapCommand::Preview {
+                file,
+                out,
+                game,
+                game_dir,
+            } => map::preview(game.into(), game_dir.as_deref(), &file, &out),
+        }),
         Command::Tmp(cmd) => exit(match cmd {
             TmpCommand::Check { game, game_dir } => tmp::check(game.into(), game_dir.as_deref()),
             TmpCommand::Png {

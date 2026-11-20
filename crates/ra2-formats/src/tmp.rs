@@ -195,15 +195,18 @@ pub struct TileSet {
     /// For a "Marble Madness" set, the ordinary set it previews in the map
     /// editor. Such sets have no tiles in the game's archives.
     pub non_marble_madness: Option<u32>,
-    /// `AllowToPlace=no` marks sets the editor may not place.
+    /// `AllowToPlace=no` marks sets the editor may not place by hand. The
+    /// game still uses them: its automatic transitions place them, and maps
+    /// are full of them.
     pub allow_to_place: bool,
 }
 
 impl TileSet {
-    /// Sets the game itself never draws: Marble Madness previews and sets
-    /// marked unplaceable. Their files are often absent.
-    pub fn is_editor_only(&self) -> bool {
-        self.non_marble_madness.is_some() || !self.allow_to_place
+    /// A "Marble Madness" set: the editor's view of another set, named by
+    /// `NonMarbleMadness`. Its files are usually absent from the game's
+    /// archives even though maps use its tile numbers.
+    pub fn is_marble_madness(&self) -> bool {
+        self.non_marble_madness.is_some()
     }
 }
 
@@ -329,8 +332,8 @@ mod tests {
         );
         let sets = tile_sets(&ini);
         assert_eq!(sets.len(), 3);
-        assert!(!sets[1].is_editor_only());
-        assert!(sets[2].is_editor_only());
+        assert!(!sets[1].is_marble_madness());
+        assert!(sets[2].is_marble_madness());
         assert_eq!(tile_file(&sets, 0, "tem").as_deref(), Some("clear01.tem"));
         assert_eq!(tile_file(&sets, 3, "tem").as_deref(), Some("water03.tem"));
         assert_eq!(tile_file(&sets, 4, "tem").as_deref(), Some("mwater01.tem"));

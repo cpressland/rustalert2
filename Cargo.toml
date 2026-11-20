@@ -44,6 +44,7 @@ must_use_candidate = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
 many_single_char_names = "allow"
+verbose_bit_mask = "allow"
 
 [profile.release]
 lto = "thin"
