@@ -78,10 +78,12 @@ pub enum Mounted {
 }
 
 /// One step of the game's startup mount sequence.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Step {
     /// Mount this archive if it can be found.
     One(&'static str),
+    /// The same, for a name built at run time.
+    Owned(String),
     /// Mount the first of these that can be found (`THEMEMD.MIX`, else `THEME.MIX`).
     FirstOf(&'static [&'static str]),
     /// `NAME%02d.MIX` from 99 down to 0.
@@ -251,16 +253,17 @@ impl Vfs {
     pub fn mount_sequence(&mut self, steps: &[Step]) -> Vec<Mounted> {
         let mut out = Vec::new();
         for step in steps {
-            match *step {
+            match step {
                 Step::One(name) => out.push(self.mount(name)),
-                Step::FirstOf(names) => {
+                Step::Owned(name) => out.push(self.mount(name)),
+                &Step::FirstOf(names) => {
                     let pick = names
                         .iter()
                         .find(|n| self.locate(n).is_some())
                         .unwrap_or(&names[0]);
                     out.push(self.mount(pick));
                 }
-                Step::NumberedDown(prefix) => {
+                &Step::NumberedDown(prefix) => {
                     for n in (0..100).rev() {
                         let name = format!("{prefix}{n:02}.mix");
                         if self.locate(&name).is_some() {
@@ -268,7 +271,7 @@ impl Vfs {
                         }
                     }
                 }
-                Step::Wildcard(prefix) => {
+                &Step::Wildcard(prefix) => {
                     for name in self.loose_matching(prefix) {
                         out.push(self.mount(&name));
                     }

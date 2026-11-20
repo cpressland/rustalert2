@@ -8,4 +8,5 @@ pub mod ini;
 pub mod mix;
 pub mod pal;
 pub mod shp;
+pub mod tmp;
 pub mod vxl;

@@ -6,6 +6,7 @@ mod ini;
 mod mix;
 mod pal;
 mod shp;
+mod tmp;
 mod vfs;
 mod vxl;
 
@@ -52,6 +53,31 @@ enum Command {
     /// Voxel models and animations.
     #[command(subcommand)]
     Vxl(VxlCommand),
+    /// Theaters and their terrain tiles.
+    #[command(subcommand)]
+    Tmp(TmpCommand),
+}
+
+#[derive(Subcommand)]
+enum TmpCommand {
+    /// Mount each theater and parse every tile its INI lists.
+    Check {
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
+    /// Draw a tile template (e.g. clear01.tem) in its theater's palette.
+    Png {
+        theater: String,
+        file: String,
+        #[arg(short, long)]
+        out: PathBuf,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -237,9 +263,21 @@ enum MixCommand {
     },
 }
 
+// One arm per subcommand: long, but flat.
+#[allow(clippy::too_many_lines)]
 fn main() -> ExitCode {
     match Cli::parse().command {
         Command::Doctor { game_dir } => doctor(game_dir),
+        Command::Tmp(cmd) => exit(match cmd {
+            TmpCommand::Check { game, game_dir } => tmp::check(game.into(), game_dir.as_deref()),
+            TmpCommand::Png {
+                theater,
+                file,
+                out,
+                game,
+                game_dir,
+            } => tmp::png(game.into(), game_dir, &theater, &file, &out),
+        }),
         Command::Vxl(cmd) => exit(match cmd {
             VxlCommand::Info {
                 name,

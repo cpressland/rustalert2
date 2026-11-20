@@ -7,3 +7,4 @@ pub mod archive;
 pub mod install;
 pub mod mount;
 pub mod names;
+pub mod theater;
