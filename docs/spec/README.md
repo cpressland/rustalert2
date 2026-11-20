@@ -10,7 +10,7 @@ notes from [TEMPLATE.md](TEMPLATE.md).
 
 | System | Note | Status |
 |---|---|---|
-| MIX archives | | Not started |
+| MIX archives | [mix.md](mix.md) | Implemented |
 | File search order (VFS) | | Not started |
 | INI reading | | Not started |
 | CSF string tables | | Not started |
