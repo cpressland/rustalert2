@@ -12,3 +12,6 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+blowfish.workspace = true
+num-bigint.workspace = true
+crc32fast.workspace = true

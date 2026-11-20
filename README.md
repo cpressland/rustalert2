@@ -21,6 +21,15 @@ This finds your install (`RA2_DATA`, `game_dir` in `config.toml`, Steam, the
 EA App, Origin, or a CrossOver/Whisky bottle on macOS) and checks it has what
 each game needs.
 
+```bash
+cargo run -p ra2tool -- mix ls ra2md.mix/localmd.mix
+cargo run -p ra2tool -- mix x ra2md.mix/localmd.mix rulesmd.ini -o out/
+cargo run -p ra2tool -- mix check
+```
+
+These list an archive (nested archives are separated by `/`), extract files
+from it, and open and verify every archive in your install.
+
 ## Documentation
 
 - [ROADMAP.md](ROADMAP.md): the plan, the architecture and how parity is checked

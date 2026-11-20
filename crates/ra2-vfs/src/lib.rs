@@ -3,4 +3,6 @@
 //! [`install`] finds the player's copy of the game. Mounting its MIX files in
 //! the game's search order comes in milestone M1.
 
+pub mod archive;
 pub mod install;
+pub mod names;
