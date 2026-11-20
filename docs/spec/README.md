@@ -20,7 +20,7 @@ notes from [TEMPLATE.md](TEMPLATE.md).
 | TMP tiles and theaters | [tmp.md](tmp.md) | Implemented |
 | Maps (MAP / YRM / MPR) | [map.md](map.md) | Implemented |
 | Audio (AUD, IDX/BAG, WAV) | [audio.md](audio.md) | Implemented |
-| Bink video | | Not started |
+| Bink video (pure Rust, #87) | | Not started |
 | Fonts and UI art | [font.md](font.md) | Implemented |
 
 ## Presentation (M3)

@@ -41,7 +41,8 @@ crates/
   ra2-render    wgpu: iso terrain with height, SHP sprites, palettes and house
                 remaps, voxels, lighting, shroud/fog, the UI layer.
   ra2-audio     cpal mixer: AUD/WAV, EVA and unit voice queues, music.
-  ra2-video     Bink 1 playback for intros and briefings (approach TBD).
+  ra2-video     Bink 1 (BIKi) playback for intros and briefings: a pure Rust
+                decoder, no ffmpeg (#20).
   ra2-ui        Shell menus, sidebar, radar, tooltips, input mapping.
   ra2-net       Our own lockstep protocol, LAN discovery, replays.
   ra2-game      Wires sim + frontend; the binary.
