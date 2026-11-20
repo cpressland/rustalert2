@@ -181,3 +181,30 @@ fn yr_voxels_parse() {
     let anim = Hva::parse(&vfs.read("htnk.hva").unwrap().unwrap()).unwrap();
     assert_eq!(hull.sections.len(), anim.section_names.len());
 }
+
+#[test]
+fn yr_theater_tiles_parse() {
+    use ra2_formats::ini::Ini;
+    use ra2_formats::tmp::{Tmp, tile_sets};
+    use ra2_vfs::install::Inspection;
+    use ra2_vfs::mount::Vfs;
+    use ra2_vfs::theater::Theater;
+    let Some(install) = install() else { return };
+    for theater in Theater::ALL {
+        let mut vfs = Vfs::new(Inspection::of(&install.inspection.root).unwrap());
+        vfs.mount_startup(Game::YurisRevenge);
+        vfs.mount_theater(theater);
+        let ini = Ini::parse(&vfs.read(&theater.ini()).unwrap().unwrap());
+        let mut parsed = 0;
+        for set in tile_sets(&ini) {
+            for n in 1..=set.tiles {
+                let file = format!("{}{n:02}.{}", set.file_name, theater.ext());
+                if let Some(data) = vfs.read(&file).unwrap() {
+                    Tmp::parse(&data).unwrap_or_else(|e| panic!("{file}: {e}"));
+                    parsed += 1;
+                }
+            }
+        }
+        assert!(parsed > 100, "{theater:?}: {parsed}");
+    }
+}

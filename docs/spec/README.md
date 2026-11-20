@@ -17,7 +17,7 @@ notes from [TEMPLATE.md](TEMPLATE.md).
 | Palettes and house colours | [palette.md](palette.md) | Implemented |
 | SHP sprites | [shp.md](shp.md) | Implemented |
 | VXL / HVA voxels | [voxel.md](voxel.md) | Implemented |
-| TMP tiles and theaters | | Not started |
+| TMP tiles and theaters | [tmp.md](tmp.md) | Implemented |
 | Maps (MAP / YRM / MPR) | | Not started |
 | Audio (AUD, IDX/BAG) | | Not started |
 | Bink video | | Not started |
