@@ -16,7 +16,7 @@ notes from [TEMPLATE.md](TEMPLATE.md).
 | CSF string tables | [csf.md](csf.md) | Implemented |
 | Palettes and house colours | [palette.md](palette.md) | Implemented |
 | SHP sprites | [shp.md](shp.md) | Implemented |
-| VXL / HVA voxels | | Not started |
+| VXL / HVA voxels | [voxel.md](voxel.md) | Implemented |
 | TMP tiles and theaters | | Not started |
 | Maps (MAP / YRM / MPR) | | Not started |
 | Audio (AUD, IDX/BAG) | | Not started |
