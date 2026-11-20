@@ -1,0 +1,25 @@
+[package]
+name = "ra2-parity"
+default-run = "parity"
+description = "The parity lab: scenarios, observation logs from the original game and our engine, and their comparison."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ra2-vfs.workspace = true
+ra2-formats.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+clap.workspace = true
+
+[[bin]]
+name = "parity"
+path = "src/main.rs"

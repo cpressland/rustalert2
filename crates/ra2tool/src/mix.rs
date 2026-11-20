@@ -207,3 +207,22 @@ fn check_tree(
     }
     ok
 }
+
+/// Build an unencrypted archive from files on disk, named by their file names.
+pub(crate) fn create(out: &Path, files: &[PathBuf]) -> io::Result<()> {
+    let mut named = Vec::new();
+    for f in files {
+        let name = f
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        named.push((name, std::fs::read(f)?));
+    }
+    let refs: Vec<(&str, &[u8])> = named
+        .iter()
+        .map(|(n, d)| (n.as_str(), d.as_slice()))
+        .collect();
+    std::fs::write(out, ra2_formats::mix::build_archive(&refs))?;
+    println!("{}: {} files", out.display(), refs.len());
+    Ok(())
+}

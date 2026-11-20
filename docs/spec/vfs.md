@@ -29,8 +29,10 @@ them.
   `[recomp 0x005B3AC0]`
 - So the list is in **mount order**.
 - A name resolves to the **first** archive in list order that holds it. The
-  earliest-mounted archive wins. `[hypothesis]` We haven't read the lookup
-  routine yet, but everything else points this way:
+  earliest-mounted archive wins. `[observed]` In the parity lab, a
+  `rulesmd.ini` in an added `expandmd99.mix` (mounted before `expandmd01`
+  and `localmd`, which both hold one) gave the GI the modified strength
+  ([parity.md](parity.md)). Everything else points the same way:
   - the expansion archives are mounted first, and their purpose is to
     override;
   - `EXPANDMD##` is mounted counting *down* from 99, so a higher number is
@@ -47,9 +49,11 @@ them.
 ### Loose files
 
 - A loose file in the game folder overrides the copy in any archive.
-  `[community]` The header of `rulesmd.ini` itself says: "If placed in game
-  directory, it will override built in values". We haven't yet found the
-  check in the recomp (`CCFileClass`).
+  `[observed]` In the parity lab, a loose `rulesmd.ini` changed the GI's
+  strength, and a loose `XMP29U2.MAP` replaced the shipped map of that name
+  ([parity.md](parity.md)). The header of `rulesmd.ini` itself says so too:
+  "If placed in game directory, it will override built in values". We
+  haven't yet found the check in the recomp (`CCFileClass`).
 - Names are case-insensitive. The game runs on Windows file systems, so we
   match loose files case-insensitively on every platform.
 - Only the game folder itself is searched, not subfolders. The exception is
@@ -125,11 +129,10 @@ archive is `expandmd01.mix`. Some resolutions:
 
 ## Open questions
 
-- **The lookup routine.** We need to confirm that it walks the list from the
-  head (first-mounted wins). Only an M2 observables check can turn the
-  `[hypothesis]` above into `[recomp]`.
-- **The loose-file override.** We need to find where `CCFileClass` checks
-  the disk before the archives.
+- **The lookup routine.** It's settled by observation; reading it in the
+  recomp would add the citation.
+- **The loose-file override.** It's settled by observation; `CCFileClass`'s
+  disk check would add the citation.
 - **Wildcard versus numbered maps and movies.** The map and movie steps
   branch on a flag at `0x0089E3A0` between the wildcard search and the
   numbered `MAPSMD%02d.MIX`/`MAPS%02d.MIX` and `MOVMD%02d`/`MOVIES%02d`
@@ -148,4 +151,4 @@ archive is `expandmd01.mix`. Some resolutions:
 |---|---|---|
 | Mount order and resolution, synthetic | `ra2-vfs` unit tests | exact |
 | Real install: startup mounts, key files resolve | `ra2tool vfs mounts`, `tests/real_install.rs` | exact |
-| The same name resolves to the same archive as the original | M2 observables hook, logging each file open | exact (not done yet) |
+| Earliest-mounted archive wins; loose files win | parity lab experiments (`expandmd99.mix`, loose `rulesmd.ini`) | exact (done) |

@@ -1,0 +1,15 @@
+diff --git a/runtime/win32hle/kernel32_ext.c b/runtime/win32hle/kernel32_ext.c
+index 8ec90c5..69c54d6 100644
+--- a/runtime/win32hle/kernel32_ext.c
++++ b/runtime/win32hle/kernel32_ext.c
+@@ -590,6 +590,10 @@ static void k_GetDiskFreeSpaceExA(void) {
+         !disk_mul_u64(unit, info.f_bfree, &values[2])) {
+         hle_set_last_error(534u); RET(0, 4);
+     }
++    /* Local change for rustalert2's observer build: clamp to 2 GB, as
++     * GetDiskFreeSpaceA does. Yuri's Revenge turns 63 GB free into "0 Mb"
++     * and dies before its strings load. */
++    for (int i = 0; i < 3; ++i) if (values[i] > 0x7FFFFFFFull) values[i] = 0x7FFFFFFFull;
+     for (int i = 0; i < 3; ++i) if (outputs[i]) memcpy(hle_ptr(outputs[i]), &values[i], 8);
+     RET(1, 4);
+ }

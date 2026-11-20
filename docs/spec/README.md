@@ -6,6 +6,12 @@ notes from [TEMPLATE.md](TEMPLATE.md).
 
 **Status:** Not started → Spec'd → Implemented → Parity-checked.
 
+## Tooling
+
+| System | Note | Status |
+|---|---|---|
+| Parity lab (observer, scenarios, diff) | [parity.md](parity.md) | Implemented |
+
 ## Formats and data (M1)
 
 | System | Note | Status |

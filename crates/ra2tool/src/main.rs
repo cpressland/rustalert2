@@ -360,6 +360,9 @@ enum MixCommand {
         #[arg(short, long)]
         out: Option<PathBuf>,
     },
+    /// Build an unencrypted archive from files on disk (for mods and
+    /// experiments; never commit one holding game data).
+    Create { out: PathBuf, files: Vec<PathBuf> },
     /// Open every archive in the install, and those nested in them, and
     /// check their indexes and checksums.
     Check {
@@ -509,6 +512,7 @@ fn main() -> ExitCode {
                 out,
             } => mix::extract(&archive, &files, out.as_deref()).map(|()| true),
             MixCommand::Check { game_dir } => mix::check(game_dir),
+            MixCommand::Create { out, files } => mix::create(&out, &files).map(|()| true),
         }),
     }
 }

@@ -24,6 +24,7 @@ ra2-net = { path = "crates/ra2-net" }
 
 serde = { version = "1", features = ["derive"] }
 toml = "1"
+serde_json = "1"
 tempfile = "3"
 blowfish = "0.10"
 num-bigint = "0.5"

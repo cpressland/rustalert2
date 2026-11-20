@@ -298,6 +298,88 @@ pub fn lcw(data: &[u8], expected: usize) -> Result<Vec<u8>, Error> {
     Ok(out)
 }
 
+/// Encode standard base64 with padding.
+pub fn base64_encode(data: &[u8]) -> String {
+    const A: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(data.len().div_ceil(3) * 4);
+    for c in data.chunks(3) {
+        let n = c
+            .iter()
+            .enumerate()
+            .fold(0u32, |n, (i, &b)| n | (u32::from(b) << (16 - 8 * i)));
+        for i in 0..4 {
+            if i <= c.len() {
+                out.push(char::from(
+                    A[usize::try_from((n >> (18 - 6 * i)) & 63).expect("6 bits")],
+                ));
+            } else {
+                out.push('=');
+            }
+        }
+    }
+    out
+}
+
+/// Encode a pack as the game reads one, storing the data uncompressed: each
+/// block a single literal run. Valid LZO1X and LCW streams, just not small.
+/// Used to write scenario maps.
+///
+/// Blocks hold 8,000 bytes so that, stored, they still pack into fewer than
+/// 8,192 bytes: the game's map readers expect no packed block larger, and a
+/// map with 8,192-byte stored blocks crashed it reading `[OverlayPack]`.
+pub fn pack_blocks_stored(data: &[u8], compression: Compression) -> Vec<u8> {
+    const BLOCK: usize = 8000;
+    let mut out = Vec::new();
+    for block in data.chunks(BLOCK) {
+        let packed = match compression {
+            Compression::Lzo => {
+                // A literal run of n bytes: 0, then n - 3 - 15 in extended
+                // form; then the end-of-stream match (0x11 0 0).
+                let mut p = Vec::new();
+                if block.len() < 4 {
+                    // Too short for the run form: first-byte literals.
+                    p.push(u8::try_from(block.len() + 17).expect("small"));
+                } else if block.len() <= 18 {
+                    // A short run: its length less 3, in one byte.
+                    p.push(u8::try_from(block.len() - 3).expect("small"));
+                } else {
+                    p.push(0);
+                    let mut rest = block.len() - 3 - 15;
+                    while rest > 255 {
+                        p.push(0);
+                        rest -= 255;
+                    }
+                    p.push(u8::try_from(rest).expect("<= 255"));
+                }
+                p.extend_from_slice(block);
+                p.extend_from_slice(&[0x11, 0, 0]);
+                p
+            }
+            Compression::Lcw => {
+                let mut p = Vec::new();
+                for run in block.chunks(63) {
+                    p.push(0x80 | u8::try_from(run.len()).expect("< 64"));
+                    p.extend_from_slice(run);
+                }
+                p.push(0x80);
+                p
+            }
+        };
+        out.extend_from_slice(
+            &u16::try_from(packed.len())
+                .expect("block fits")
+                .to_le_bytes(),
+        );
+        out.extend_from_slice(
+            &u16::try_from(block.len())
+                .expect("block fits")
+                .to_le_bytes(),
+        );
+        out.extend_from_slice(&packed);
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -348,6 +430,30 @@ mod tests {
         assert_eq!(unpack_blocks(&data, Compression::Lcw).unwrap(), b"abcabc");
         data[2] = 4;
         assert!(unpack_blocks(&data, Compression::Lcw).is_err());
+    }
+
+    #[test]
+    fn stored_packs_round_trip() {
+        for len in [0usize, 1, 3, 4, 18, 19, 300, 8000, 8192, 20_000] {
+            let data: Vec<u8> = (0..len).map(|i| u8::try_from(i % 251).unwrap()).collect();
+            for c in [Compression::Lzo, Compression::Lcw] {
+                let packed = pack_blocks_stored(&data, c);
+                assert_eq!(unpack_blocks(&packed, c).unwrap(), data, "{c:?} {len}");
+            }
+            assert_eq!(base64(&base64_encode(&data)).unwrap(), data);
+        }
+        assert_eq!(base64_encode(b"Ma"), "TWE=");
+        // Every packed block stays under the 8,192 bytes the game reads.
+        let big = vec![7u8; 100_000];
+        for c in [Compression::Lzo, Compression::Lcw] {
+            let p = pack_blocks_stored(&big, c);
+            let mut at = 0;
+            while at < p.len() {
+                let n = usize::from(u16::from_le_bytes([p[at], p[at + 1]]));
+                assert!(n < 8192, "{c:?} block of {n}");
+                at += 4 + n;
+            }
+        }
     }
 
     #[test]
