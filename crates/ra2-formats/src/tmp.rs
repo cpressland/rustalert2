@@ -108,7 +108,11 @@ impl Tmp {
         if width == 0 || height == 0 || width > 64 || height > 64 {
             return Err(Error::NotTmp("implausible template size"));
         }
-        if tile_width == 0 || tile_height == 0 || tile_width > 256 || tile_width != 2 * tile_height
+        if tile_width == 0
+            || tile_height == 0
+            || tile_width > 256
+            || tile_height > 128
+            || tile_width != 2 * tile_height
         {
             return Err(Error::NotTmp("implausible tile size"));
         }
@@ -315,6 +319,10 @@ mod tests {
         assert!(t.cells[1].is_none());
         let e = t.cells[2].as_ref().unwrap().extra.as_ref().unwrap();
         assert_eq!((e.width, e.height, e.image.clone()), (3, 2, vec![9; 6]));
+        // Found by fuzzing: a huge tile height overflowed `2 * tile_height`.
+        let mut huge = encode(&[None]);
+        huge[12..16].copy_from_slice(&u32::MAX.to_le_bytes());
+        assert!(Tmp::parse(&huge).is_err());
         let mut short = encode(&[Some((7, true))]);
         short.truncate(short.len() - 1);
         assert!(matches!(
