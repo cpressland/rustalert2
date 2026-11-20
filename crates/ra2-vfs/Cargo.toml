@@ -1,0 +1,19 @@
+[package]
+name = "ra2-vfs"
+description = "Finds a game install and mounts its MIX files and loose files in the game's search order, with mod overlays."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+serde.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
