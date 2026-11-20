@@ -11,3 +11,5 @@
 //! - only the dependencies listed in `allowed-deps.txt`.
 #![forbid(unsafe_code)]
 #![deny(clippy::float_arithmetic)]
+
+pub mod coords;
