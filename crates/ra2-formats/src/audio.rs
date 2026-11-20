@@ -233,7 +233,8 @@ pub fn aud(data: &[u8]) -> Result<Sound, Error> {
         return Err(Error::Unsupported("stereo AUD".into()));
     }
     let mut state = Ima::default();
-    let mut samples = Vec::with_capacity(out_size / 2);
+    // Two samples per packed byte at most, whatever the header claims.
+    let mut samples = Vec::with_capacity((out_size / 2).min(size * 2));
     let mut at = 12;
     while at < 12 + size {
         let packed = usize::from(u16_at(data, at)?);

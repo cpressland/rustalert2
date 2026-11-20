@@ -1,0 +1,80 @@
+[package]
+name = "ra2-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "MIT"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+ra2-formats = { path = "../crates/ra2-formats" }
+
+# Not part of the main workspace: cargo-fuzz needs nightly.
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "mix"
+path = "fuzz_targets/mix.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "ini"
+path = "fuzz_targets/ini.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "csf"
+path = "fuzz_targets/csf.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "shp"
+path = "fuzz_targets/shp.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "vxl"
+path = "fuzz_targets/vxl.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "tmp"
+path = "fuzz_targets/tmp.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "codec"
+path = "fuzz_targets/codec.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "audio"
+path = "fuzz_targets/audio.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "image"
+path = "fuzz_targets/image.rs"
+test = false
+doc = false
+bench = false
