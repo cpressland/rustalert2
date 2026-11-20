@@ -11,7 +11,7 @@ notes from [TEMPLATE.md](TEMPLATE.md).
 | System | Note | Status |
 |---|---|---|
 | MIX archives | [mix.md](mix.md) | Implemented |
-| File search order (VFS) | | Not started |
+| File search order (VFS) | [vfs.md](vfs.md) | Implemented |
 | INI reading | | Not started |
 | CSF string tables | | Not started |
 | Palettes and house colours | | Not started |

@@ -25,10 +25,13 @@ each game needs.
 cargo run -p ra2tool -- mix ls ra2md.mix/localmd.mix
 cargo run -p ra2tool -- mix x ra2md.mix/localmd.mix rulesmd.ini -o out/
 cargo run -p ra2tool -- mix check
+cargo run -p ra2tool -- vfs mounts
+cargo run -p ra2tool -- vfs which rulesmd.ini artmd.ini
 ```
 
 These list an archive (nested archives are separated by `/`), extract files
-from it, and open and verify every archive in your install.
+from it, open and verify every archive in your install, mount the archives the
+way the game does at startup, and show which archive each file comes from.
 
 ## Documentation
 
