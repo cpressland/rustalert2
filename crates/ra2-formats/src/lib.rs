@@ -6,10 +6,12 @@
 pub mod audio;
 pub mod codec;
 pub mod csf;
+pub mod fnt;
 pub mod ini;
 pub mod map;
 pub mod mix;
 pub mod pal;
+pub mod pcx;
 pub mod shp;
 pub mod tmp;
 pub mod vxl;
