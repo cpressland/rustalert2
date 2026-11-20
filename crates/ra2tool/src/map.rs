@@ -205,3 +205,51 @@ pub(crate) fn preview(
     );
     Ok(true)
 }
+
+/// Summarise a map: name, theater, sizes and what it contains.
+pub(crate) fn info(game: Game, game_dir: Option<&Path>, file: &str) -> io::Result<bool> {
+    let vfs = vfs(game, game_dir.map(Path::to_path_buf))?;
+    let ini = Ini::parse(&read(&vfs, file)?);
+    let m = Map::from_ini(&ini)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
+    let count = |section: &str| {
+        ini.section(section)
+            .map_or(0, ra2_formats::ini::Section::len)
+    };
+    println!(
+        "{file}: {}",
+        ini.get("Basic", "Name").unwrap_or("(no name)")
+    );
+    println!(
+        "  theater {}, size {}x{}, local {:?}",
+        m.theater,
+        m.size.width,
+        m.size.height,
+        m.local_size.map(|r| (r.x, r.y, r.width, r.height))
+    );
+    println!(
+        "  {} terrain cells, {} overlay cells, preview {}",
+        m.tiles.len(),
+        m.overlay
+            .as_ref()
+            .map_or(0, |o| o.iter().filter(|&&v| v != 0xff).count()),
+        m.preview
+            .as_ref()
+            .map_or("none".to_string(), |(r, _)| format!(
+                "{}x{}",
+                r.width, r.height
+            ))
+    );
+    println!(
+        "  {} houses, {} units, {} infantry, {} aircraft, {} structures, {} terrain objects, {} waypoints, {} triggers",
+        count("Houses"),
+        count("Units"),
+        count("Infantry"),
+        count("Aircraft"),
+        count("Structures"),
+        count("Terrain"),
+        count("Waypoints"),
+        count("Triggers")
+    );
+    Ok(true)
+}
