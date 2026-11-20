@@ -84,3 +84,25 @@ fn yr_rules_inis_parse() {
     assert_eq!(art.get_int("PARABOMB", "Rate"), Some(200));
     assert_eq!(art.duplicates, []);
 }
+
+#[test]
+fn yr_string_table_reads() {
+    use ra2_formats::csf::{Language, StringTable};
+    use ra2_vfs::install::Inspection;
+    use ra2_vfs::mount::Vfs;
+    let Some(install) = install() else { return };
+    let mut vfs = Vfs::new(Inspection::of(&install.inspection.root).unwrap());
+    vfs.mount_startup(Game::YurisRevenge);
+    let t = StringTable::parse(&vfs.read("ra2md.csf").unwrap().unwrap()).unwrap();
+    assert!(t.entries().len() > 5000);
+    assert_eq!(t.duplicates, Vec::<String>::new());
+    if t.language == Language::Us {
+        assert_eq!(t.text("name:e1"), "GI");
+        assert_eq!(t.text("NAME:GAPOWR"), "Power Plant");
+    }
+    assert!(
+        t.entries()
+            .iter()
+            .all(|e| !e.text.contains("  ") && !e.text.ends_with(' '))
+    );
+}

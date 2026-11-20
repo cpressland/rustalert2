@@ -13,7 +13,7 @@ notes from [TEMPLATE.md](TEMPLATE.md).
 | MIX archives | [mix.md](mix.md) | Implemented |
 | File search order (VFS) | [vfs.md](vfs.md) | Implemented |
 | INI reading | [ini.md](ini.md) | Implemented |
-| CSF string tables | | Not started |
+| CSF string tables | [csf.md](csf.md) | Implemented |
 | Palettes and house colours | | Not started |
 | SHP sprites | | Not started |
 | VXL / HVA voxels | | Not started |

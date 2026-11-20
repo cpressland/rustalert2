@@ -1,5 +1,6 @@
 //! `ra2tool`: command-line tools for working with a game install.
 
+mod csf;
 mod ini;
 mod mix;
 mod vfs;
@@ -35,6 +36,34 @@ enum Command {
     /// Read INI files from the game's file system, as the game reads them.
     #[command(subcommand)]
     Ini(IniCommand),
+    /// Read the game's string tables.
+    #[command(subcommand)]
+    Csf(CsfCommand),
+}
+
+#[derive(Subcommand)]
+enum CsfCommand {
+    /// Print labels' text, or with --grep the labels whose text matches.
+    Get {
+        labels: Vec<String>,
+        #[arg(long)]
+        grep: Option<String>,
+        #[arg(long, default_value = "ra2md.csf")]
+        file: String,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
+    /// Summarise a table.
+    Stats {
+        #[arg(long, default_value = "ra2md.csf")]
+        file: String,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -120,6 +149,20 @@ enum MixCommand {
 fn main() -> ExitCode {
     match Cli::parse().command {
         Command::Doctor { game_dir } => doctor(game_dir),
+        Command::Csf(cmd) => exit(match cmd {
+            CsfCommand::Get {
+                labels,
+                grep,
+                file,
+                game,
+                game_dir,
+            } => csf::get(game.into(), game_dir, &file, &labels, grep.as_deref()),
+            CsfCommand::Stats {
+                file,
+                game,
+                game_dir,
+            } => csf::stats(game.into(), game_dir, &file),
+        }),
         Command::Ini(cmd) => exit(match cmd {
             IniCommand::Get {
                 file,
