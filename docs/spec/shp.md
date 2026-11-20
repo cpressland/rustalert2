@@ -70,6 +70,16 @@ So bit 1 means rows with lengths, and with it, bit 0 means zero runs.
   `[hypothesis]` We believe the game's decoder clips rather than spilling
   into the next row. A frame comparison in M3 confirms it.
 
+### Limits we add
+
+These are not the game's behaviour. Fuzzing found that forged headers could
+otherwise ask for gigabytes, so we add limits that no shipped file comes near:
+
+- An empty frame decodes as 0×0, whatever size its header claims.
+- A frame may not claim more pixels than its data could expand to (128 per
+  byte).
+- Canvases larger than 4,096 × 4,096 are rejected.
+
 ## Results on a real install
 
 `ra2tool shp check` on the Steam install covers the 3,449 files in the 27
