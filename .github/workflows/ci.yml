@@ -56,13 +56,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: fuzz
-      - run: cargo install cargo-fuzz --locked
+      # The repository pins stable in rust-toolchain.toml; fuzzing needs nightly.
+      - run: cargo +nightly install cargo-fuzz --locked
       - name: Run each target
         working-directory: fuzz
         run: |
-          for t in $(cargo fuzz list); do
+          for t in $(cargo +nightly fuzz list); do
             echo "::group::$t"
-            cargo fuzz run "$t" -- -max_total_time=30 -rss_limit_mb=2048
+            cargo +nightly fuzz run "$t" -- -max_total_time=30 -rss_limit_mb=2048
             echo "::endgroup::"
           done
       - if: failure()
