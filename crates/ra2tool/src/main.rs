@@ -7,6 +7,7 @@ mod mix;
 mod pal;
 mod shp;
 mod vfs;
+mod vxl;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -48,6 +49,28 @@ enum Command {
     /// SHP sprites.
     #[command(subcommand)]
     Shp(ShpCommand),
+    /// Voxel models and animations.
+    #[command(subcommand)]
+    Vxl(VxlCommand),
+}
+
+#[derive(Subcommand)]
+enum VxlCommand {
+    /// Describe a model (`name`, without .vxl) and its animation.
+    Info {
+        name: String,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
+    /// Parse every VXL and HVA in the mounted game and pair them by name.
+    Check {
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -217,6 +240,14 @@ enum MixCommand {
 fn main() -> ExitCode {
     match Cli::parse().command {
         Command::Doctor { game_dir } => doctor(game_dir),
+        Command::Vxl(cmd) => exit(match cmd {
+            VxlCommand::Info {
+                name,
+                game,
+                game_dir,
+            } => vxl::info(game.into(), game_dir, &name),
+            VxlCommand::Check { game, game_dir } => vxl::check(game.into(), game_dir),
+        }),
         Command::Shp(cmd) => exit(match cmd {
             ShpCommand::Png {
                 file,
@@ -289,27 +320,15 @@ fn main() -> ExitCode {
                 game_dir,
             } => vfs::which(game.into(), game_dir, &names),
         }),
-        Command::Mix(cmd) => {
-            let result = match cmd {
-                MixCommand::Ls { archive, names } => {
-                    mix::ls(&archive, names.as_deref()).map(|()| true)
-                }
-                MixCommand::X {
-                    archive,
-                    files,
-                    out,
-                } => mix::extract(&archive, &files, out.as_deref()).map(|()| true),
-                MixCommand::Check { game_dir } => mix::check(game_dir),
-            };
-            match result {
-                Ok(true) => ExitCode::SUCCESS,
-                Ok(false) => ExitCode::FAILURE,
-                Err(e) => {
-                    eprintln!("{e}");
-                    ExitCode::FAILURE
-                }
-            }
-        }
+        Command::Mix(cmd) => exit(match cmd {
+            MixCommand::Ls { archive, names } => mix::ls(&archive, names.as_deref()).map(|()| true),
+            MixCommand::X {
+                archive,
+                files,
+                out,
+            } => mix::extract(&archive, &files, out.as_deref()).map(|()| true),
+            MixCommand::Check { game_dir } => mix::check(game_dir),
+        }),
     }
 }
 

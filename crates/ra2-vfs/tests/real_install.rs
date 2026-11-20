@@ -157,3 +157,27 @@ fn yr_shps_decode() {
     let gi = vfs.read("gi.shp").unwrap().unwrap();
     assert!(Shp::parse(&gi).unwrap().frames.len() > 100);
 }
+
+#[test]
+fn yr_voxels_parse() {
+    use ra2_formats::vxl::{Hva, Vxl};
+    use ra2_vfs::install::Inspection;
+    use ra2_vfs::mount::Vfs;
+    let Some(install) = install() else { return };
+    let mut vfs = Vfs::new(Inspection::of(&install.inspection.root).unwrap());
+    vfs.mount_startup(Game::YurisRevenge);
+    let mut models = 0;
+    for m in vfs.mounts() {
+        for e in &m.archive.index().entries {
+            let data = m.archive.read(*e).unwrap();
+            if data.starts_with(b"Voxel Animation") {
+                Vxl::parse(&data).unwrap_or_else(|err| panic!("{} {:08X}: {err}", m.name, e.id));
+                models += 1;
+            }
+        }
+    }
+    assert!(models > 200, "{models}");
+    let hull = Vxl::parse(&vfs.read("htnk.vxl").unwrap().unwrap()).unwrap();
+    let anim = Hva::parse(&vfs.read("htnk.hva").unwrap().unwrap()).unwrap();
+    assert_eq!(hull.sections.len(), anim.section_names.len());
+}
