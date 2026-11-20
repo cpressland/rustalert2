@@ -61,11 +61,13 @@ jobs:
       - name: Run each target
         working-directory: fuzz
         run: |
+          failed=""
           for t in $(cargo +nightly fuzz list); do
             echo "::group::$t"
-            cargo +nightly fuzz run "$t" -- -max_total_time=30 -rss_limit_mb=2048
+            cargo +nightly fuzz run "$t" -- -max_total_time=30 -rss_limit_mb=2048 || failed="$failed $t"
             echo "::endgroup::"
           done
+          if [ -n "$failed" ]; then echo "::error::crashes in:$failed"; exit 1; fi
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
