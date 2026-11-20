@@ -1,5 +1,6 @@
 //! `ra2tool`: command-line tools for working with a game install.
 
+mod ini;
 mod mix;
 mod vfs;
 
@@ -31,6 +32,31 @@ enum Command {
     /// The game's file system, mounted the way the game mounts it at startup.
     #[command(subcommand)]
     Vfs(VfsCommand),
+    /// Read INI files from the game's file system, as the game reads them.
+    #[command(subcommand)]
+    Ini(IniCommand),
+}
+
+#[derive(Subcommand)]
+enum IniCommand {
+    /// Print a value, or a whole section when no key is given.
+    Get {
+        file: String,
+        section: String,
+        key: Option<String>,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
+    /// Summarise how files parse: sections, entries, repeats, long lines.
+    Stats {
+        files: Vec<String>,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
 }
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -94,6 +120,20 @@ enum MixCommand {
 fn main() -> ExitCode {
     match Cli::parse().command {
         Command::Doctor { game_dir } => doctor(game_dir),
+        Command::Ini(cmd) => exit(match cmd {
+            IniCommand::Get {
+                file,
+                section,
+                key,
+                game,
+                game_dir,
+            } => ini::get(game.into(), game_dir, &file, &section, key.as_deref()),
+            IniCommand::Stats {
+                files,
+                game,
+                game_dir,
+            } => ini::stats(game.into(), game_dir, &files),
+        }),
         Command::Vfs(cmd) => exit(match cmd {
             VfsCommand::Mounts { game, game_dir } => vfs::mounts(game.into(), game_dir),
             VfsCommand::Which {

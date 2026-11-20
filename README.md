@@ -27,11 +27,14 @@ cargo run -p ra2tool -- mix x ra2md.mix/localmd.mix rulesmd.ini -o out/
 cargo run -p ra2tool -- mix check
 cargo run -p ra2tool -- vfs mounts
 cargo run -p ra2tool -- vfs which rulesmd.ini artmd.ini
+cargo run -p ra2tool -- ini get rulesmd.ini General BuildSpeed
+cargo run -p ra2tool -- ini stats rulesmd.ini artmd.ini
 ```
 
 These list an archive (nested archives are separated by `/`), extract files
 from it, open and verify every archive in your install, mount the archives the
-way the game does at startup, and show which archive each file comes from.
+way the game does at startup, show which archive each file comes from, and
+read INI values the way the game reads them.
 
 ## Documentation
 
