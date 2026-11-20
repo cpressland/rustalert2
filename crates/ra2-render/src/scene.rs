@@ -69,6 +69,8 @@ pub struct Art {
     pub house_palettes: Vec<(String, [Rgb; 256])>,
     shp_cache: BTreeMap<String, Option<Vec<u8>>>,
     shades: Option<crate::voxel::ShadeTable>,
+    /// The voxel normals, from the player's `gamemd.exe`.
+    normals: Option<crate::voxel::Normals>,
     voxel_cache: BTreeMap<(String, u8), Option<crate::voxel::Sprite>>,
 }
 
@@ -110,6 +112,11 @@ impl Art {
                 .ok()
                 .flatten()
                 .and_then(|d| crate::voxel::ShadeTable::parse(&d)),
+            normals: vfs
+                .read("gamemd.exe")
+                .ok()
+                .flatten()
+                .and_then(|d| crate::voxel::Normals::from_gamemd(&d)),
             voxel_cache: BTreeMap::new(),
         }
     }
@@ -195,7 +202,12 @@ impl Art {
             } else {
                 let refs: Vec<(&Vxl, Option<&Hva>)> =
                     parts.iter().map(|(v, h)| (v, h.as_ref())).collect();
-                Some(crate::voxel::render(&refs, facing, self.shades.as_ref()))
+                Some(crate::voxel::render(
+                    &refs,
+                    facing,
+                    self.shades.as_ref(),
+                    self.normals.as_ref(),
+                ))
             };
             self.voxel_cache.insert(key.clone(), sprite);
         }

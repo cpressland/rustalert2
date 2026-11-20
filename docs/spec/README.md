@@ -36,7 +36,7 @@ notes from [TEMPLATE.md](TEMPLATE.md).
 | Coordinates, cells and projection | [coords.md](coords.md) | Implemented |
 | Terrain and height | [terrain.md](terrain.md) | Implemented |
 | Sprites, objects and draw order | [objects.md](objects.md) | Implemented |
-| Voxel lighting | [objects.md](objects.md) | Spec'd |
+| Voxel lighting | [objects.md](objects.md#voxel-lighting) | Implemented |
 | Map lighting | [lighting.md](lighting.md) | Implemented |
 | Shroud and fog | [shroud.md](shroud.md) | Implemented |
 
