@@ -69,7 +69,10 @@ pub fn decode(data: &[u8]) -> Result<Image, Error> {
     if x1 < x0 || y1 < y0 {
         return Err(Error::NotPcx("bad window"));
     }
-    let (width, height) = (x1 - x0 + 1, y1 - y0 + 1);
+    // A full 0..=65535 window is 65,536 wide, which doesn't fit a u16.
+    let (Some(width), Some(height)) = ((x1 - x0).checked_add(1), (y1 - y0).checked_add(1)) else {
+        return Err(Error::NotPcx("window wider than 65,535"));
+    };
     let planes = usize::from(data[65]);
     let bpl = usize::from(u16_at(data, 66));
     if !(planes == 1 || planes == 3) || bpl < usize::from(width) {
@@ -171,5 +174,9 @@ mod tests {
             Image::Indexed { .. } => panic!("expected rgb"),
         }
         assert!(decode(&d[..130]).is_err());
+        // Found by fuzzing: a 0..=65535 window overflowed the width.
+        let mut wide = header(2, 1, 1, 2);
+        wide[8..10].copy_from_slice(&u16::MAX.to_le_bytes());
+        assert!(decode(&wide).is_err());
     }
 }
