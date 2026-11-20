@@ -234,3 +234,20 @@ fn yr_maps_decode() {
     }
     assert!(maps > 100, "{maps}");
 }
+
+#[test]
+fn yr_sound_bank_decodes() {
+    use ra2_formats::audio::{bag_index, bag_sound};
+    use ra2_vfs::install::Inspection;
+    use ra2_vfs::mount::Vfs;
+    let Some(install) = install() else { return };
+    let mut vfs = Vfs::new(Inspection::of(&install.inspection.root).unwrap());
+    vfs.mount_startup(Game::YurisRevenge);
+    let entries = bag_index(&vfs.read("audio.idx").unwrap().unwrap()).unwrap();
+    let bag = vfs.read("audio.bag").unwrap().unwrap();
+    assert!(entries.len() > 2000);
+    for e in &entries {
+        let s = bag_sound(&bag, e).unwrap_or_else(|err| panic!("{}: {err}", e.name));
+        assert_ne!(s.samples.len(), 0, "{}", e.name);
+    }
+}

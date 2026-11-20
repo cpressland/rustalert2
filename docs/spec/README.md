@@ -19,7 +19,7 @@ notes from [TEMPLATE.md](TEMPLATE.md).
 | VXL / HVA voxels | [voxel.md](voxel.md) | Implemented |
 | TMP tiles and theaters | [tmp.md](tmp.md) | Implemented |
 | Maps (MAP / YRM / MPR) | [map.md](map.md) | Implemented |
-| Audio (AUD, IDX/BAG) | | Not started |
+| Audio (AUD, IDX/BAG, WAV) | [audio.md](audio.md) | Implemented |
 | Bink video | | Not started |
 | Fonts | | Not started |
 
