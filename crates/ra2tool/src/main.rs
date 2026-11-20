@@ -1,8 +1,10 @@
 //! `ra2tool`: command-line tools for working with a game install.
 
 mod csf;
+mod image;
 mod ini;
 mod mix;
+mod pal;
 mod vfs;
 
 use std::path::PathBuf;
@@ -39,6 +41,36 @@ enum Command {
     /// Read the game's string tables.
     #[command(subcommand)]
     Csf(CsfCommand),
+    /// Palettes and house colours.
+    #[command(subcommand)]
+    Pal(PalCommand),
+}
+
+#[derive(Subcommand)]
+enum PalCommand {
+    /// Draw a palette's 256 colours, optionally with a house colour applied.
+    Png {
+        file: String,
+        #[arg(short, long)]
+        out: PathBuf,
+        /// A [Colors] name from the rules, or H,S,V.
+        #[arg(long)]
+        house: Option<String>,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
+    /// Print the 16-colour remap ramp for house colours (all of [Colors] if none given).
+    Ramp {
+        colours: Vec<String>,
+        #[arg(short, long)]
+        out: Option<PathBuf>,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -149,6 +181,21 @@ enum MixCommand {
 fn main() -> ExitCode {
     match Cli::parse().command {
         Command::Doctor { game_dir } => doctor(game_dir),
+        Command::Pal(cmd) => exit(match cmd {
+            PalCommand::Png {
+                file,
+                out,
+                house,
+                game,
+                game_dir,
+            } => pal::png(game.into(), game_dir, &file, house.as_deref(), &out),
+            PalCommand::Ramp {
+                colours,
+                out,
+                game,
+                game_dir,
+            } => pal::ramps(game.into(), game_dir, &colours, out.as_deref()),
+        }),
         Command::Csf(cmd) => exit(match cmd {
             CsfCommand::Get {
                 labels,
