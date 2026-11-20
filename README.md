@@ -13,33 +13,32 @@ macOS on Apple silicon comes first, then Linux, then Windows.
 
 ## Trying what's there
 
+`ra2tool` finds your install (`RA2_DATA`, `game_dir` in `config.toml`, Steam,
+the EA App, Origin, or a CrossOver/Whisky bottle on macOS), mounts it the way
+the game does, and reads every format the engine has so far:
+
+| Command | What it does |
+|---|---|
+| `doctor` | find the install and check it's complete |
+| `mix ls / x / check` | list, extract and verify archives (`ra2md.mix/localmd.mix`) |
+| `vfs mounts / which` | the startup mount order, and where a file comes from |
+| `ini get / stats` | read INI values as the game reads them |
+| `csf get / stats` | translated strings |
+| `pal png / ramp` | palettes and house colours |
+| `shp png / check` | sprites |
+| `vxl info / png / check` | voxel models and animations |
+| `tmp png / check` | theaters and terrain tiles |
+| `map info / preview / check` | scenarios |
+| `audio export / check` | sounds, music and the sound bank |
+| `font render / check / pcx` | the bitmap font and PCX art |
+
 ```bash
-cargo run -p ra2tool -- doctor
+cargo run --release -p ra2tool -- doctor
+cargo run --release -p ra2tool -- shp png gi.shp --house DarkBlue --count 8 -o /tmp/gi.png
 ```
 
-This finds your install (`RA2_DATA`, `game_dir` in `config.toml`, Steam, the
-EA App, Origin, or a CrossOver/Whisky bottle on macOS) and checks it has what
-each game needs.
-
-```bash
-cargo run -p ra2tool -- mix ls ra2md.mix/localmd.mix
-cargo run -p ra2tool -- mix x ra2md.mix/localmd.mix rulesmd.ini -o out/
-cargo run -p ra2tool -- mix check
-cargo run -p ra2tool -- vfs mounts
-cargo run -p ra2tool -- vfs which rulesmd.ini artmd.ini
-cargo run -p ra2tool -- ini get rulesmd.ini General BuildSpeed
-cargo run -p ra2tool -- ini stats rulesmd.ini artmd.ini
-cargo run -p ra2tool -- csf get Name:E1 NAME:GAPOWR
-cargo run -p ra2tool -- pal ramp DarkRed Gold -o /tmp/ramps.png
-cargo run -p ra2tool -- shp png gi.shp --house DarkBlue --count 8 -o /tmp/gi.png
-```
-
-These list an archive (nested archives are separated by `/`), extract files
-from it, open and verify every archive in your install, mount the archives the
-way the game does at startup, show which archive each file comes from, and
-read INI values and translated strings the way the game reads them, and
-build house colours. Images go wherever you point `-o`; never commit them,
-since pictures of game data are game data.
+Images and sounds go wherever you point `-o`. Never commit them: pictures
+and recordings of game data are game data.
 
 ## Documentation
 

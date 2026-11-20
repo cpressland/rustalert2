@@ -131,6 +131,14 @@ enum MapCommand {
         #[arg(long)]
         game_dir: Option<PathBuf>,
     },
+    /// Summarise a map.
+    Info {
+        file: String,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
     /// Write a map's embedded preview image.
     Preview {
         file: String,
@@ -170,6 +178,18 @@ enum VxlCommand {
     /// Describe a model (`name`, without .vxl) and its animation.
     Info {
         name: String,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
+    /// Draw a model's sections from the side and from above.
+    Png {
+        name: String,
+        #[arg(short, long)]
+        out: PathBuf,
+        #[arg(long, default_value = "unittem.pal")]
+        palette: String,
         #[arg(long, value_enum, default_value = "yr")]
         game: GameArg,
         #[arg(long)]
@@ -372,6 +392,11 @@ fn main() -> ExitCode {
         }),
         Command::Map(cmd) => exit(match cmd {
             MapCommand::Check { game, game_dir } => map::check(game.into(), game_dir.as_deref()),
+            MapCommand::Info {
+                file,
+                game,
+                game_dir,
+            } => map::info(game.into(), game_dir.as_deref(), &file),
             MapCommand::Preview {
                 file,
                 out,
@@ -396,6 +421,13 @@ fn main() -> ExitCode {
                 game_dir,
             } => vxl::info(game.into(), game_dir, &name),
             VxlCommand::Check { game, game_dir } => vxl::check(game.into(), game_dir),
+            VxlCommand::Png {
+                name,
+                out,
+                palette,
+                game,
+                game_dir,
+            } => vxl::png(game.into(), game_dir, &name, &palette, &out),
         }),
         Command::Shp(cmd) => exit(match cmd {
             ShpCommand::Png {

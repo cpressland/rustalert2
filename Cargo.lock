@@ -478,6 +478,7 @@ dependencies = [
  "png",
  "ra2-formats",
  "ra2-vfs",
+ "tempfile",
 ]
 
 [[package]]

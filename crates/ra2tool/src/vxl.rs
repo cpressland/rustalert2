@@ -1,13 +1,14 @@
 //! `ra2tool vxl`: voxel models and their animations.
 
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use ra2_formats::ini::Ini;
 use ra2_formats::vxl::{Hva, Vxl};
 use ra2_vfs::install::Game;
 
-use crate::pal::{read, vfs};
+use crate::image::write_rgba;
+use crate::pal::{palette, read, vfs};
 
 /// Parse every VXL and HVA in the mounted game, then pair them by the image
 /// names the rules and art use and compare their section counts.
@@ -148,5 +149,85 @@ pub(crate) fn info(game: Game, game_dir: Option<PathBuf>, name: &str) -> io::Res
             h.section_names
         );
     }
+    Ok(true)
+}
+
+/// Draw a model's sections from the side (x across, z up) and from above
+/// (x across, y down), nearest voxel first, in a palette. A flat preview
+/// for checking models; real projection and lighting are the renderer's.
+pub(crate) fn png(
+    game: Game,
+    game_dir: Option<PathBuf>,
+    name: &str,
+    pal_name: &str,
+    out: &Path,
+) -> io::Result<bool> {
+    const SCALE: usize = 3;
+    let vfs = vfs(game, game_dir)?;
+    let v = Vxl::parse(&read(&vfs, &format!("{name}.vxl"))?)
+        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
+    let colors = palette(&vfs, pal_name)?.to_rgb8();
+    let panels: Vec<_> = v
+        .sections
+        .iter()
+        .map(|s| {
+            (
+                usize::from(s.size[0]),
+                usize::from(s.size[1]),
+                usize::from(s.size[2]),
+            )
+        })
+        .collect();
+    let w = panels.iter().map(|&(x, _, _)| x).sum::<usize>().max(1) * SCALE;
+    let h = panels.iter().map(|&(_, y, z)| y + z).max().unwrap_or(1) * SCALE + SCALE;
+    let mut rgba = vec![0u8; w * h * 4];
+    let mut ox = 0;
+    for (s, &(sx, sy, sz)) in v.sections.iter().zip(&panels) {
+        // Side: keep the voxel nearest the viewer (highest y); top: highest z.
+        let mut side = vec![None; sx * sz];
+        let mut top = vec![None; sx * sy];
+        for vox in &s.voxels {
+            let (x, y, z) = (usize::from(vox.x), usize::from(vox.y), usize::from(vox.z));
+            let si = (sz - 1 - z) * sx + x;
+            if side[si].is_none_or(|(d, _)| y > d) {
+                side[si] = Some((y, vox.color));
+            }
+            let ti = y * sx + x;
+            if top[ti].is_none_or(|(d, _)| z > d) {
+                top[ti] = Some((z, vox.color));
+            }
+        }
+        let mut put = |px: usize, py: usize, c: u8| {
+            let col = colors[usize::from(c)];
+            for dy in 0..SCALE {
+                for dx in 0..SCALE {
+                    let p = ((py * SCALE + dy) * w + px * SCALE + dx) * 4;
+                    rgba[p..p + 4].copy_from_slice(&[col[0], col[1], col[2], 255]);
+                }
+            }
+        };
+        for (i, cell) in side.iter().enumerate() {
+            if let Some((_, c)) = cell {
+                put(ox + i % sx, i / sx, *c);
+            }
+        }
+        for (i, cell) in top.iter().enumerate() {
+            if let Some((_, c)) = cell {
+                put(ox + i % sx, sz + 1 + i / sx, *c);
+            }
+        }
+        ox += sx;
+    }
+    write_rgba(
+        out,
+        u32::try_from(w).expect("small"),
+        u32::try_from(h).expect("small"),
+        &rgba,
+    )?;
+    println!(
+        "{name}.vxl: {} sections; wrote {}",
+        v.sections.len(),
+        out.display()
+    );
     Ok(true)
 }
