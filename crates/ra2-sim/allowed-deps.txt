@@ -1,0 +1,3 @@
+# Direct dependencies ra2-sim may have. Adding one needs a reason in review:
+# it must be deterministic, with no I/O, clocks or threads.
+ra2-rules

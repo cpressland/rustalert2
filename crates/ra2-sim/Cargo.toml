@@ -1,0 +1,15 @@
+[package]
+name = "ra2-sim"
+description = "The deterministic game simulation. No clocks, threads, graphics, audio or unordered iteration."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+ra2-rules.workspace = true

@@ -1,0 +1,12 @@
+# The simulation must be deterministic; see src/lib.rs.
+disallowed-types = [
+    { path = "std::collections::HashMap", reason = "iteration order is random; use BTreeMap or an indexed arena" },
+    { path = "std::collections::HashSet", reason = "iteration order is random; use BTreeSet or a bitset" },
+    { path = "std::time::Instant", reason = "the sim has no wall clock; count game frames" },
+    { path = "std::time::SystemTime", reason = "the sim has no wall clock; count game frames" },
+    { path = "f32", reason = "no floating point in sim state; use fixed point" },
+    { path = "f64", reason = "no floating point in sim state; use fixed point" },
+]
+disallowed-methods = [
+    { path = "std::thread::spawn", reason = "the sim is single-threaded and deterministic" },
+]
