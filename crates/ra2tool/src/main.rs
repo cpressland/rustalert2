@@ -5,6 +5,7 @@ mod image;
 mod ini;
 mod mix;
 mod pal;
+mod shp;
 mod vfs;
 
 use std::path::PathBuf;
@@ -44,6 +45,41 @@ enum Command {
     /// Palettes and house colours.
     #[command(subcommand)]
     Pal(PalCommand),
+    /// SHP sprites.
+    #[command(subcommand)]
+    Shp(ShpCommand),
+}
+
+#[derive(Subcommand)]
+enum ShpCommand {
+    /// Draw frames in a palette.
+    Png {
+        file: String,
+        #[arg(short, long)]
+        out: PathBuf,
+        #[arg(long, default_value = "unittem.pal")]
+        palette: String,
+        /// A [Colors] name, or H,S,V, for the remap slots.
+        #[arg(long)]
+        house: Option<String>,
+        /// First frame to draw.
+        #[arg(long, default_value_t = 0)]
+        first: usize,
+        /// How many frames to draw (default: all).
+        #[arg(long)]
+        count: Option<usize>,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
+    /// Try every file in the mounted game as an SHP and decode every frame.
+    Check {
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -181,6 +217,27 @@ enum MixCommand {
 fn main() -> ExitCode {
     match Cli::parse().command {
         Command::Doctor { game_dir } => doctor(game_dir),
+        Command::Shp(cmd) => exit(match cmd {
+            ShpCommand::Png {
+                file,
+                out,
+                palette,
+                house,
+                first,
+                count,
+                game,
+                game_dir,
+            } => shp::png(
+                game.into(),
+                game_dir,
+                &file,
+                &palette,
+                house.as_deref(),
+                Some((first, count.unwrap_or(usize::MAX))),
+                &out,
+            ),
+            ShpCommand::Check { game, game_dir } => shp::check(game.into(), game_dir),
+        }),
         Command::Pal(cmd) => exit(match cmd {
             PalCommand::Png {
                 file,

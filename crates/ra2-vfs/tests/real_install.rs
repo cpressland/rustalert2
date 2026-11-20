@@ -128,3 +128,32 @@ fn yr_palettes_and_house_colours() {
         let _ = house_ramp(Hsv::parse(value));
     }
 }
+
+#[test]
+fn yr_shps_decode() {
+    use ra2_formats::shp::Shp;
+    use ra2_vfs::install::Inspection;
+    use ra2_vfs::mount::Vfs;
+    let Some(install) = install() else { return };
+    let mut vfs = Vfs::new(Inspection::of(&install.inspection.root).unwrap());
+    vfs.mount_startup(Game::YurisRevenge);
+    let (mut files, mut frames) = (0, 0);
+    for m in vfs.mounts() {
+        for e in &m.archive.index().entries {
+            let data = m.archive.read(*e).unwrap();
+            let Ok(shp) = Shp::parse(&data) else { continue };
+            files += 1;
+            for k in 0..shp.frames.len() {
+                shp.frame(k)
+                    .unwrap_or_else(|err| panic!("{} {:08X}: {err}", m.name, e.id));
+                frames += 1;
+            }
+        }
+    }
+    assert!(
+        files > 1000 && frames > 50_000,
+        "{files} files, {frames} frames"
+    );
+    let gi = vfs.read("gi.shp").unwrap().unwrap();
+    assert!(Shp::parse(&gi).unwrap().frames.len() > 100);
+}

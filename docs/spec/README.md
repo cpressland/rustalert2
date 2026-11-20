@@ -15,7 +15,7 @@ notes from [TEMPLATE.md](TEMPLATE.md).
 | INI reading | [ini.md](ini.md) | Implemented |
 | CSF string tables | [csf.md](csf.md) | Implemented |
 | Palettes and house colours | [palette.md](palette.md) | Implemented |
-| SHP sprites | | Not started |
+| SHP sprites | [shp.md](shp.md) | Implemented |
 | VXL / HVA voxels | | Not started |
 | TMP tiles and theaters | | Not started |
 | Maps (MAP / YRM / MPR) | | Not started |
