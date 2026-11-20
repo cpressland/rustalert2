@@ -3,5 +3,6 @@
 //! Every reader is pure: it takes bytes and returns typed data, with no file
 //! system or global state. Behaviour is specified in `docs/spec/` first.
 
+pub mod csf;
 pub mod ini;
 pub mod mix;
