@@ -66,3 +66,21 @@ fn yr_startup_mounts_and_resolves() {
     let rules = vfs.read("rulesmd.ini").unwrap().unwrap();
     assert!(rules.starts_with(b";"), "rulesmd.ini should be INI text");
 }
+
+#[test]
+fn yr_rules_inis_parse() {
+    use ra2_formats::ini::Ini;
+    use ra2_vfs::install::Inspection;
+    use ra2_vfs::mount::Vfs;
+    let Some(install) = install() else { return };
+    let mut vfs = Vfs::new(Inspection::of(&install.inspection.root).unwrap());
+    vfs.mount_startup(Game::YurisRevenge);
+    let rules = Ini::parse(&vfs.read("rulesmd.ini").unwrap().unwrap());
+    assert!(rules.sections().len() > 1000);
+    assert_eq!(rules.get_list("InfantryTypes", "1").unwrap(), ["E1"]);
+    assert_eq!(rules.duplicates, []);
+    // The empty first [PARABOMB] must not shadow the real one.
+    let art = Ini::parse(&vfs.read("artmd.ini").unwrap().unwrap());
+    assert_eq!(art.get_int("PARABOMB", "Rate"), Some(200));
+    assert_eq!(art.duplicates, []);
+}
