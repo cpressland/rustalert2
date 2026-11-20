@@ -253,3 +253,124 @@ pub(crate) fn info(game: Game, game_dir: Option<&Path>, file: &str) -> io::Resul
     );
     Ok(true)
 }
+
+fn load_view(
+    game: Game,
+    game_dir: Option<&Path>,
+    file: &str,
+) -> io::Result<(ra2_vfs::mount::Vfs, ra2_render::compose::MapView)> {
+    let mut vfs = vfs(game, game_dir.map(Path::to_path_buf))?;
+    let (rules, art) = if game == Game::YurisRevenge {
+        ("rulesmd.ini", "artmd.ini")
+    } else {
+        ("rules.ini", "art.ini")
+    };
+    let view = ra2_render::compose::MapView::load(&mut vfs, file, rules, art)?;
+    Ok((vfs, view))
+}
+
+/// Open a map in a window.
+pub(crate) fn view(
+    game: Game,
+    game_dir: Option<&Path>,
+    file: &str,
+    shroud: bool,
+    snapshot: Option<&Path>,
+) -> io::Result<bool> {
+    use ra2_render::compose::Layers;
+    let (vfs, mut view) = load_view(game, game_dir, file)?;
+    if let Some(out) = snapshot {
+        let (canvas, _) = view.compose(
+            &vfs,
+            Layers {
+                shroud,
+                ..Layers::default()
+            },
+            None,
+        );
+        let (w, h) = (1280, 800);
+        let px = ra2_render::viewer::snapshot(&canvas, w, h, None).map_err(io::Error::other)?;
+        write_rgba(out, w, h, &px)?;
+        println!("{file}: {w}x{h} GPU snapshot written to {}", out.display());
+        return Ok(true);
+    }
+    let title = format!("{file} ({})", view.map.theater);
+    ra2_render::viewer::run(
+        &title,
+        Layers {
+            shroud,
+            ..Layers::default()
+        },
+        |layers| view.compose(&vfs, layers, None).0,
+    )
+    .map_err(io::Error::other)?;
+    Ok(true)
+}
+
+/// Draw a map to an image: terrain, objects, lighting and (optionally) the
+/// player's starting shroud.
+pub(crate) fn render(
+    game: Game,
+    game_dir: Option<&Path>,
+    file: &str,
+    scale: u32,
+    around: Option<(i16, i16, u32, u32)>,
+    shroud: bool,
+    out: &Path,
+) -> io::Result<bool> {
+    use ra2_render::compose::Layers;
+    let (vfs, mut view) = load_view(game, game_dir, file)?;
+    let rect = around.map(|(cx, cy, w, h)| {
+        let p = ra2_sim::coords::Cell::new(cx, cy).screen(0);
+        let (w, h) = (
+            i32::try_from(w).unwrap_or(800),
+            i32::try_from(h).unwrap_or(600),
+        );
+        (p.x - w / 2, p.y - h / 2, p.x + w / 2, p.y + h / 2)
+    });
+    let (canvas, stats) = view.compose(
+        &vfs,
+        Layers {
+            shroud,
+            ..Layers::default()
+        },
+        rect,
+    );
+    let s = scale.max(1) as usize;
+    let (w, h) = (canvas.width as usize / s, canvas.height as usize / s);
+    let mut small = Vec::with_capacity(w * h * 4);
+    for y in 0..h {
+        for x in 0..w {
+            let i = ((y * s) * canvas.width as usize + x * s) * 4;
+            small.extend_from_slice(&canvas.rgba[i..i + 4]);
+        }
+    }
+    write_rgba(
+        out,
+        u32::try_from(w).expect("fits"),
+        u32::try_from(h).expect("fits"),
+        &small,
+    )?;
+    let (t, o) = (&stats.terrain, &stats.scene);
+    println!(
+        "{file}: {} {}x{}; {} cells ({} Marble Madness, {} cleared); {} overlays, {} terrain objects, {} smudges, \
+         {} buildings, {} infantry, {} vehicles; missing art {:?}; {}x{} written to {}",
+        view.map.theater,
+        view.map.size.width,
+        view.map.size.height,
+        t.cells,
+        t.marble_madness,
+        t.cleared,
+        o.overlays,
+        o.terrain_objects,
+        o.smudges,
+        o.buildings,
+        o.infantry,
+        o.vehicles,
+        o.missing.iter().take(8).collect::<Vec<_>>(),
+        w,
+        h,
+        out.display()
+    );
+    Ok(true)
+}

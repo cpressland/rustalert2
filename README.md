@@ -29,12 +29,14 @@ the game does, and reads every format the engine has so far:
 | `vxl info / png / check` | voxel models and animations |
 | `tmp png / check` | theaters and terrain tiles |
 | `map info / preview / check` | scenarios |
+| `map render / view` | draw a map to a PNG, or open it in a window (pan, zoom, layer toggles) |
 | `audio export / check` | sounds, music and the sound bank |
 | `font render / check / pcx` | the bitmap font and PCX art |
 
 ```bash
 cargo run --release -p ra2tool -- doctor
 cargo run --release -p ra2tool -- shp png gi.shp --house DarkBlue --count 8 -o /tmp/gi.png
+cargo run --release -p ra2tool -- map view all01umd.map
 ```
 
 The parity lab (`cargo run -p ra2-parity -- record | diff | events | summary`)

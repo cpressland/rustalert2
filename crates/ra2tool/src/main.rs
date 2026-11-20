@@ -139,6 +139,44 @@ enum MapCommand {
         #[arg(long)]
         game_dir: Option<PathBuf>,
     },
+    /// Draw a map to an image.
+    Render {
+        file: String,
+        #[arg(short, long)]
+        out: PathBuf,
+        /// Shrink by this factor (nearest pixel).
+        #[arg(long, default_value_t = 1)]
+        scale: u32,
+        /// Draw only around this cell: x,y.
+        #[arg(long)]
+        around: Option<String>,
+        /// The size of the --around view in pixels: `WxH`.
+        #[arg(long, default_value = "800x600")]
+        size: String,
+        /// Shroud what the map's player can't see at the start.
+        #[arg(long)]
+        shroud: bool,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
+    /// Open a map in a window. Drag or arrows pan, scroll or +/- zoom, 0
+    /// resets; O, L and S toggle objects, lighting and shroud.
+    View {
+        file: String,
+        /// Start with the player's shroud on.
+        #[arg(long)]
+        shroud: bool,
+        /// Don't open a window: draw the opening view through the GPU to
+        /// this PNG.
+        #[arg(long)]
+        snapshot: Option<PathBuf>,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
     /// Write a map's embedded preview image.
     Preview {
         file: String,
@@ -395,6 +433,49 @@ fn main() -> ExitCode {
         }),
         Command::Map(cmd) => exit(match cmd {
             MapCommand::Check { game, game_dir } => map::check(game.into(), game_dir.as_deref()),
+            MapCommand::Render {
+                file,
+                out,
+                scale,
+                around,
+                size,
+                shroud,
+                game,
+                game_dir,
+            } => {
+                let around = around.and_then(|a| {
+                    let (x, y) = a.split_once(',')?;
+                    let (w, h) = size.split_once('x')?;
+                    Some((
+                        x.trim().parse().ok()?,
+                        y.trim().parse().ok()?,
+                        w.parse().ok()?,
+                        h.parse().ok()?,
+                    ))
+                });
+                map::render(
+                    game.into(),
+                    game_dir.as_deref(),
+                    &file,
+                    scale,
+                    around,
+                    shroud,
+                    &out,
+                )
+            }
+            MapCommand::View {
+                file,
+                shroud,
+                snapshot,
+                game,
+                game_dir,
+            } => map::view(
+                game.into(),
+                game_dir.as_deref(),
+                &file,
+                shroud,
+                snapshot.as_deref(),
+            ),
             MapCommand::Info {
                 file,
                 game,

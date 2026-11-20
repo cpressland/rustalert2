@@ -12,6 +12,8 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+ra2-sim.workspace = true
+ra2-render.workspace = true
 ra2-vfs.workspace = true
 clap.workspace = true
 ra2-formats.workspace = true

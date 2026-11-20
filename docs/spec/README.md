@@ -33,12 +33,12 @@ notes from [TEMPLATE.md](TEMPLATE.md).
 
 | System | Note | Status |
 |---|---|---|
-| Coordinates, cells and projection | | Not started |
-| Terrain and height | | Not started |
-| Sprites and draw order | | Not started |
-| Voxel lighting | | Not started |
-| Map lighting | | Not started |
-| Shroud and fog | | Not started |
+| Coordinates, cells and projection | [coords.md](coords.md) | Implemented |
+| Terrain and height | [terrain.md](terrain.md) | Implemented |
+| Sprites, objects and draw order | [objects.md](objects.md) | Implemented |
+| Voxel lighting | [objects.md](objects.md) | Spec'd |
+| Map lighting | [lighting.md](lighting.md) | Implemented |
+| Shroud and fog | [shroud.md](shroud.md) | Implemented |
 
 ## Simulation (M4)
 
