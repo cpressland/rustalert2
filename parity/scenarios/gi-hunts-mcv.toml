@@ -1,0 +1,68 @@
+name = "gi-hunts-mcv"
+description = """
+A GI on Hunt, owned by Neutral, walks from the middle of a flat clear map
+to the idle human player's MCV, stops at weapon range and fires at it.
+Covers infantry walking speed, sub-cell movement, range, small-arms damage
+against a vehicle's armour and rate of fire.
+
+In a skirmish the map's objects are read before the player houses exist, so
+only Neutral and Special can own them; Neutral is hostile to the players.
+One AI starts in the far corner and doesn't reach the area in time."""
+map = "parity_gi_hunts_mcv.yrm"
+end_frame = 1200
+human_start = [35, 35]
+
+[generate]
+name = "Parity: GI hunts MCV"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 47
+y = 50
+subcell = 0
+facing = 64
+mission = "Hunt"
+
+# Tolerances as for grizzly-hunts-mcv: positions to a fraction of a cell,
+# timing to a few frames, damage to about one shot.
+
+[[check]]
+what = "position"
+type = "E1"
+owner = 2
+at = 120
+tolerance = 64
+
+[[check]]
+what = "position"
+type = "E1"
+owner = 2
+at = 300
+tolerance = 32
+
+[[check]]
+what = "first_damage"
+type = "AMCV"
+owner = 0
+window = 3
+
+[[check]]
+what = "hp"
+type = "AMCV"
+owner = 0
+at = 600
+tolerance = 15
+
+[[check]]
+what = "hp"
+type = "AMCV"
+owner = 0
+at = 1200
+tolerance = 15

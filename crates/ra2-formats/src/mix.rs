@@ -317,6 +317,43 @@ pub fn local_database_names(data: &[u8]) -> Option<Vec<String>> {
 /// The name of the XCC database entry.
 pub const LOCAL_DATABASE: &str = "local mix database.dat";
 
+/// Build an unencrypted extended-layout archive (flags 0) of `(name, bytes)`
+/// pairs, entries sorted by ID as the game's own archives are. For tools and
+/// tests: mods, parity experiments, fixtures.
+pub fn build_archive(files: &[(&str, &[u8])]) -> Vec<u8> {
+    let mut body = Vec::new();
+    let mut entries = Vec::new();
+    for (name, data) in files {
+        let offset = u32::try_from(body.len()).expect("archive under 4 GB");
+        entries.push((
+            mix_id(name),
+            offset,
+            u32::try_from(data.len()).expect("file under 4 GB"),
+        ));
+        body.extend_from_slice(data);
+    }
+    // Westwood sorts by the ID as a signed number.
+    entries.sort_by_key(|e| e.0.cast_signed());
+    let mut out = 0u32.to_le_bytes().to_vec();
+    out.extend_from_slice(
+        &u16::try_from(files.len())
+            .expect("under 65,536 files")
+            .to_le_bytes(),
+    );
+    out.extend_from_slice(
+        &u32::try_from(body.len())
+            .expect("archive under 4 GB")
+            .to_le_bytes(),
+    );
+    for (id, offset, size) in entries {
+        for v in [id, offset, size] {
+            out.extend_from_slice(&v.to_le_bytes());
+        }
+    }
+    out.extend_from_slice(&body);
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -405,6 +442,23 @@ mod tests {
             b"[General]\n"
         );
         assert!(idx.find("missing.ini").is_none());
+    }
+
+    #[test]
+    fn built_archives_read_back() {
+        let file = build_archive(&[("rulesmd.ini", b"[General]\n"), ("b.shp", b"xyz")]);
+        let idx = Index::parse(&file).unwrap();
+        let (start, len) = idx.span(idx.find("rulesmd.ini").unwrap());
+        let start = usize::try_from(start).unwrap();
+        assert_eq!(
+            &file[start..start + usize::try_from(len).unwrap()],
+            b"[General]\n"
+        );
+        assert!(
+            idx.entries
+                .windows(2)
+                .all(|w| w[0].id.cast_signed() < w[1].id.cast_signed())
+        );
     }
 
     #[test]

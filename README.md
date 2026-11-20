@@ -5,7 +5,7 @@ written in Rust. It aims to play like the original (the same rules, timings,
 AI and outcomes) as a safe, native 64-bit program. It reads the data files of
 your own copy of the game; nothing from the game is in this repository.
 
-**Status: M0, foundations.** Nothing is playable yet. The plan, the
+**Status: M2, the parity lab.** Nothing is playable yet. The plan, the
 milestones and the decisions behind them are in [ROADMAP.md](ROADMAP.md) and
 on the [project board](https://github.com/users/cpressland/projects/1).
 
@@ -36,6 +36,10 @@ the game does, and reads every format the engine has so far:
 cargo run --release -p ra2tool -- doctor
 cargo run --release -p ra2tool -- shp png gi.shp --house DarkBlue --count 8 -o /tmp/gi.png
 ```
+
+The parity lab (`cargo run -p ra2-parity -- record | diff | events | summary`)
+records scenarios in the original game through the recomp and compares them
+with our engine; see [docs/spec/parity.md](docs/spec/parity.md).
 
 Images and sounds go wherever you point `-o`. Never commit them: pictures
 and recordings of game data are game data.
