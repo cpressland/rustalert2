@@ -278,6 +278,18 @@ fn levels(map: &Map) -> BTreeMap<(i16, i16), i32> {
         .collect()
 }
 
+/// Bridge overlays: high (`BRIDGE1/2`, `RAILBRDG1/2`), and low (`LOBRDG…`,
+/// `LOBRDB…`).
+fn is_bridge(id: &str) -> bool {
+    let id = id.to_ascii_uppercase();
+    id.starts_with("BRIDGE") || id.starts_with("RAILBRDG") || id.starts_with("LOBRD")
+}
+
+fn is_high_bridge(id: &str) -> bool {
+    let id = id.to_ascii_uppercase();
+    id.starts_with("BRIDGE") || id.starts_with("RAILBRDG")
+}
+
 /// Infantry facing (0–255) to a sequence frame offset: 8 facings,
 /// numbered anticlockwise from north. `[community]`
 fn infantry_facing(facing: i32) -> usize {
@@ -340,6 +352,8 @@ pub fn collect(
                 .unwrap_or(false);
             let pal = if wall {
                 art.house_palette("Neutral")
+            } else if is_bridge(id) {
+                PaletteKind::Iso
             } else {
                 PaletteKind::Theater
             };
@@ -347,6 +361,13 @@ pub fn collect(
                 continue;
             }
             let c = ground(x, y);
+            // A high bridge's deck is lit four levels up, as the cell
+            // lighting routine's second value is. `[hypothesis]`
+            let deck = if is_high_bridge(id) {
+                (x, y, height(x, y) + 4)
+            } else {
+                at(x, y)
+            };
             match art.shp(vfs, &image) {
                 Some(d)
                     if push_frame(
@@ -357,7 +378,7 @@ pub fn collect(
                         (c.1, c.0, 0),
                         pal,
                         false,
-                        at(x, y),
+                        deck,
                     ) =>
                 {
                     stats.overlays += 1;

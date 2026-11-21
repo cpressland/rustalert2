@@ -73,6 +73,18 @@ and vehicles in their starting state. Animation is left to the game loop
 - **HVA rotations.** A section's HVA rotation moves its voxels but doesn't
   turn the light. The table is built once for the whole unit. `[recomp]`
 
+## Bridges
+
+- Bridges are overlays: high bridges `BRIDGE1/2` and `RAILBRDG1/2`
+  (art `BRIDGE`, `RAILBRDG`, `Theater=yes`), and low bridges `LOBRDG…`
+  and `LOBRDB…`. `[observed]`
+- They draw in the theater's iso palette, not the overlay palette; the
+  overlay palette scrambles their colours. `[observed]`
+- Their art already holds the deck's height: drawn at the cell's ground
+  like other overlays, the deck meets the road at each end. `[observed]`
+- A high bridge's deck is lit as level `h + 4`, the cell lighting
+  routine's second value. `[hypothesis]` (see lighting.md)
+
 ## Building details
 
 - **Bib.** `BibShape=` names an SHP laid flat under the building at the
@@ -112,7 +124,8 @@ and vehicles in their starting state. Animation is left to the game loop
   32 sections. We clamp it to 31; the game reads whatever follows the table.
 - Building anims' timing, `IdleAnim`, and `ZAdjust`/`YSort` ordering.
   These need the game loop's timers.
-- Bridges, which are overlays drawn on their own layer.
+- Bridges' draw order against units under and on them (the game gives
+  bridges their own layer).
 
 ## Parity
 

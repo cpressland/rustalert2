@@ -265,7 +265,14 @@ fn load_view(
     } else {
         ("rules.ini", "art.ini")
     };
-    let view = ra2_render::compose::MapView::load(&mut vfs, file, rules, art)?;
+    // A path to a file on disk is read from there; anything else is a name
+    // in the game's file system.
+    let view = if Path::new(file).is_file() {
+        let data = std::fs::read(file)?;
+        ra2_render::compose::MapView::from_data(&mut vfs, file, &data, rules, art)?
+    } else {
+        ra2_render::compose::MapView::load(&mut vfs, file, rules, art)?
+    };
     Ok((vfs, view))
 }
 
