@@ -102,7 +102,20 @@ pub(crate) fn ls(path: &str, names_file: Option<&Path>) -> io::Result<()> {
 pub(crate) fn extract(path: &str, files: &[String], out_dir: Option<&Path>) -> io::Result<()> {
     let archive = open(path)?;
     for name in files {
-        let data = archive.read_file(name)?.ok_or_else(|| {
+        // An 8-digit hex ID, as `mix ls` prints it, finds unnamed files.
+        let by_id = || -> io::Result<Option<Vec<u8>>> {
+            match u32::from_str_radix(name, 16) {
+                Ok(id) if name.len() == 8 => {
+                    archive.find_id(id).map(|e| archive.read(e)).transpose()
+                }
+                _ => Ok(None),
+            }
+        };
+        let data = match archive.read_file(name)? {
+            Some(d) => Some(d),
+            None => by_id()?,
+        };
+        let data = data.ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::NotFound,
                 format!("{name}: not in the archive"),

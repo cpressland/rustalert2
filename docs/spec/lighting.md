@@ -50,9 +50,9 @@ drawn with.
 
 ## Open questions
 
-- The same routine computes a second value with `h + 4` in place of `h`;
-  which of the two lights terrain and which objects isn't traced. We use
-  `h` for both. Comparing again with lamps and `Ground` in is part of the
+- The same routine computes a second value with `h + 4` in place of `h`.
+  Four levels is a high bridge's height, so we take it as the light on a
+  bridge deck and use it for high bridge overlays. `[hypothesis]` Comparing again with lamps and `Ground` in is part of the
   M3 exit check (#35).
 - Ramps take their cell's level; no per-slope term has turned up in the
   cell lighting routine.

@@ -20,7 +20,7 @@ the game does, and reads every format the engine has so far:
 | Command | What it does |
 |---|---|
 | `doctor` | find the install and check it's complete |
-| `mix ls / x / check` | list, extract and verify archives (`ra2md.mix/localmd.mix`) |
+| `mix ls / x / check` | list, extract (by name, or by the ID `ls` prints) and verify archives (`ra2md.mix/localmd.mix`) |
 | `vfs mounts / which` | the startup mount order, and where a file comes from |
 | `ini get / stats` | read INI values as the game reads them |
 | `csf get / stats` | translated strings |
@@ -29,7 +29,7 @@ the game does, and reads every format the engine has so far:
 | `vxl info / png / check` | voxel models and animations |
 | `tmp png / check` | theaters and terrain tiles |
 | `map info / preview / check` | scenarios |
-| `map render / view` | draw a map to a PNG, or open it in a window (pan, zoom, layer toggles) |
+| `map render / view` | draw a map (from the game, or a file on disk) to a PNG, or open it in a window (pan, zoom, layer toggles) |
 | `audio export / check` | sounds, music and the sound bank |
 | `font render / check / pcx` | the bitmap font and PCX art |
 

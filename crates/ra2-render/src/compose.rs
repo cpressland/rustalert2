@@ -59,11 +59,25 @@ pub struct Stats {
 impl MapView {
     /// Load a map by file name, mounting its theater onto `vfs`.
     pub fn load(vfs: &mut Vfs, name: &str, rules: &str, art: &str) -> io::Result<MapView> {
+        let data = vfs
+            .read(name)?
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, format!("{name}: not found")))?;
+        MapView::from_data(vfs, name, &data, rules, art)
+    }
+
+    /// Load a map from its bytes (a file from outside the game, say).
+    pub fn from_data(
+        vfs: &mut Vfs,
+        name: &str,
+        data: &[u8],
+        rules: &str,
+        art: &str,
+    ) -> io::Result<MapView> {
         let read = |vfs: &Vfs, n: &str| {
             vfs.read(n)?
                 .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, format!("{n}: not found")))
         };
-        let ini = Ini::parse(&read(vfs, name)?);
+        let ini = Ini::parse(data);
         let map = Map::from_ini(&ini)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e.to_string()))?;
         let theater = Theater::from_name(&map.theater).ok_or_else(|| {

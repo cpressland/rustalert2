@@ -185,6 +185,11 @@ impl Archive {
         read_all(&self.entry_source(entry)?)
     }
 
+    /// An entry by its ID, for files whose names aren't known.
+    pub fn find_id(&self, id: u32) -> Option<Entry> {
+        self.index.get(id)
+    }
+
     /// Read a file by name, if the archive has it.
     pub fn read_file(&self, name: &str) -> io::Result<Option<Vec<u8>>> {
         self.find(name).map(|e| self.read(e)).transpose()
