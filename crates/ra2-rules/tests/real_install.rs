@@ -41,6 +41,21 @@ fn yuris_revenge_rules_build() {
             .any(|c| c.id == "Americans" && c.side == "GDI")
     );
     assert_eq!(rules.sides.len(), 5);
+    assert_eq!(rules.super_weapons.len(), 12);
+    let nuke = rules
+        .super_weapons
+        .iter()
+        .find(|s| s.id == "NukeSpecial")
+        .unwrap();
+    assert_eq!(nuke.kind, "MultiMissile");
+    assert_eq!(rules.weapon(nuke.weapon.unwrap()).id, "NukeCarrier");
+    assert!(rules.anims.len() > 500);
+    assert!(
+        rules
+            .particle_systems
+            .iter()
+            .any(|p| p.id == "SparkSys" && p.behaves_like == "Spark")
+    );
     // Every weapon a type names resolves, and so does its warhead.
     assert!(
         rules
