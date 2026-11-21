@@ -27,10 +27,10 @@ index 870464e..6910a8b 100644
          static long long last, sum;
 diff --git a/src/runtime/observe.c b/src/runtime/observe.c
 new file mode 100644
-index 0000000..95d3706
+index 0000000..54fee7d
 --- /dev/null
 +++ b/src/runtime/observe.c
-@@ -0,0 +1,169 @@
+@@ -0,0 +1,174 @@
 +/* rustalert2 parity observer: per game frame, what the simulation holds.
 + * Written for github.com/cpressland/rustalert2's parity lab (M2); this file
 + * and the two-line hook in hdvox.c are its whole footprint here.
@@ -75,6 +75,7 @@ index 0000000..95d3706
 +
 +static FILE *g_out;
 +static long g_dump_frame = -1;
++static long g_dump_every = 0;
 +static int g_inited;
 +static uint32_t g_last_frame = 0xFFFFFFFFu;
 +
@@ -157,6 +158,7 @@ index 0000000..95d3706
 +        g_inited = 1;
 +        if (path) g_out = fopen(path, "w");
 +        if (dump) g_dump_frame = strtol(dump, NULL, 0);
++        if (getenv("RA2_OBSERVE_DUMP_EVERY")) g_dump_every = strtol(getenv("RA2_OBSERVE_DUMP_EVERY"), NULL, 0);
 +        if (every && strtol(every, NULL, 0) > 0) g_every = strtol(every, NULL, 0);
 +        if (getenv("RA2_OBSERVE_END")) g_end = strtol(getenv("RA2_OBSERVE_END"), NULL, 0);
 +    }
@@ -168,7 +170,10 @@ index 0000000..95d3706
 +    if (frame % (uint32_t)g_every == 0) write_frame(frame);
 +    if (g_dump_frame >= 0 && (long)frame >= g_dump_frame) {
 +        char name[1024];
-+        snprintf(name, sizeof name, "%s.dump", getenv("RA2_OBSERVE"));
++        if (g_dump_every > 0)
++            snprintf(name, sizeof name, "%s.dump.%u", getenv("RA2_OBSERVE"), frame);
++        else
++            snprintf(name, sizeof name, "%s.dump", getenv("RA2_OBSERVE"));
 +        FILE *f = fopen(name, "w");
 +        if (f) {
 +            fprintf(f, "# frame %u\n", frame);
@@ -189,7 +194,7 @@ index 0000000..95d3706
 +            }
 +            fclose(f);
 +        }
-+        g_dump_frame = -1;
++        g_dump_frame = g_dump_every > 0 ? (long)frame + g_dump_every : -1;
 +    }
 +    fflush(g_out);
 +    if (g_end >= 0 && (long)frame >= g_end) {

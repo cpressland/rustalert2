@@ -74,8 +74,20 @@ game's bit for bit without floating point in the simulation.
 
 No single fixed corridor of those blocks gives the observed route with
 the traced cell search: one that stops the early diagonal also rules out
-a cell the unit later crosses. So the route is likely re-planned on the
-way, or tidied by the passes above. `[hypothesis]`
+a cell the unit later crosses. `[observed]`
+
+Dumping the unit every two frames shows how the route is held: a list of
+directions in the unit (`UnitClass +0x5E0`, ended by −1), planned once at
+the start and **kept to about 12 steps**: NW, N, N, then nine NW, ending
+at (37,38), which is the first 12 steps of a 15-step route to the MCV's
+cell. Steps come off the front as the unit drives, one ahead of the one
+in progress (for the drive tracks). It isn't re-planned on the way.
+`[observed]`
+
+So the N, N early in the route comes from the planning itself, most
+likely the tidying pass `0x0042B7F0`, which walks the route in windows of
+up to 20 steps and re-solves stretches through `0x0042BCA0` and
+`0x0042BE20`. `[hypothesis]`
 
 
 Without the corridor, the A* from (47,50) to (35,35) on open ground goes
