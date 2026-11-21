@@ -13,3 +13,5 @@
 #![deny(clippy::float_arithmetic)]
 
 pub mod coords;
+pub mod rng;
+pub mod tick;

@@ -52,7 +52,7 @@ their art ships in); those are reported, not drawn.
 
 | System | Note | Status |
 |---|---|---|
-| Ticks, game speed and RNG | | Not started |
+| Ticks, game speed and RNG | [tick.md](tick.md) | Implemented |
 | Rules tables | | Not started |
 | Object model and missions | | Not started |
 | Pathfinding and occupancy | | Not started |
