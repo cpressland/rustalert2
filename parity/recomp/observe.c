@@ -6,7 +6,8 @@
  *   RA2_OBSERVE_EVERY=N     log every Nth frame (default every frame)
  *   RA2_OBSERVE_END=N       at game frame N, log it and exit the game
  *   RA2_OBSERVE_DUMP=N      at game frame N, also dump raw house and object
- *                           memory to path.dump, to find field offsets
+ *                           memory, and the map's per-cell zone records, to
+ *                           path.dump
  */
 #include <stdint.h>
 #include <stdio.h>
@@ -141,6 +142,19 @@ void ra2_observe_tick(void) {
             fprintf(f, "# frame %u\n", frame);
             dump_vector(f, "house", HOUSES_VA, 0x1000);
             dump_vector(f, "techno", TECHNOS_VA, 0x800);
+            {
+                /* The map's per-cell records (10 bytes: zone ids by level,
+                   then two more words). Cell index = y * stride + x. */
+                uint32_t map = 0x87F7E8u, tbl = rd32(map + 0x70), n = rd32(map + 0x6C);
+                uint32_t a = rd32(map + 0xF4), b = rd32(map + 0xF8);
+                fprintf(f, "# zones table %08X cells %u f4 %u f8 %u\n", tbl, n, a, b);
+                for (uint32_t i = 0; i < n && tbl; i++) {
+                    const uint8_t *r = GUEST_PTR(tbl + 10 * i);
+                    int16_t z[5]; memcpy(z, r, 10);
+                    if (z[0] || z[1] || z[2] || z[3] || z[4])
+                        fprintf(f, "zone %u %d %d %d %d %d\n", i, z[0], z[1], z[2], z[3], z[4]);
+                }
+            }
             fclose(f);
         }
         g_dump_frame = -1;

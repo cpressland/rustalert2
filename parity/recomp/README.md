@@ -42,7 +42,7 @@ The observer reads environment variables:
 | `RA2_OBSERVE=path` | write the log to `path` |
 | `RA2_OBSERVE_EVERY=N` | log every Nth frame (default: every frame) |
 | `RA2_OBSERVE_END=N` | log frame N, then exit the game |
-| `RA2_OBSERVE_DUMP=N` | at frame N, also dump raw house and object memory to `path.dump` (how the field offsets were found) |
+| `RA2_OBSERVE_DUMP=N` | at frame N, also dump raw house and object memory, and every cell's zone record (`zone <index> <level 0> <level 1> <level 2> <w3> <w4>`, index `y × (w + h + 1) + x`), to `path.dump` |
 
 `parity record` sets these, lays out a game folder and drives the menus, so
 normally you don't run the recomp by hand:

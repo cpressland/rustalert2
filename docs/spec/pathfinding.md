@@ -31,8 +31,12 @@ How a unit's route is found. Moving along it is in locomotors.md.
 3. The found route is then tidied (`0x0042B210` straightens diagonal
    zig-zags; `0x0042B7F0` does more). `[recomp]` (not yet traced)
 
-Each cell has a 10-byte record in a map table (map object `+0x70`) whose
-first word is its zone. How zones are built is #108.
+Each cell has a 10-byte record in a map table (map object `+0x70`,
+indexed `y × (w + h + 1) + x`) holding its zone at three levels. On open
+ground, zones are aligned square blocks: 2×2 cells at level 0, 4×4 at
+level 1 and 8×8 at level 2, clipped to the playable diamond. `[observed]`
+(observer zone dump of a 50×50 flat map) How they split on real terrain,
+and how the corridor is searched, is #108.
 
 ### The cell-level A*
 
@@ -67,6 +71,12 @@ square root and the roundings in integers, so the routes match the
 game's bit for bit without floating point in the simulation.
 
 ### What the logs show
+
+No single fixed corridor of those blocks gives the observed route with
+the traced cell search: one that stops the early diagonal also rules out
+a cell the unit later crosses. So the route is likely re-planned on the
+way, or tidied by the passes above. `[hypothesis]`
+
 
 Without the corridor, the A* from (47,50) to (35,35) on open ground goes
 twelve steps NW and then three N. The original's units go NW, N, N, then
