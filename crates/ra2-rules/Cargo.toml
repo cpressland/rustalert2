@@ -13,3 +13,6 @@ workspace = true
 
 [dependencies]
 ra2-formats.workspace = true
+
+[dev-dependencies]
+ra2-vfs.workspace = true
