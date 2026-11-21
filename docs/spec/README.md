@@ -56,8 +56,8 @@ their art ships in); those are reported, not drawn.
 | Rules tables | [rules.md](rules.md) | Implemented |
 | Object model and missions | [objects-model.md](objects-model.md) | Started |
 | Pathfinding and occupancy | | Not started |
-| Locomotors | | Not started |
-| Combat | | Not started |
+| Locomotors | [locomotors.md](locomotors.md) | Spec'd |
+| Combat | [combat.md](combat.md) | Spec'd |
 | Economy | | Not started |
 | Power and production | | Not started |
 | Special abilities | | Not started |

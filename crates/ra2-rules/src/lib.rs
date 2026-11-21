@@ -193,8 +193,11 @@ pub struct TechnoType {
     pub points: i32,
     /// In cells.
     pub sight: i32,
-    /// `Speed=` as written; its units belong to the locomotors (#40).
+    /// `Speed=` as written.
     pub speed: i32,
+    /// The speed the game keeps: `Speed=` clamped to 0–100, × 256 / 100,
+    /// capped at 255. `[recomp 0x0071465A]`
+    pub speed_fraction: i32,
     pub rot: i32,
     pub owner: Vec<String>,
     pub prerequisite: Vec<String>,
@@ -417,6 +420,9 @@ impl Rules {
                     points: int(s, "Points", 0),
                     sight: int(s, "Sight", 0),
                     speed: int(s, "Speed", 0),
+                    speed_fraction: s
+                        .and_then(|s| s.get("Speed"))
+                        .map_or(0, |v| (atoi(v).clamp(0, 100) * 256 / 100).min(255)),
                     rot: int(s, "ROT", 0),
                     owner: list(s, "Owner"),
                     prerequisite: list(s, "Prerequisite"),
@@ -599,6 +605,7 @@ mod tests {
             (Kind::Vehicle, 300, Armor::Heavy, 7)
         );
         assert_eq!(t.image, "GTNK");
+        assert_eq!(t.speed_fraction, 17, "7 x 256 / 100");
         assert_eq!(t.owner, ["British", "French"]);
         let w = r.weapon(t.primary.unwrap());
         assert_eq!((w.damage, w.rof, w.range, w.burst), (65, 60, 1472, 1));
