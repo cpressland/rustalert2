@@ -56,6 +56,75 @@ fn fs(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 }
 ";
 
+const SPRITE_SHADER: &str = r"
+struct Frame {
+    // The world texture's origin (world pixels) and size.
+    origin: vec2<f32>,
+    size: vec2<f32>,
+};
+@group(0) @binding(0) var atlas: texture_2d<u32>;
+@group(0) @binding(1) var palettes: texture_2d<f32>;
+@group(0) @binding(2) var<uniform> frame: Frame;
+
+struct Out {
+    @builtin(position) pos: vec4<f32>,
+    @location(0) local: vec2<f32>,
+    @location(1) @interpolate(flat) src: vec2<u32>,
+    @location(2) @interpolate(flat) row: u32,
+};
+
+@vertex
+fn vs(
+    @builtin(vertex_index) v: u32,
+    @location(0) dest: vec4<f32>,
+    @location(1) src: vec2<u32>,
+    @location(2) row: u32,
+) -> Out {
+    var corners = array<vec2<f32>, 6>(
+        vec2<f32>(0.0, 0.0), vec2<f32>(1.0, 0.0), vec2<f32>(0.0, 1.0),
+        vec2<f32>(0.0, 1.0), vec2<f32>(1.0, 0.0), vec2<f32>(1.0, 1.0),
+    );
+    let local = corners[v] * dest.zw;
+    let texel = dest.xy + local - frame.origin;
+    var o: Out;
+    o.pos = vec4<f32>(texel.x / frame.size.x * 2.0 - 1.0, 1.0 - texel.y / frame.size.y * 2.0, 0.0, 1.0);
+    o.local = local;
+    o.src = src;
+    o.row = row;
+    return o;
+}
+
+@fragment
+fn fs(o: Out) -> @location(0) vec4<f32> {
+    let idx = textureLoad(atlas, o.src + vec2<u32>(floor(o.local)), 0).r;
+    if (idx == 0u) {
+        discard;
+    }
+    return textureLoad(palettes, vec2<u32>(idx, o.row), 0);
+}
+
+// Shadows darken what's beneath through the blend (by 127/255, which
+// rounds to the CPU's halving for every byte); index 1 marks them.
+@fragment
+fn fs_shadow(o: Out) -> @location(0) vec4<f32> {
+    let idx = textureLoad(atlas, o.src + vec2<u32>(floor(o.local)), 0).r;
+    if (idx != 1u) {
+        discard;
+    }
+    // (Touch the palettes so both pipelines share one bind group layout.)
+    let rows = f32(textureDimensions(palettes).y);
+    return vec4<f32>(1.0, 1.0, 1.0, 1.0) + vec4<f32>(0.0 * rows);
+}
+";
+
+/// A running game's frame: the backdrop when it changed, and the sprites
+/// to draw over it on the GPU.
+#[derive(Debug)]
+pub struct LiveFrame {
+    pub backdrop: Option<Canvas>,
+    pub sprites: crate::sprites::Sprites,
+}
+
 /// Something that can draw the map for a set of layers.
 pub trait Composer {
     fn compose(&mut self, layers: Layers) -> Canvas;
@@ -63,6 +132,13 @@ pub trait Composer {
     /// For a running game: advance by `elapsed` wall time and return the
     /// new frame, if it changed. Static maps return `None`.
     fn frame(&mut self, _layers: Layers, _elapsed: std::time::Duration) -> Option<Canvas> {
+        None
+    }
+
+    /// For a running game drawn on the GPU: advance by `elapsed` and return
+    /// the sprites (and the backdrop, when it changed). Preferred over
+    /// [`Composer::frame`] when it returns `Some`.
+    fn live_frame(&mut self, _layers: Layers, _elapsed: std::time::Duration) -> Option<LiveFrame> {
         None
     }
 
@@ -166,9 +242,23 @@ struct Renderer {
     uniforms: wgpu::Buffer,
     bind_group: Option<wgpu::BindGroup>,
     texture_size: (u32, u32),
+    /// The map as composed on the CPU, and the world texture the frame is
+    /// built in (the backdrop copied, then sprites drawn over it) and the
+    /// camera pass samples.
+    backdrop: Option<wgpu::Texture>,
+    world: Option<wgpu::Texture>,
+    /// The canvas's world-pixel origin, and whether it was uploaded at
+    /// full size (sprites need that).
+    origin: (i32, i32),
+    full_size: bool,
+    sprite: wgpu::RenderPipeline,
+    shadow: wgpu::RenderPipeline,
+    frame_uniforms: wgpu::Buffer,
 }
 
 impl Renderer {
+    // GPU setup is long but flat: pipelines and buffers, one after another.
+    #[allow(clippy::too_many_lines)]
     fn new(device: &wgpu::Device, format: wgpu::TextureFormat) -> Renderer {
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("viewer"),
@@ -206,49 +296,132 @@ impl Renderer {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
+        let sprite_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("sprites"),
+            source: wgpu::ShaderSource::Wgsl(SPRITE_SHADER.into()),
+        });
+        let instance = Some(wgpu::VertexBufferLayout {
+            array_stride: 32,
+            step_mode: wgpu::VertexStepMode::Instance,
+            attributes: &wgpu::vertex_attr_array![0 => Float32x4, 1 => Uint32x2, 2 => Uint32],
+        });
+        let make = |entry: &str, blend: Option<wgpu::BlendState>| {
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some(entry),
+                layout: None,
+                vertex: wgpu::VertexState {
+                    module: &sprite_module,
+                    entry_point: Some("vs"),
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                    buffers: std::slice::from_ref(&instance),
+                },
+                primitive: wgpu::PrimitiveState::default(),
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState::default(),
+                fragment: Some(wgpu::FragmentState {
+                    module: &sprite_module,
+                    entry_point: Some(entry),
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format: wgpu::TextureFormat::Rgba8Unorm,
+                        blend,
+                        write_mask: wgpu::ColorWrites::ALL,
+                    })],
+                }),
+                multiview_mask: None,
+                cache: None,
+            })
+        };
+        let darken = wgpu::BlendComponent {
+            src_factor: wgpu::BlendFactor::Zero,
+            dst_factor: wgpu::BlendFactor::Constant,
+            operation: wgpu::BlendOperation::Add,
+        };
+        let keep = wgpu::BlendComponent {
+            src_factor: wgpu::BlendFactor::Zero,
+            dst_factor: wgpu::BlendFactor::One,
+            operation: wgpu::BlendOperation::Add,
+        };
+        let sprite = make("fs", None);
+        let shadow = make(
+            "fs_shadow",
+            Some(wgpu::BlendState {
+                color: darken,
+                alpha: keep,
+            }),
+        );
+        let frame_uniforms = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("frame"),
+            size: 16,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
         Renderer {
             pipeline,
             sampler,
             uniforms,
             bind_group: None,
             texture_size: (1, 1),
+            backdrop: None,
+            world: None,
+            origin: (0, 0),
+            full_size: false,
+            sprite,
+            shadow,
+            frame_uniforms,
         }
     }
 
-    /// Upload a canvas, shrunk to fit the device's largest texture.
+    /// Upload a canvas, shrunk to fit the device's largest texture, as the
+    /// backdrop and the starting world texture.
     fn upload(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, canvas: &Canvas) {
-        let (pixels, w, h, _) = fit(canvas, device.limits().max_texture_dimension_2d);
+        let (pixels, w, h, scale) = fit(canvas, device.limits().max_texture_dimension_2d);
         let size = wgpu::Extent3d {
             width: w,
             height: h,
             depth_or_array_layers: 1,
         };
-        let texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("map"),
-            size,
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8Unorm,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
-        });
-        queue.write_texture(
-            wgpu::TexelCopyTextureInfo {
-                texture: &texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-                aspect: wgpu::TextureAspect::All,
-            },
-            &pixels,
-            wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(w * 4),
-                rows_per_image: Some(h),
-            },
-            size,
+        let make = |label, usage| {
+            device.create_texture(&wgpu::TextureDescriptor {
+                label: Some(label),
+                size,
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8Unorm,
+                usage,
+                view_formats: &[],
+            })
+        };
+        let backdrop = make(
+            "backdrop",
+            wgpu::TextureUsages::COPY_SRC | wgpu::TextureUsages::COPY_DST,
         );
-        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let world = make(
+            "world",
+            wgpu::TextureUsages::TEXTURE_BINDING
+                | wgpu::TextureUsages::COPY_DST
+                | wgpu::TextureUsages::COPY_SRC
+                | wgpu::TextureUsages::RENDER_ATTACHMENT,
+        );
+        for texture in [&backdrop, &world] {
+            queue.write_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::All,
+                },
+                &pixels,
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(w * 4),
+                    rows_per_image: Some(h),
+                },
+                size,
+            );
+        }
+        let view = world.create_view(&wgpu::TextureViewDescriptor::default());
         self.bind_group = Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("map"),
             layout: &self.pipeline.get_bind_group_layout(0),
@@ -268,6 +441,193 @@ impl Renderer {
             ],
         }));
         self.texture_size = (w, h);
+        self.backdrop = Some(backdrop);
+        self.world = Some(world);
+        self.origin = (canvas.origin_x, canvas.origin_y);
+        #[allow(clippy::float_cmp)]
+        {
+            self.full_size = scale == 1.0;
+        }
+    }
+
+    /// Build the frame in the world texture: the backdrop, then `sprites`
+    /// in order on top. Skipped (the backdrop shows alone) if the canvas
+    /// had to be shrunk to fit.
+    #[allow(clippy::too_many_lines)]
+    fn draw_sprites(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        encoder: &mut wgpu::CommandEncoder,
+        sprites: &crate::sprites::Sprites,
+    ) {
+        let (Some(backdrop), Some(world)) = (&self.backdrop, &self.world) else {
+            return;
+        };
+        let size = wgpu::Extent3d {
+            width: self.texture_size.0,
+            height: self.texture_size.1,
+            depth_or_array_layers: 1,
+        };
+        encoder.copy_texture_to_texture(backdrop.as_image_copy(), world.as_image_copy(), size);
+        let max = device.limits().max_texture_dimension_2d;
+        if !self.full_size
+            || sprites.draws.is_empty()
+            || sprites.atlas_height == 0
+            || sprites.atlas_height > max
+        {
+            return;
+        }
+        let texture = |label, format, (w, h): (u32, u32), data: &[u8], bytes: u32| {
+            let t = device.create_texture(&wgpu::TextureDescriptor {
+                label: Some(label),
+                size: wgpu::Extent3d {
+                    width: w,
+                    height: h,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                view_formats: &[],
+            });
+            queue.write_texture(
+                t.as_image_copy(),
+                data,
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(w * bytes),
+                    rows_per_image: Some(h),
+                },
+                wgpu::Extent3d {
+                    width: w,
+                    height: h,
+                    depth_or_array_layers: 1,
+                },
+            );
+            t
+        };
+        let atlas = texture(
+            "atlas",
+            wgpu::TextureFormat::R8Uint,
+            (crate::sprites::ATLAS_WIDTH, sprites.atlas_height),
+            &sprites.atlas,
+            1,
+        );
+        let rows = u32::try_from(sprites.palettes.len() / 256)
+            .unwrap_or(1)
+            .max(1);
+        let palette_bytes: Vec<u8> = sprites.palettes.iter().flatten().copied().collect();
+        let palettes = texture(
+            "palettes",
+            wgpu::TextureFormat::Rgba8Unorm,
+            (256, rows),
+            &palette_bytes,
+            4,
+        );
+        #[allow(clippy::cast_precision_loss)]
+        let frame = [
+            self.origin.0 as f32,
+            self.origin.1 as f32,
+            self.texture_size.0 as f32,
+            self.texture_size.1 as f32,
+        ];
+        queue.write_buffer(
+            &self.frame_uniforms,
+            0,
+            &frame
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect::<Vec<u8>>(),
+        );
+        let mut instances = Vec::with_capacity(sprites.draws.len() * 32);
+        for d in &sprites.draws {
+            #[allow(clippy::cast_precision_loss)]
+            for v in [d.x as f32, d.y as f32, d.width as f32, d.height as f32] {
+                instances.extend_from_slice(&v.to_le_bytes());
+            }
+            for v in [d.atlas_x, d.atlas_y, d.palette, 0] {
+                instances.extend_from_slice(&v.to_le_bytes());
+            }
+        }
+        let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("sprites"),
+            size: instances.len() as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        queue.write_buffer(&instance_buffer, 0, &instances);
+        let atlas_view = atlas.create_view(&wgpu::TextureViewDescriptor::default());
+        let palette_view = palettes.create_view(&wgpu::TextureViewDescriptor::default());
+        let bind = |pipeline: &wgpu::RenderPipeline| {
+            device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("sprites"),
+                layout: &pipeline.get_bind_group_layout(0),
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&atlas_view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::TextureView(&palette_view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: self.frame_uniforms.as_entire_binding(),
+                    },
+                ],
+            })
+        };
+        let (sprite_group, shadow_group) = (bind(&self.sprite), bind(&self.shadow));
+        let target = world.create_view(&wgpu::TextureViewDescriptor::default());
+        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("sprites"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &target,
+                depth_slice: None,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Load,
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
+        });
+        pass.set_vertex_buffer(0, instance_buffer.slice(..));
+        pass.set_blend_constant(wgpu::Color {
+            r: 127.0 / 255.0,
+            g: 127.0 / 255.0,
+            b: 127.0 / 255.0,
+            a: 1.0,
+        });
+        // Runs of shadows and of plain sprites, in drawing order.
+        let mut start = 0;
+        while start < sprites.draws.len() {
+            let shadow = sprites.draws[start].shadow;
+            let end = sprites.draws[start..]
+                .iter()
+                .position(|d| d.shadow != shadow)
+                .map_or(sprites.draws.len(), |n| start + n);
+            if shadow {
+                pass.set_pipeline(&self.shadow);
+                pass.set_bind_group(0, &shadow_group, &[]);
+            } else {
+                pass.set_pipeline(&self.sprite);
+                pass.set_bind_group(0, &sprite_group, &[]);
+            }
+            let (s0, s1) = (
+                u32::try_from(start).unwrap_or(u32::MAX),
+                u32::try_from(end).unwrap_or(u32::MAX),
+            );
+            pass.draw(0..6, s0..s1);
+            start = end;
+        }
     }
 
     /// The camera that shows the whole texture in a viewport.
@@ -340,6 +700,21 @@ pub fn snapshot(
     camera: Option<Camera>,
     scaling: Scaling,
 ) -> Result<Vec<u8>, String> {
+    snapshot_frame(canvas, None, width, height, camera, scaling)
+}
+
+/// As [`snapshot`], with `sprites` drawn over the canvas on the GPU first.
+///
+/// # Errors
+/// If there's no GPU adapter.
+pub fn snapshot_frame(
+    canvas: &Canvas,
+    sprites: Option<&crate::sprites::Sprites>,
+    width: u32,
+    height: u32,
+    camera: Option<Camera>,
+    scaling: Scaling,
+) -> Result<Vec<u8>, String> {
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle());
     let adapter =
         pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
@@ -374,6 +749,9 @@ pub fn snapshot(
         mapped_at_creation: false,
     });
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+    if let Some(sprites) = sprites {
+        renderer.draw_sprites(&device, &queue, &mut encoder, sprites);
+    }
     renderer.encode(
         &queue,
         &mut encoder,
@@ -414,6 +792,63 @@ pub fn snapshot(
     Ok(out)
 }
 
+/// Build a frame in the world texture (the canvas, then `sprites` drawn on
+/// the GPU) and read it back at world scale, to check against the CPU.
+///
+/// # Errors
+/// If there's no GPU adapter.
+pub fn world_pixels(canvas: &Canvas, sprites: &crate::sprites::Sprites) -> Result<Vec<u8>, String> {
+    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle());
+    let adapter =
+        pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
+            .map_err(|e| e.to_string())?;
+    let (device, queue) =
+        pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
+            .map_err(|e| e.to_string())?;
+    let mut renderer = Renderer::new(&device, wgpu::TextureFormat::Rgba8Unorm);
+    renderer.upload(&device, &queue, canvas);
+    let (w, h) = renderer.texture_size;
+    let row = (w * 4).div_ceil(256) * 256;
+    let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("readback"),
+        size: u64::from(row * h),
+        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    });
+    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+    renderer.draw_sprites(&device, &queue, &mut encoder, sprites);
+    let world = renderer.world.as_ref().ok_or("no world texture")?;
+    encoder.copy_texture_to_buffer(
+        world.as_image_copy(),
+        wgpu::TexelCopyBufferInfo {
+            buffer: &buffer,
+            layout: wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(row),
+                rows_per_image: Some(h),
+            },
+        },
+        wgpu::Extent3d {
+            width: w,
+            height: h,
+            depth_or_array_layers: 1,
+        },
+    );
+    queue.submit([encoder.finish()]);
+    let slice = buffer.slice(..);
+    slice.map_async(wgpu::MapMode::Read, |_| {});
+    device
+        .poll(wgpu::PollType::wait_indefinitely())
+        .map_err(|e| e.to_string())?;
+    let data = slice.get_mapped_range().map_err(|e| e.to_string())?;
+    let mut out = Vec::with_capacity((w * h * 4) as usize);
+    for y in 0..h {
+        let start = (y * row) as usize;
+        out.extend_from_slice(&data[start..start + (w * 4) as usize]);
+    }
+    Ok(out)
+}
+
 struct Gpu {
     window: Arc<Window>,
     surface: wgpu::Surface<'static>,
@@ -421,6 +856,8 @@ struct Gpu {
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     renderer: Renderer,
+    /// The latest live frame's sprites, drawn over the backdrop each frame.
+    sprites: Option<crate::sprites::Sprites>,
 }
 
 struct App<C> {
@@ -477,6 +914,7 @@ impl<C: Composer> App<C> {
             queue,
             config,
             renderer,
+            sprites: None,
         });
         self.recompose(true);
         Ok(())
@@ -533,6 +971,10 @@ impl<C: Composer> App<C> {
         let mut encoder = gpu
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        if let Some(sprites) = &gpu.sprites {
+            gpu.renderer
+                .draw_sprites(&gpu.device, &gpu.queue, &mut encoder, sprites);
+        }
         gpu.renderer.encode(
             &gpu.queue,
             &mut encoder,
@@ -600,7 +1042,15 @@ impl<C: Composer> App<C> {
         let now = std::time::Instant::now();
         let elapsed = self.last_frame.map_or_else(Default::default, |t| now - t);
         self.last_frame = Some(now);
-        if let Some(canvas) = self.composer.frame(self.layers, elapsed)
+        if let Some(frame) = self.composer.live_frame(self.layers, elapsed) {
+            if let Some(gpu) = self.gpu.as_mut() {
+                if let Some(backdrop) = &frame.backdrop {
+                    gpu.renderer.upload(&gpu.device, &gpu.queue, backdrop);
+                }
+                gpu.sprites = Some(frame.sprites);
+                gpu.window.request_redraw();
+            }
+        } else if let Some(canvas) = self.composer.frame(self.layers, elapsed)
             && let Some(gpu) = self.gpu.as_mut()
         {
             gpu.renderer.upload(&gpu.device, &gpu.queue, &canvas);
@@ -736,6 +1186,108 @@ mod tests {
                 // No GPU here (as on CI runners): nothing to check.
                 Err(e) => eprintln!("skipped: {e}"),
             }
+        }
+    }
+
+    /// The GPU sprite path against the CPU canvas: overlapping sprites in
+    /// two palettes under two cell lights, and a shadow, over a patterned
+    /// background, byte for byte.
+    #[test]
+    fn gpu_sprites_match_the_cpu_canvas() {
+        use crate::lighting::{Lamp, Lighting};
+        use crate::scene::{PaletteKind, Piece};
+        use crate::sprites::Sprites;
+        let mut background = Canvas::new(-20, -10, 60, 40, [0, 0, 0, 255]);
+        for y in -10..40 {
+            for x in -20..60 {
+                let v = |n: i32| u8::try_from(n.rem_euclid(256)).unwrap();
+                background.put(x, y, [v(x * 9 + 3), v(y * 7 + 1), v(x * y)]);
+            }
+        }
+        let palette = |kind: PaletteKind| {
+            let mut p = [[0u8; 3]; 256];
+            for (i, c) in p.iter_mut().enumerate() {
+                let i = u8::try_from(i).unwrap();
+                *c = match kind {
+                    PaletteKind::Iso => [i, i.wrapping_mul(3), 255 - i],
+                    _ => [255 - i, i, i.wrapping_mul(7)],
+                };
+            }
+            p
+        };
+        let light = Lighting {
+            ambient: 0.8,
+            lamps: vec![Lamp {
+                x: 128,
+                y: 128,
+                range: 2048,
+                intensity: 300,
+                tint: [80, 0, 20],
+            }],
+            ..Lighting::default()
+        };
+        let pattern = |w: usize, h: usize, k: usize| -> Vec<u8> {
+            (0..w * h)
+                .map(|i| {
+                    if (i + k).is_multiple_of(5) {
+                        0
+                    } else {
+                        u8::try_from((i * 7 + k) % 255 + 1).unwrap()
+                    }
+                })
+                .collect()
+        };
+        let pieces = vec![
+            Piece {
+                order: (2, 0, 0),
+                x: -5,
+                y: 0,
+                width: 20,
+                pixels: pattern(20, 12, 1),
+                palette: PaletteKind::Iso,
+                shadow: false,
+                at: (0, 0, 0),
+            },
+            Piece {
+                order: (1, 0, 0),
+                x: 0,
+                y: 4,
+                width: 18,
+                pixels: vec![1; 18 * 9],
+                palette: PaletteKind::Theater,
+                shadow: true,
+                at: (0, 0, 0),
+            },
+            Piece {
+                order: (3, 0, 0),
+                x: 8,
+                y: 6,
+                width: 25,
+                pixels: pattern(25, 15, 3),
+                palette: PaletteKind::Theater,
+                shadow: false,
+                at: (5, 2, 1),
+            },
+        ];
+        // The CPU reference, as scene::draw composites.
+        let mut cpu = background.clone();
+        let mut sorted = pieces.clone();
+        sorted.sort_by_key(|p| p.order);
+        for p in &sorted {
+            let lit = Lighting::lit(&palette(p.palette), light.cell(p.at.0, p.at.1, p.at.2));
+            cpu.blit(p.x, p.y, p.width, &p.pixels, &lit, p.shadow);
+        }
+        let sprites = Sprites::build(pieces, &palette, &light);
+        match world_pixels(&background, &sprites) {
+            Ok(gpu) => {
+                let differ = gpu
+                    .chunks(4)
+                    .zip(cpu.rgba.chunks(4))
+                    .filter(|(a, b)| a != b)
+                    .count();
+                assert_eq!(differ, 0, "{differ} pixels differ");
+            }
+            Err(e) => eprintln!("skipped: {e}"),
         }
     }
 
