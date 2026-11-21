@@ -6,8 +6,7 @@
  *   RA2_OBSERVE_EVERY=N     log every Nth frame (default every frame)
  *   RA2_OBSERVE_END=N       at game frame N, log it and exit the game
  *   RA2_OBSERVE_DUMP=N      at game frame N, also dump raw house and object
- *                           memory, and the map's per-cell zone records, to
- *                           path.dump
+ *                           memory to path.dump, to find field offsets
  */
 #include <stdint.h>
 #include <stdio.h>
@@ -43,6 +42,7 @@ static const char *class_name(uint32_t obj) {
 
 static FILE *g_out;
 static long g_dump_frame = -1;
+static long g_dump_every = 0;
 static int g_inited;
 static uint32_t g_last_frame = 0xFFFFFFFFu;
 
@@ -125,6 +125,7 @@ void ra2_observe_tick(void) {
         g_inited = 1;
         if (path) g_out = fopen(path, "w");
         if (dump) g_dump_frame = strtol(dump, NULL, 0);
+        if (getenv("RA2_OBSERVE_DUMP_EVERY")) g_dump_every = strtol(getenv("RA2_OBSERVE_DUMP_EVERY"), NULL, 0);
         if (every && strtol(every, NULL, 0) > 0) g_every = strtol(every, NULL, 0);
         if (getenv("RA2_OBSERVE_END")) g_end = strtol(getenv("RA2_OBSERVE_END"), NULL, 0);
     }
@@ -136,7 +137,10 @@ void ra2_observe_tick(void) {
     if (frame % (uint32_t)g_every == 0) write_frame(frame);
     if (g_dump_frame >= 0 && (long)frame >= g_dump_frame) {
         char name[1024];
-        snprintf(name, sizeof name, "%s.dump", getenv("RA2_OBSERVE"));
+        if (g_dump_every > 0)
+            snprintf(name, sizeof name, "%s.dump.%u", getenv("RA2_OBSERVE"), frame);
+        else
+            snprintf(name, sizeof name, "%s.dump", getenv("RA2_OBSERVE"));
         FILE *f = fopen(name, "w");
         if (f) {
             fprintf(f, "# frame %u\n", frame);
@@ -157,7 +161,7 @@ void ra2_observe_tick(void) {
             }
             fclose(f);
         }
-        g_dump_frame = -1;
+        g_dump_frame = g_dump_every > 0 ? (long)frame + g_dump_every : -1;
     }
     fflush(g_out);
     if (g_end >= 0 && (long)frame >= g_end) {
