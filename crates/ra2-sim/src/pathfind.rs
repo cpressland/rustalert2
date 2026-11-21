@@ -221,8 +221,8 @@ impl Heap {
 /// order, skip it if blocked or already reached cheaply enough, else make
 /// a node whose cost adds 1 plus the direction's bias and whose estimate
 /// adds the straight-line distance to the goal. The best new neighbour is
-/// kept aside to expand next unless the heap's top is at least as good;
-/// the rest go on the heap. The search stops when it makes the goal's node.
+/// expanded next; the rest go on the heap, which is used when an
+/// expansion adds nothing. The search stops when it makes the goal's node.
 /// `[recomp 0x00429A90]`
 pub fn find_path(
     start: (i16, i16),
@@ -290,12 +290,12 @@ pub fn find_path(
                 return Some(path);
             }
         }
+        // The best new neighbour is expanded next whenever there is one;
+        // the heap is only drawn on when an expansion adds nothing. The
+        // game's own dumps of a search show this (every reached cell and
+        // cost match), though the code reads as if the heap's top could
+        // win when better. `[observed]`
         current = match (aside, heap.top()) {
-            (Some(a), Some(t)) if nodes[t].f <= nodes[a].f => {
-                heap.0[1] = a;
-                heap.sift(&nodes, 1);
-                Some(t)
-            }
             (Some(a), _) => Some(a),
             (None, Some(t)) => {
                 let last = heap.0.pop().expect("non-empty");
@@ -360,6 +360,30 @@ mod tests {
             dirs((46, 47), &find_path((46, 47), (35, 35), &open).unwrap()),
             "NW,NW,NW,NW,NW,NW,NW,NW,NW,NW,NW,N"
         );
+    }
+
+    /// The corridor the game marked for grizzly-hunts-mcv's Grizzly (2×2
+    /// level-0 zones, dumped from the original) and the route its search
+    /// found inside it, every reached cell's cost matching bit for bit.
+    #[test]
+    fn inside_the_games_corridor_the_route_is_the_games() {
+        let blocks = [
+            (46, 50),
+            (46, 48),
+            (46, 46),
+            (44, 44),
+            (42, 42),
+            (40, 40),
+            (38, 38),
+            (36, 38),
+        ];
+        let allowed = |c: (i16, i16)| {
+            blocks
+                .iter()
+                .any(|&(bx, by)| (bx..bx + 2).contains(&c.0) && (by..by + 2).contains(&c.1))
+        };
+        let p = find_path((47, 50), (37, 38), &allowed).unwrap();
+        assert_eq!(dirs((47, 50), &p), "NW,N,N,N,NW,NW,NW,NW,NW,NW,NW,NW,W");
     }
 
     #[test]

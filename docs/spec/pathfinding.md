@@ -57,10 +57,11 @@ and how the corridor is searched, is #108.
 - A cell already reached is skipped unless its recorded cost is at least
   the current node's cost + 1.009. `[recomp]`
 - Of each expansion's new nodes, the best (strictly lowest estimate; the
-  first on ties) is kept aside and the rest go on a binary heap. The next
-  node expanded is the one kept aside, unless the heap's top is at least
-  as good: then the heap's top is expanded and the kept node takes its
-  place in the heap. `[recomp]`
+  first on ties) is kept aside and the rest go on a binary heap. The node
+  kept aside is expanded next; the heap is drawn on only when an
+  expansion adds nothing. `[observed]` (the code at `0x0042A1B3` reads as
+  if the heap's top could win when better, but the game's own search
+  dumps match the always-kept-aside rule in every reached cell and cost)
 - The heap moves an entry up only while its parent is strictly worse, and
   down only to a strictly better child, preferring the left. `[recomp]`
 - The search ends when it makes the goal's node, and gives up after
@@ -69,6 +70,28 @@ and how the corridor is searched, is #108.
 We hold the single-precision values as their bits and do the adds, the
 square root and the roundings in integers, so the routes match the
 game's bit for bit without floating point in the simulation.
+
+### Checked against the game's own searches
+
+The observer can dump, right after a unit plans, the zones its search
+marked as the corridor at each level and every cell its cell search
+reached with its cost (`RA2_OBSERVE_DUMP`). For grizzly-hunts-mcv's
+Grizzly the corridor is a staircase of level-0 blocks, and our search
+inside it reaches the same 33 cells with the same costs, bit for bit, and
+finds the same route: NW, N, N, N, 8 × NW, W to (37,38). `[observed]`
+
+Still to settle (#108):
+
+- **The start.** Start-cell neighbours outside the corridor are recorded
+  as reached but not expanded; but in two other starts the game also
+  passed over an in-corridor neighbour with a better estimate (it went NE
+  then NW where N was best), probably the facing check at `0x00429C8C`.
+- **The destination.** The search's goal isn't the target's cell but a
+  cell part-way, (37,38) here; the stored route then ends at the first
+  cell strictly within range.
+- **Building the corridor** (the zone-level search) and the tidying passes,
+  which turned the found route NW, N, N, N, 8 × NW, W into the stored
+  NW, N, N, 9 × NW (one N and the last W merged into a diagonal).
 
 ### What the logs show
 
