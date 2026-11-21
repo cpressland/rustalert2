@@ -14,6 +14,7 @@
 
 pub mod coords;
 pub mod hunt;
+pub mod pathfind;
 pub mod rng;
 pub mod tick;
 pub mod world;
