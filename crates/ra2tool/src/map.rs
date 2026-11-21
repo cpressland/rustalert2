@@ -296,7 +296,14 @@ pub(crate) fn view(
             None,
         );
         let (w, h) = (1280, 800);
-        let px = ra2_render::viewer::snapshot(&canvas, w, h, None).map_err(io::Error::other)?;
+        let px = ra2_render::viewer::snapshot(
+            &canvas,
+            w,
+            h,
+            None,
+            ra2_render::viewer::Scaling::default(),
+        )
+        .map_err(io::Error::other)?;
         write_rgba(out, w, h, &px)?;
         println!("{file}: {w}x{h} GPU snapshot written to {}", out.display());
         return Ok(true);

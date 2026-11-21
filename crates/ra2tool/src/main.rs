@@ -162,7 +162,8 @@ enum MapCommand {
         game_dir: Option<PathBuf>,
     },
     /// Open a map in a window. Drag or arrows pan, scroll or +/- zoom, 0
-    /// resets; O, L and S toggle objects, lighting and shroud.
+    /// resets; O, L and S toggle objects, lighting and shroud; M cycles scaling
+    /// (nearest, integer, sharp bilinear); F or F11 toggles fullscreen.
     View {
         file: String,
         /// Start with the player's shroud on.
