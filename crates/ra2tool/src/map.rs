@@ -323,6 +323,98 @@ pub(crate) fn view(
 
 /// Draw a map to an image: terrain, objects, lighting and (optionally) the
 /// player's starting shroud.
+/// Draw every map the game ships (the M3 exit check): each through the
+/// whole composition, shrouded where the map names a player, optionally
+/// written as a small PNG.
+/// Returns whether every map drew.
+pub(crate) fn render_all(
+    game: Game,
+    game_dir: Option<&Path>,
+    scale: u32,
+    out: Option<&Path>,
+) -> io::Result<bool> {
+    use ra2_render::compose::{Layers, MapView};
+    let (rules, art) = if game == Game::YurisRevenge {
+        ("rulesmd.ini", "artmd.ini")
+    } else {
+        ("rules.ini", "art.ini")
+    };
+    let maps = all_maps(game, game_dir)?;
+    let mut missing: BTreeMap<String, usize> = BTreeMap::new();
+    let (mut drawn, mut failed) = (0usize, Vec::new());
+    let start = std::time::Instant::now();
+    for (label, data) in &maps {
+        // Each map mounts its own theater, so each gets a fresh file system.
+        let mut vfs = vfs(game, game_dir.map(Path::to_path_buf))?;
+        let t0 = std::time::Instant::now();
+        let mut view = match MapView::from_data(&mut vfs, label, data, rules, art) {
+            Ok(v) => v,
+            Err(e) => {
+                failed.push(format!("{label}: {e}"));
+                continue;
+            }
+        };
+        // Shroud only where the map names the player's house: multiplayer
+        // maps have none until a game starts.
+        let shroud = view.ini.get("Basic", "Player").is_some();
+        let (canvas, stats) = view.compose(
+            &vfs,
+            Layers {
+                shroud,
+                ..Layers::default()
+            },
+            None,
+        );
+        drawn += 1;
+        for (name, n) in &stats.scene.missing {
+            *missing.entry(name.clone()).or_default() += n;
+        }
+        if let Some(dir) = out {
+            std::fs::create_dir_all(dir)?;
+            let s = scale.max(1) as usize;
+            let (w, h) = (canvas.width as usize / s, canvas.height as usize / s);
+            let mut small = Vec::with_capacity(w * h * 4);
+            for y in 0..h {
+                for x in 0..w {
+                    let i = ((y * s) * canvas.width as usize + x * s) * 4;
+                    small.extend_from_slice(&canvas.rgba[i..i + 4]);
+                }
+            }
+            let name: String = label
+                .chars()
+                .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+                .collect();
+            write_rgba(
+                &dir.join(format!("{name}.png")),
+                u32::try_from(w).expect("fits"),
+                u32::try_from(h).expect("fits"),
+                &small,
+            )?;
+        }
+        println!(
+            "{label}: {} {}x{}, {} revealed, {:.0} ms",
+            view.map.theater,
+            view.map.size.width,
+            view.map.size.height,
+            stats.revealed,
+            t0.elapsed().as_secs_f64() * 1000.0
+        );
+    }
+    let mut missing: Vec<_> = missing.into_iter().collect();
+    missing.sort_by_key(|(_, n)| std::cmp::Reverse(*n));
+    println!(
+        "{drawn} of {} maps drawn in {:.1} s; {} failed; most-missed art {:?}",
+        maps.len(),
+        start.elapsed().as_secs_f64(),
+        failed.len(),
+        missing.iter().take(12).collect::<Vec<_>>()
+    );
+    for f in &failed {
+        println!("  {f}");
+    }
+    Ok(failed.is_empty())
+}
+
 pub(crate) fn render(
     game: Game,
     game_dir: Option<&Path>,

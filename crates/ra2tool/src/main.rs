@@ -131,6 +131,19 @@ enum MapCommand {
         #[arg(long)]
         game_dir: Option<PathBuf>,
     },
+    /// Draw every map the game ships (shrouded for missions): the M3 exit check.
+    RenderAll {
+        /// Also write each as a PNG here.
+        #[arg(short, long)]
+        out: Option<PathBuf>,
+        /// Shrink the PNGs by this factor.
+        #[arg(long, default_value_t = 4)]
+        scale: u32,
+        #[arg(long, value_enum, default_value = "yr")]
+        game: GameArg,
+        #[arg(long)]
+        game_dir: Option<PathBuf>,
+    },
     /// Summarise a map.
     Info {
         file: String,
@@ -434,6 +447,12 @@ fn main() -> ExitCode {
         }),
         Command::Map(cmd) => exit(match cmd {
             MapCommand::Check { game, game_dir } => map::check(game.into(), game_dir.as_deref()),
+            MapCommand::RenderAll {
+                out,
+                scale,
+                game,
+                game_dir,
+            } => map::render_all(game.into(), game_dir.as_deref(), scale, out.as_deref()),
             MapCommand::Render {
                 file,
                 out,

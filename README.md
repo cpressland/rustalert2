@@ -28,7 +28,7 @@ the game does, and reads every format the engine has so far:
 | `shp png / check` | sprites |
 | `vxl info / png / check` | voxel models and animations |
 | `tmp png / check` | theaters and terrain tiles |
-| `map info / preview / check` | scenarios |
+| `map info / preview / check / render-all` | scenarios; `render-all` draws every shipped map |
 | `map render / view` | draw a map (from the game, or a file on disk) to a PNG, or open it in a window (pan, zoom, layer toggles, scaling modes, fullscreen) |
 | `audio export / check` | sounds, music and the sound bank |
 | `font render / check / pcx` | the bitmap font and PCX art |

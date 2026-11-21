@@ -41,6 +41,13 @@ notes from [TEMPLATE.md](TEMPLATE.md).
 | Shroud and fog | [shroud.md](shroud.md) | Implemented |
 | Presenter: window and scaling | [presenter.md](presenter.md) | Implemented |
 
+The M3 exit check is `ra2tool map render-all`: every map the game ships
+(287 in Yuri's Revenge, from the archives and the loose `.mmx`/`.yro`
+files) is drawn through the whole composition, missions under their
+start-of-game shroud. All draw, in about 30 s. A handful of buildings have
+no art in some theaters (flags, guard shacks placed outside the theater
+their art ships in); those are reported, not drawn.
+
 ## Simulation (M4)
 
 | System | Note | Status |
