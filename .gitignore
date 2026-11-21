@@ -26,3 +26,6 @@
 *.[sS][aA][vV]
 *.[eE][xX][eE]
 *.[dD][lL][lL]
+
+# Personal Claude Code settings
+.claude/settings.local.json
