@@ -14,7 +14,7 @@ use ra2_parity::scenario::Scenario;
 use ra2_render::canvas::Canvas;
 use ra2_render::compose::{Layers, MapView};
 use ra2_render::scene::{Live, LiveKind};
-use ra2_render::viewer::{self, Composer};
+use ra2_render::viewer::{self, Composer, LiveFrame};
 use ra2_rules::{Kind, Rules};
 use ra2_sim::tick::{GameSpeed, Sim};
 use ra2_vfs::mount::Vfs;
@@ -100,38 +100,49 @@ impl Game {
             .collect()
     }
 
-    fn draw(&mut self, layers: Layers, blend: f32) -> Canvas {
+    /// The map without its own units, recomposed when the layers change.
+    /// Returns it when it changed.
+    fn backdrop(&mut self, layers: Layers) -> Option<Canvas> {
         let stale = self.backdrop.as_ref().is_none_or(|(l, _)| *l != layers);
-        if stale {
-            let (canvas, _) = self.view.compose(
-                &self.vfs,
-                Layers {
-                    technos: false,
-                    ..layers
-                },
-                None,
-            );
-            self.backdrop = Some((layers, canvas));
+        if !stale {
+            return None;
         }
+        let (canvas, _) = self.view.compose(
+            &self.vfs,
+            Layers {
+                technos: false,
+                ..layers
+            },
+            None,
+        );
+        self.backdrop = Some((layers, canvas.clone()));
+        Some(canvas)
+    }
+
+    fn sprites(&mut self, layers: Layers, blend: f32) -> ra2_render::sprites::Sprites {
         let live = self.live(blend);
-        let backdrop = &self.backdrop.as_ref().expect("drawn").1;
-        self.view
-            .draw_live(&self.vfs, backdrop, &live, layers.lighting)
+        self.view.live_sprites(&self.vfs, &live, layers.lighting)
     }
 }
 
 impl Composer for Game {
+    /// The backdrop alone: the units are drawn over it on the GPU.
     fn compose(&mut self, layers: Layers) -> Canvas {
-        let blend = self.step.blend();
-        self.draw(layers, blend)
+        self.backdrop(layers);
+        self.backdrop.as_ref().expect("composed").1.clone()
     }
 
-    fn frame(&mut self, layers: Layers, elapsed: Duration) -> Option<Canvas> {
+    fn live_frame(&mut self, layers: Layers, elapsed: Duration) -> Option<LiveFrame> {
         for _ in 0..self.step.advance(elapsed) {
             self.tick();
         }
-        let blend = self.step.blend();
-        Some(self.draw(layers, blend))
+        Some(LiveFrame {
+            backdrop: self.backdrop(layers),
+            sprites: {
+                let blend = self.step.blend();
+                self.sprites(layers, blend)
+            },
+        })
     }
 
     fn is_live(&self) -> bool {
@@ -170,10 +181,20 @@ fn snapshot(game: &mut Game, frames: u32, out: &PathBuf) -> io::Result<()> {
     for _ in 0..frames {
         game.tick();
     }
-    let canvas = game.draw(Layers::default(), 1.0);
+    let layers = Layers::default();
+    let backdrop = game.compose(layers);
+    // Objects where the last step left them.
+    let sprites = game.sprites(layers, 1.0);
     let (w, h) = (1280, 800);
-    let px = viewer::snapshot(&canvas, w, h, None, viewer::Scaling::default())
-        .map_err(io::Error::other)?;
+    let px = viewer::snapshot_frame(
+        &backdrop,
+        Some(&sprites),
+        w,
+        h,
+        None,
+        viewer::Scaling::default(),
+    )
+    .map_err(io::Error::other)?;
     let mut enc = png::Encoder::new(BufWriter::new(std::fs::File::create(out)?), w, h);
     enc.set_color(png::ColorType::Rgba);
     enc.set_depth(png::BitDepth::Eight);

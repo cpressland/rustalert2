@@ -195,6 +195,24 @@ impl MapView {
         canvas
     }
 
+    /// A running game's sprites for the GPU: the live objects, lit like the
+    /// map, packed for [`crate::viewer`] to draw over the backdrop.
+    pub fn live_sprites(
+        &mut self,
+        vfs: &Vfs,
+        objects: &[scene::Live],
+        lighting: bool,
+    ) -> crate::sprites::Sprites {
+        let light = if lighting {
+            Lighting::from_map(&self.ini).with_lamps(&self.ini, &self.art.rules, &self.art.art)
+        } else {
+            Lighting::default()
+        };
+        let pieces = scene::live(vfs, &mut self.art, objects);
+        let art = &self.art;
+        crate::sprites::Sprites::build(pieces, &|k| *art.palette(k), &light)
+    }
+
     /// The cells the map's player house sees at the start: within each of
     /// its objects' `Sight=` (cells) of the object's cell. The player house
     /// is `[Basic] Player=`.

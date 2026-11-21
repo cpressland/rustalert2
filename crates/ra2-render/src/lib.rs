@@ -9,6 +9,7 @@ pub mod compose;
 pub mod lighting;
 pub mod scene;
 pub mod shroud;
+pub mod sprites;
 pub mod terrain;
 pub mod viewer;
 pub mod voxel;
