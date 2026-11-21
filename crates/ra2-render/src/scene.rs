@@ -50,8 +50,8 @@ pub struct Piece {
     pub palette: PaletteKind,
     /// Index 1 is a shadow that darkens what's below.
     pub shadow: bool,
-    /// The height level the object stands at, for lighting.
-    pub level: i32,
+    /// The cell (x, y) and height level the object stands at, for lighting.
+    pub at: (i32, i32, i32),
 }
 
 /// Rules and art the scene needs.
@@ -237,7 +237,7 @@ fn push_frame(
     order: (i32, i32, u8),
     palette: PaletteKind,
     with_shadow: bool,
-    level: i32,
+    at: (i32, i32, i32),
 ) -> bool {
     let Ok(shp) = Shp::parse(data) else {
         return false;
@@ -257,7 +257,7 @@ fn push_frame(
                 pixels: f.pixels,
                 palette,
                 shadow,
-                level,
+                at,
             });
         }
     };
@@ -309,6 +309,7 @@ pub fn collect(
         let p = Cell::new(cx, cy).screen(height(x, y));
         (p.x, p.y + 15)
     };
+    let at = |x: i32, y: i32| (x, y, height(x, y));
     let miss = |stats: &mut SceneStats, name: &str| {
         *stats.missing.entry(name.to_string()).or_default() += 1;
     };
@@ -356,7 +357,7 @@ pub fn collect(
                         (c.1, c.0, 0),
                         pal,
                         false,
-                        height(x, y),
+                        at(x, y),
                     ) =>
                 {
                     stats.overlays += 1;
@@ -388,7 +389,7 @@ pub fn collect(
                         (c.1 - 30, c.0, 0),
                         PaletteKind::Iso,
                         false,
-                        height(atoi(p[1]), atoi(p[2])),
+                        at(atoi(p[1]), atoi(p[2])),
                     ) =>
                 {
                     stats.smudges += 1;
@@ -417,7 +418,7 @@ pub fn collect(
                         (c.1, c.0, 0),
                         PaletteKind::Iso,
                         true,
-                        height(n % 1000, n / 1000),
+                        at(n % 1000, n / 1000),
                     ) =>
                 {
                     stats.terrain_objects += 1;
@@ -436,7 +437,12 @@ pub fn collect(
                 continue;
             }
             let (owner, id, x, y) = (p[0], p[1], atoi(p[3]), atoi(p[4]));
-            if hidden(x, y) {
+            let invisible = art
+                .rules
+                .get(id, "InvisibleInGame")
+                .and_then(ra2_formats::ini::parse_bool)
+                .unwrap_or(false);
+            if hidden(x, y) || invisible {
                 continue;
             }
             let image = art.image(id);
@@ -454,7 +460,7 @@ pub fn collect(
             let c = (top.0 + (fw - fh) * 15, top.1 + (fw + fh - 2) * 15 / 2);
             let pal = art.house_palette(owner);
             let order = (top.1 + (fw + fh - 1) * 15, top.0, 0);
-            let level = height(x, y);
+            let level = at(x, y);
             // Health is out of 256; at or below ConditionYellow the
             // building shows its damaged frame and anims.
             let yellow = art
@@ -568,7 +574,7 @@ pub fn collect(
                         (c.1, c.0, 0),
                         pal,
                         true,
-                        height(x, y),
+                        at(x, y),
                     ) =>
                 {
                     stats.infantry += 1;
@@ -605,7 +611,7 @@ pub fn collect(
                     pixels: sprite.shadow,
                     palette: pal,
                     shadow: true,
-                    level: height(x, y),
+                    at: at(x, y),
                 });
                 pieces.push(Piece {
                     order: (c.1, c.0, 1),
@@ -615,20 +621,11 @@ pub fn collect(
                     pixels: sprite.pixels,
                     palette: pal,
                     shadow: false,
-                    level: height(x, y),
+                    at: at(x, y),
                 });
                 stats.vehicles += 1;
             } else if let Some(d) = art.shp(vfs, &image) {
-                if push_frame(
-                    &mut pieces,
-                    &d,
-                    0,
-                    c,
-                    (c.1, c.0, 0),
-                    pal,
-                    true,
-                    height(x, y),
-                ) {
+                if push_frame(&mut pieces, &d, 0, c, (c.1, c.0, 0), pal, true, at(x, y)) {
                     stats.vehicles += 1;
                 }
             } else {
@@ -647,11 +644,12 @@ pub fn draw(
     mut pieces: Vec<Piece>,
 ) {
     pieces.sort_by_key(|p| p.order);
-    let mut lit: BTreeMap<(PaletteKind, i32), [Rgb; 256]> = BTreeMap::new();
+    let mut lit: BTreeMap<(PaletteKind, crate::lighting::Light), [Rgb; 256]> = BTreeMap::new();
     for p in pieces {
+        let cell = light.cell(p.at.0, p.at.1, p.at.2);
         let palette = lit
-            .entry((p.palette, p.level))
-            .or_insert_with(|| light.apply(art.palette(p.palette), p.level));
+            .entry((p.palette, cell))
+            .or_insert_with(|| crate::lighting::Lighting::lit(art.palette(p.palette), cell));
         canvas.blit(p.x, p.y, p.width, &p.pixels, palette, p.shadow);
     }
 }

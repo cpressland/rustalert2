@@ -113,7 +113,7 @@ impl MapView {
         let (x0, y0, x1, y1) = rect.unwrap_or_else(|| terrain::bounds(&self.map));
         let mut canvas = Canvas::new(x0, y0, x1, y1, [0, 0, 0, 255]);
         let light = if layers.lighting {
-            Lighting::from_map(&self.ini)
+            Lighting::from_map(&self.ini).with_lamps(&self.ini, &self.art.rules, &self.art.art)
         } else {
             Lighting::default()
         };
