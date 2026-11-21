@@ -454,11 +454,69 @@ pub fn collect(
             let c = (top.0 + (fw - fh) * 15, top.1 + (fw + fh - 2) * 15 / 2);
             let pal = art.house_palette(owner);
             let order = (top.1 + (fw + fh - 1) * 15, top.0, 0);
+            let level = height(x, y);
+            // Health is out of 256; at or below ConditionYellow the
+            // building shows its damaged frame and anims.
+            let yellow = art
+                .rules
+                .get("AudioVisual", "ConditionYellow")
+                .map_or(0.5, ra2_formats::ini::parse_number);
+            let damaged = f64::from(atoi(p[2])) <= yellow * 256.0;
+            let frame = usize::from(damaged);
+            // The bib lies flat under everything, so it's drawn first.
+            if let Some(bib) = art.art.get(&image, "BibShape").map(str::to_string)
+                && let Some(d) = art.shp(vfs, &bib)
+            {
+                push_frame(
+                    &mut pieces,
+                    &d,
+                    frame,
+                    c,
+                    (i32::MIN / 2 + top.1, top.0, 0),
+                    pal,
+                    true,
+                    level,
+                );
+            }
             match art.shp(vfs, &image) {
-                Some(d) if push_frame(&mut pieces, &d, 0, c, order, pal, true, height(x, y)) => {
+                Some(d) if push_frame(&mut pieces, &d, frame, c, order, pal, true, level) => {
                     stats.buildings += 1;
                 }
                 _ => miss(stats, &image),
+            }
+            for (i, key) in [
+                "ActiveAnim",
+                "ActiveAnimTwo",
+                "ActiveAnimThree",
+                "ActiveAnimFour",
+            ]
+            .iter()
+            .enumerate()
+            {
+                let anim = damaged
+                    .then(|| art.art.get(&image, &format!("{key}Damaged")))
+                    .flatten()
+                    .or_else(|| art.art.get(&image, key))
+                    .map(str::to_string);
+                let Some(anim) = anim else { continue };
+                let offset =
+                    |axis: &str| art.art.get(&image, &format!("{key}{axis}")).map_or(0, atoi);
+                let at = (c.0 + offset("X"), c.1 + offset("Y"));
+                let layer = 2 + 2 * u8::try_from(i).expect("small");
+                if let Some(d) = art.shp(vfs, &anim) {
+                    push_frame(
+                        &mut pieces,
+                        &d,
+                        0,
+                        at,
+                        (order.0, order.1, layer),
+                        pal,
+                        false,
+                        level,
+                    );
+                } else {
+                    miss(stats, &anim);
+                }
             }
         }
     }

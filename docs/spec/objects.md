@@ -73,6 +73,20 @@ and vehicles in their starting state. Animation is left to the game loop
 - **HVA rotations.** A section's HVA rotation moves its voxels but doesn't
   turn the light. The table is built once for the whole unit. `[recomp]`
 
+## Building details
+
+- **Bib.** `BibShape=` names an SHP laid flat under the building at the
+  same centre. Bibs are drawn before every other object. `[community]`
+- **Damage.** A building at or below `[AudioVisual] ConditionYellow`
+  (default 0.5) of its health (map health is out of 256) shows frame 1 of
+  its SHP and of its bib. `[community]`
+- **Active anims.** `ActiveAnim`, `ActiveAnimTwo`, `…Three`, `…Four` name
+  anims drawn over the building at its centre plus `…X`/`…Y`, in the
+  building's house palette, frame 0. When damaged, `…Damaged` replaces
+  each. `[hypothesis]` (palette, frame; `…ZAdjust` and `…YSort` aren't
+  used yet)
+- `IdleAnim`, production and door anims need the game loop (M4).
+
 ## Voxel shadows
 
 - A unit's shadow is a second render of its voxels (`0x00706BD0` →
@@ -96,8 +110,8 @@ and vehicles in their starting state. Animation is left to the game loop
   voxel scale.
 - A level of 32 (full diffuse and full specular) indexes past `voxels.vpl`'s
   32 sections. We clamp it to 31; the game reads whatever follows the table.
-- Damaged frames, `ActiveAnim`/`IdleAnim`, bibs and building anims. These
-  need the game loop's timers.
+- Building anims' timing, `IdleAnim`, and `ZAdjust`/`YSort` ordering.
+  These need the game loop's timers.
 - Bridges, which are overlays drawn on their own layer.
 
 ## Parity
