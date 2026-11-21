@@ -55,7 +55,7 @@ their art ships in); those are reported, not drawn.
 | Ticks, game speed and RNG | [tick.md](tick.md) | Implemented |
 | Rules tables | [rules.md](rules.md) | Implemented |
 | Object model and missions | [objects-model.md](objects-model.md) | Started |
-| Pathfinding and occupancy | | Not started |
+| Pathfinding and occupancy | [pathfinding.md](pathfinding.md) | Started |
 | Locomotors | [locomotors.md](locomotors.md) | Started |
 | Combat | [combat.md](combat.md) | Started |
 | Economy | | Not started |
