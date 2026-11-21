@@ -2,6 +2,7 @@
 //! See `docs/spec/tick.md`.
 
 use crate::rng::Randomizer;
+use crate::world::World;
 
 /// The game speed setting, 0 (fastest) to 6 (slowest), as the options
 /// slider and `GameSpeed=` in spawn files give it.
@@ -85,14 +86,26 @@ pub enum Event {
 pub struct Sim {
     frame: u32,
     rng: Randomizer,
+    world: World,
 }
 
 impl Sim {
     pub fn new(seed: u32) -> Sim {
+        Sim::with_world(seed, World::default())
+    }
+
+    /// A simulation starting from `world` (houses and objects set up from
+    /// a map and the game's options).
+    pub fn with_world(seed: u32, world: World) -> Sim {
         Sim {
             frame: 0,
             rng: Randomizer::new(seed),
+            world,
         }
+    }
+
+    pub fn world(&self) -> &World {
+        &self.world
     }
 
     /// The number of frames stepped.
@@ -128,6 +141,7 @@ impl Sim {
         for &t in table {
             h.u32(t);
         }
+        self.world.feed(&mut h);
         h.finish()
     }
 }
@@ -167,7 +181,7 @@ mod tests {
         assert_eq!(hashes[299], PINNED);
     }
 
-    const PINNED: u64 = 12_505_371_678_757_505_138;
+    const PINNED: u64 = 10_693_829_126_038_112_946;
 
     #[test]
     fn speeds_run_from_sixty_to_ten_frames_a_second() {
