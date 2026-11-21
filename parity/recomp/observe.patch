@@ -27,10 +27,10 @@ index 870464e..6910a8b 100644
          static long long last, sum;
 diff --git a/src/runtime/observe.c b/src/runtime/observe.c
 new file mode 100644
-index 0000000..54fee7d
+index 0000000..ae96dfd
 --- /dev/null
 +++ b/src/runtime/observe.c
-@@ -0,0 +1,174 @@
+@@ -0,0 +1,198 @@
 +/* rustalert2 parity observer: per game frame, what the simulation holds.
 + * Written for github.com/cpressland/rustalert2's parity lab (M2); this file
 + * and the two-line hook in hdvox.c are its whole footprint here.
@@ -185,6 +185,30 @@ index 0000000..54fee7d
 +                uint32_t map = 0x87F7E8u, tbl = rd32(map + 0x70), n = rd32(map + 0x6C);
 +                uint32_t a = rd32(map + 0xF4), b = rd32(map + 0xF8);
 +                fprintf(f, "# zones table %08X cells %u f4 %u f8 %u\n", tbl, n, a, b);
++                {
++                    /* The pathfinder (0x87E8B8): the latest search's stamp,
++                       the zones it stamped at each level (the corridor),
++                       and the cells its cell search reached, with g. */
++                    uint32_t pf = 0x87E8B8u, stamp = rd32(pf + 0x28);
++                    int maxz[3] = {0, 0, 0};
++                    for (uint32_t i = 0; i < n && tbl; i++) {
++                        int16_t z[3]; memcpy(z, GUEST_PTR(tbl + 10 * i), 6);
++                        for (int l = 0; l < 3; l++) if (z[l] > maxz[l]) maxz[l] = z[l];
++                    }
++                    fprintf(f, "# pathfinder stamp %u\n", stamp);
++                    for (int l = 0; l < 3; l++) {
++                        uint32_t arr = rd32(pf + 0x40 + 4 * l);
++                        if (!arr) continue;
++                        fprintf(f, "corridor %d", l);
++                        for (int zid = 0; zid <= maxz[l]; zid++)
++                            if (rd32(arr + 4 * zid) == stamp) fprintf(f, " %d", zid);
++                        fprintf(f, "\n");
++                    }
++                    uint32_t seen = rd32(pf + 0x18), cost = rd32(pf + 0x24);
++                    for (uint32_t i = 0; i < n && seen; i++)
++                        if (rd32(seen + 4 * i) == stamp)
++                            fprintf(f, "reached %u %08X\n", i, cost ? rd32(cost + 4 * i) : 0);
++                }
 +                for (uint32_t i = 0; i < n && tbl; i++) {
 +                    const uint8_t *r = GUEST_PTR(tbl + 10 * i);
 +                    int16_t z[5]; memcpy(z, r, 10);
