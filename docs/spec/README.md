@@ -39,6 +39,7 @@ notes from [TEMPLATE.md](TEMPLATE.md).
 | Voxel lighting | [objects.md](objects.md#voxel-lighting) | Implemented |
 | Map lighting | [lighting.md](lighting.md) | Implemented |
 | Shroud and fog | [shroud.md](shroud.md) | Implemented |
+| Presenter: window and scaling | [presenter.md](presenter.md) | Implemented |
 
 ## Simulation (M4)
 

@@ -2,7 +2,8 @@
 //! under a pan-and-zoom camera; toggling a layer recomposes it.
 //!
 //! Keys: arrows or drag to pan, scroll or `+`/`-` to zoom, `0` to reset,
-//! `O` objects, `L` lighting, `S` shroud, `Esc` to quit.
+//! `O` objects, `L` lighting, `S` shroud, `M` scaling mode, `F` (or
+//! `F11`) fullscreen, `Esc` to quit.
 
 use std::sync::Arc;
 
@@ -18,10 +19,11 @@ use crate::compose::Layers;
 
 const SHADER: &str = r"
 struct Camera {
-    // Texel at the window centre, zoom (screen pixels per texel), unused.
+    // Texel at the window centre, zoom (screen pixels per texel), scaling
+    // mode (0 nearest, 1 sharp bilinear).
     centre: vec2<f32>,
     zoom: f32,
-    _pad: f32,
+    mode: f32,
     viewport: vec2<f32>,
     texture: vec2<f32>,
 };
@@ -41,7 +43,16 @@ fn fs(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     if (texel.x < 0.0 || texel.y < 0.0 || texel.x >= camera.texture.x || texel.y >= camera.texture.y) {
         return vec4<f32>(0.0, 0.0, 0.0, 1.0);
     }
-    return textureSample(map, map_sampler, texel / camera.texture);
+    if (camera.mode < 0.5) {
+        return textureLoad(map, vec2<i32>(floor(texel)), 0);
+    }
+    // Sharp bilinear: each texel is a flat square, blended with its
+    // neighbour only across the last screen pixel at its edge.
+    let t = texel - 0.5;
+    let base = floor(t);
+    let f = t - base;
+    let edge = clamp((f - 0.5) * max(camera.zoom, 1.0) + 0.5, vec2<f32>(0.0), vec2<f32>(1.0));
+    return textureSampleLevel(map, map_sampler, (base + edge + 0.5) / camera.texture, 0.0);
 }
 ";
 
@@ -68,6 +79,7 @@ pub fn run(title: &str, layers: Layers, composer: impl Composer) -> Result<(), S
         composer,
         gpu: None,
         camera: Camera::default(),
+        scaling: Scaling::default(),
         drag: None,
         error: None,
     };
@@ -81,6 +93,58 @@ pub fn run(title: &str, layers: Layers, composer: impl Composer) -> Result<(), S
 pub struct Camera {
     pub centre: (f32, f32),
     pub zoom: f32,
+}
+
+/// How texels become screen pixels, as the recomp's presenter offers.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum Scaling {
+    /// Nearest texel at any zoom.
+    #[default]
+    Nearest,
+    /// Nearest texel, with the zoom held to whole numbers (or their
+    /// reciprocals below 1), so every texel is the same size.
+    Integer,
+    /// Flat texels with their edges blended over one screen pixel: sharp
+    /// at any zoom without uneven texel sizes.
+    SharpBilinear,
+}
+
+impl Scaling {
+    fn next(self) -> Scaling {
+        match self {
+            Scaling::Nearest => Scaling::Integer,
+            Scaling::Integer => Scaling::SharpBilinear,
+            Scaling::SharpBilinear => Scaling::Nearest,
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Scaling::Nearest => "nearest",
+            Scaling::Integer => "integer",
+            Scaling::SharpBilinear => "sharp bilinear",
+        }
+    }
+
+    /// The zoom this mode shows for a requested one.
+    pub fn zoom(self, zoom: f32) -> f32 {
+        if self != Scaling::Integer {
+            return zoom;
+        }
+        if zoom >= 1.0 {
+            zoom.round().max(1.0)
+        } else {
+            1.0 / (1.0 / zoom).round()
+        }
+    }
+
+    fn shader_mode(self) -> f32 {
+        if self == Scaling::SharpBilinear {
+            1.0
+        } else {
+            0.0
+        }
+    }
 }
 
 /// Draws an uploaded map canvas into any target of its format.
@@ -120,7 +184,7 @@ impl Renderer {
             cache: None,
         });
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            mag_filter: wgpu::FilterMode::Nearest,
+            mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,
             ..Default::default()
         });
@@ -211,6 +275,7 @@ impl Renderer {
         target: &wgpu::TextureView,
         viewport: (u32, u32),
         camera: Camera,
+        scaling: Scaling,
     ) {
         let Some(bind_group) = &self.bind_group else {
             return;
@@ -219,8 +284,8 @@ impl Renderer {
         let u = [
             camera.centre.0,
             camera.centre.1,
-            camera.zoom,
-            0.0,
+            scaling.zoom(camera.zoom),
+            scaling.shader_mode(),
             viewport.0 as f32,
             viewport.1 as f32,
             self.texture_size.0 as f32,
@@ -261,6 +326,7 @@ pub fn snapshot(
     width: u32,
     height: u32,
     camera: Option<Camera>,
+    scaling: Scaling,
 ) -> Result<Vec<u8>, String> {
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle());
     let adapter =
@@ -302,6 +368,7 @@ pub fn snapshot(
         &target.create_view(&wgpu::TextureViewDescriptor::default()),
         (width, height),
         camera,
+        scaling,
     );
     encoder.copy_texture_to_buffer(
         wgpu::TexelCopyTextureInfo {
@@ -350,6 +417,7 @@ struct App<C> {
     composer: C,
     gpu: Option<Gpu>,
     camera: Camera,
+    scaling: Scaling,
     drag: Option<(PhysicalPosition<f64>, Option<PhysicalPosition<f64>>)>,
     error: Option<String>,
 }
@@ -410,14 +478,27 @@ impl<C: Composer> App<C> {
                 .renderer
                 .fit_camera((gpu.config.width, gpu.config.height));
         }
+        self.update_title();
+    }
+
+    fn update_title(&self) {
+        let Some(gpu) = self.gpu.as_ref() else { return };
         gpu.window.set_title(&format!(
-            "{} — objects {} · lighting {} · shroud {}",
+            "{} — objects {} · lighting {} · shroud {} · {}",
             self.title,
             on(self.layers.objects),
             on(self.layers.lighting),
-            on(self.layers.shroud)
+            on(self.layers.shroud),
+            self.scaling.name()
         ));
         gpu.window.request_redraw();
+    }
+
+    fn toggle_fullscreen(&self) {
+        let Some(gpu) = self.gpu.as_ref() else { return };
+        let full = gpu.window.fullscreen().is_some();
+        gpu.window
+            .set_fullscreen((!full).then_some(winit::window::Fullscreen::Borderless(None)));
     }
 
     fn draw(&self) {
@@ -444,6 +525,7 @@ impl<C: Composer> App<C> {
             &view,
             (gpu.config.width, gpu.config.height),
             self.camera,
+            self.scaling,
         );
         gpu.queue.submit([encoder.finish()]);
         gpu.queue.present(frame);
@@ -546,6 +628,7 @@ impl<C: Composer> ApplicationHandler for App<C> {
                 let step = 120.0;
                 match event.logical_key.as_ref() {
                     Key::Named(NamedKey::Escape) => event_loop.exit(),
+                    Key::Named(NamedKey::F11) => self.toggle_fullscreen(),
                     Key::Named(NamedKey::ArrowLeft) => self.pan(step, 0.0),
                     Key::Named(NamedKey::ArrowRight) => self.pan(-step, 0.0),
                     Key::Named(NamedKey::ArrowUp) => self.pan(0.0, step),
@@ -566,6 +649,11 @@ impl<C: Composer> ApplicationHandler for App<C> {
                             self.layers.shroud = !self.layers.shroud;
                             self.recompose(false);
                         }
+                        "m" => {
+                            self.scaling = self.scaling.next();
+                            self.update_title();
+                        }
+                        "f" => self.toggle_fullscreen(),
                         _ => {}
                     },
                     _ => {}
@@ -602,10 +690,40 @@ mod tests {
             centre: (32.0, 16.0),
             zoom: 1.0,
         };
-        match snapshot(&c, 64, 32, Some(camera)) {
-            Ok(px) => assert_eq!(px, c.rgba),
-            // No GPU here (as on CI runners): nothing to check.
-            Err(e) => eprintln!("skipped: {e}"),
+        for scaling in [Scaling::Nearest, Scaling::Integer, Scaling::SharpBilinear] {
+            match snapshot(&c, 64, 32, Some(camera), scaling) {
+                Ok(px) => assert_eq!(px, c.rgba, "{scaling:?}"),
+                // No GPU here (as on CI runners): nothing to check.
+                Err(e) => eprintln!("skipped: {e}"),
+            }
         }
+    }
+
+    #[test]
+    fn integer_scaling_holds_zoom_to_whole_steps() {
+        assert_eq!(Scaling::Integer.zoom(2.4), 2.0);
+        assert_eq!(Scaling::Integer.zoom(0.45), 0.5);
+        assert_eq!(Scaling::Integer.zoom(0.9), 1.0);
+        assert_eq!(Scaling::Nearest.zoom(2.4), 2.4);
+    }
+
+    #[test]
+    fn sharp_bilinear_shows_flat_texels_with_soft_edges_when_magnified() {
+        let mut c = Canvas::new(0, 0, 4, 1, [0, 0, 0, 255]);
+        c.put(2, 0, [255, 255, 255]);
+        c.put(3, 0, [255, 255, 255]);
+        let camera = Camera {
+            centre: (2.0, 0.5),
+            zoom: 4.0,
+        };
+        let Ok(px) = snapshot(&c, 16, 4, Some(camera), Scaling::SharpBilinear) else {
+            return;
+        };
+        let red: Vec<u8> = px[..16 * 4].chunks(4).map(|p| p[0]).collect();
+        // Texel 1 (black) then texel 2 (white): flat inside, one blended
+        // screen pixel at the boundary.
+        assert_eq!(red[5], 0);
+        assert_eq!(red[10], 255);
+        assert!(red[7] < 255 && red[8] > 0, "{red:?}");
     }
 }
