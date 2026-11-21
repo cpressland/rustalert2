@@ -142,18 +142,23 @@ struct Piece {
 }
 
 /// Draw a map's terrain onto a canvas: base diamonds in row order, then
-/// extra art (cliff faces and the like) in row order over them.
+/// extra art (cliff faces and the like) in row order over them. Cells
+/// `hidden` says are under shroud aren't drawn, as in the game.
 pub fn draw(
     canvas: &mut Canvas,
     vfs: &Vfs,
     lib: &mut TileLibrary,
     map: &Map,
     light: &crate::lighting::Lighting,
+    hidden: &dyn Fn(i16, i16) -> bool,
 ) -> TerrainStats {
     let mut stats = TerrainStats::default();
     let mut pieces = Vec::new();
     for t in &map.tiles {
         stats.cells += 1;
+        if hidden(t.x, t.y) {
+            continue;
+        }
         let tile = match lib.resolve(vfs, t.tile) {
             Resolved::Direct(n) => n,
             Resolved::MarbleMadness(n) => {

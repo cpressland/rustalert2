@@ -13,6 +13,7 @@ use ra2_vfs::theater::Theater;
 use crate::canvas::Canvas;
 use crate::lighting::Lighting;
 use crate::scene::{self, Art, SceneStats};
+use crate::shroud;
 use crate::terrain::{self, TerrainStats, TileLibrary};
 
 /// What to draw.
@@ -43,6 +44,8 @@ pub struct MapView {
     pub theater: Theater,
     lib: TileLibrary,
     art: Art,
+    /// The soft-edge shroud, when `gamemd.exe` and `shroud.shp` are found.
+    soft_shroud: Option<(shroud::FrameTable, shroud::Shapes)>,
 }
 
 /// What a composition drew.
@@ -78,7 +81,19 @@ impl MapView {
             Ini::parse(&read(vfs, art)?),
             &ini,
         );
+        let soft_shroud = vfs
+            .read("gamemd.exe")
+            .ok()
+            .flatten()
+            .and_then(|exe| shroud::FrameTable::from_gamemd(&exe))
+            .zip(
+                vfs.read("shroud.shp")
+                    .ok()
+                    .flatten()
+                    .and_then(|d| shroud::Shapes::parse(&d)),
+            );
         Ok(MapView {
+            soft_shroud,
             name: name.to_string(),
             map,
             ini,
@@ -102,18 +117,37 @@ impl MapView {
         } else {
             Lighting::default()
         };
+        let seen = layers.shroud.then(|| self.revealed());
+        let hidden = |x: i16, y: i16| seen.as_ref().is_some_and(|s| !s.contains(&(x, y)));
         let mut stats = Stats {
-            terrain: terrain::draw(&mut canvas, vfs, &mut self.lib, &self.map, &light),
+            terrain: terrain::draw(&mut canvas, vfs, &mut self.lib, &self.map, &light, &hidden),
             ..Stats::default()
         };
         if layers.objects {
-            let pieces = scene::collect(vfs, &mut self.art, &self.map, &self.ini, &mut stats.scene);
+            let hidden_object = |x: i32, y: i32| {
+                hidden(
+                    i16::try_from(x).unwrap_or(i16::MAX),
+                    i16::try_from(y).unwrap_or(i16::MAX),
+                )
+            };
+            let pieces = scene::collect(
+                vfs,
+                &mut self.art,
+                &self.map,
+                &self.ini,
+                &mut stats.scene,
+                &hidden_object,
+            );
             scene::draw(&mut canvas, &self.art, &light, pieces);
         }
-        if layers.shroud {
-            let seen = self.revealed();
+        if let Some(seen) = &seen {
             stats.revealed = seen.len();
-            shroud(&mut canvas, &self.map, &seen);
+            match &self.soft_shroud {
+                Some((table, shapes)) => {
+                    shroud::draw(&mut canvas, &self.map, seen, table, shapes);
+                }
+                None => hard_shroud(&mut canvas, &self.map, seen),
+            }
         }
         (canvas, stats)
     }
@@ -158,10 +192,9 @@ impl MapView {
     }
 }
 
-/// Black out unseen cells; darken seen cells next to unseen ones. The
-/// game's soft shroud edges (`shroud.shp`, 48 shapes chosen by a
-/// neighbour-mask table) come later.
-fn shroud(canvas: &mut Canvas, map: &Map, seen: &BTreeSet<(i16, i16)>) {
+/// Without the game's shroud shapes: black out unseen cells and darken
+/// seen cells next to unseen ones.
+fn hard_shroud(canvas: &mut Canvas, map: &Map, seen: &BTreeSet<(i16, i16)>) {
     let diamond = |canvas: &mut Canvas, x: i16, y: i16, keep: u16| {
         let top = Cell::new(x, y).screen(0);
         for row in 0..30 {
