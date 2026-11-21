@@ -1652,7 +1652,14 @@ dependencies = [
 name = "ra2-game"
 version = "0.0.0"
 dependencies = [
+ "clap",
+ "png",
+ "ra2-formats",
+ "ra2-parity",
+ "ra2-render",
+ "ra2-rules",
  "ra2-sim",
+ "ra2-vfs",
 ]
 
 [[package]]

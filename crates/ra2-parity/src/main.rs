@@ -165,39 +165,8 @@ fn run(cmd: Command) -> io::Result<bool> {
             game_dir,
             seed,
         } => {
-            use ra2_vfs::install::{Game, Inspection, SearchContext};
             let s = load_scenario(&scenario)?;
-            let inspection = match game_dir {
-                Some(d) => Inspection::of(&d)?,
-                None => {
-                    SearchContext::from_env()
-                        .find(Game::YurisRevenge)
-                        .map_err(io::Error::other)?
-                        .inspection
-                }
-            };
-            let mut vfs = ra2_vfs::mount::Vfs::new(inspection);
-            vfs.mount_startup(Game::YurisRevenge);
-            let read = |n: &str| -> io::Result<ra2_formats::ini::Ini> {
-                let d = vfs.read(n)?.ok_or_else(|| {
-                    io::Error::new(io::ErrorKind::NotFound, format!("{n}: not found"))
-                })?;
-                Ok(ra2_formats::ini::Ini::parse(&d))
-            };
-            let map = match &s.generate {
-                Some(spec) => {
-                    ra2_formats::ini::Ini::parse(ra2_parity::mapgen::write(spec).as_bytes())
-                }
-                None => read(&s.map)?,
-            };
-            // Map sections override the rules, as in the game.
-            let mut rules_ini = read("rulesmd.ini")?;
-            for section in map.sections() {
-                for (k, v) in section.entries() {
-                    rules_ini.put(&section.name, k, v);
-                }
-            }
-            let rules = ra2_rules::Rules::from_ini(&rules_ini, &read("artmd.ini")?);
+            let (_vfs, rules, map) = ra2_parity::engine::prepare(&s, game_dir.as_deref())?;
             let log = ra2_parity::engine::run(&s, &rules, &map, seed);
             log.write(io::BufWriter::new(File::create(&out)?))?;
             println!(

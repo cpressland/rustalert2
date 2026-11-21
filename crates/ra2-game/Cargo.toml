@@ -11,5 +11,19 @@ publish.workspace = true
 [lints]
 workspace = true
 
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "rustalert2"
+path = "src/main.rs"
+
 [dependencies]
 ra2-sim.workspace = true
+ra2-rules.workspace = true
+ra2-render.workspace = true
+ra2-parity.workspace = true
+ra2-vfs.workspace = true
+ra2-formats.workspace = true
+clap.workspace = true
+png.workspace = true

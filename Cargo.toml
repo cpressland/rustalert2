@@ -17,6 +17,7 @@ ra2-vfs = { path = "crates/ra2-vfs" }
 ra2-rules = { path = "crates/ra2-rules" }
 ra2-sim = { path = "crates/ra2-sim" }
 ra2-render = { path = "crates/ra2-render" }
+ra2-parity = { path = "crates/ra2-parity" }
 ra2-audio = { path = "crates/ra2-audio" }
 ra2-video = { path = "crates/ra2-video" }
 ra2-ui = { path = "crates/ra2-ui" }

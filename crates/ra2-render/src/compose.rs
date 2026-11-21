@@ -16,13 +16,17 @@ use crate::scene::{self, Art, SceneStats};
 use crate::shroud;
 use crate::terrain::{self, TerrainStats, TileLibrary};
 
-/// What to draw.
+/// What to draw: independent switches, so plain booleans.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Layers {
     pub objects: bool,
     pub lighting: bool,
     /// Shroud everything the map's player house can't see at the start.
     pub shroud: bool,
+    /// The map's own buildings, vehicles and infantry (off when a running
+    /// game draws them).
+    pub technos: bool,
 }
 
 impl Default for Layers {
@@ -31,6 +35,7 @@ impl Default for Layers {
             objects: true,
             lighting: true,
             shroud: false,
+            technos: true,
         }
     }
 }
@@ -146,13 +151,14 @@ impl MapView {
                     i16::try_from(y).unwrap_or(i16::MAX),
                 )
             };
-            let mut pieces = scene::collect(
+            let mut pieces = scene::collect_with(
                 vfs,
                 &mut self.art,
                 &self.map,
                 &self.ini,
                 &mut stats.scene,
                 &hidden_object,
+                layers.technos,
             );
             pieces.extend(scene::tile_anims(vfs, &mut self.art, &anims));
             scene::draw(&mut canvas, &self.art, &light, pieces);
@@ -167,6 +173,26 @@ impl MapView {
             }
         }
         (canvas, stats)
+    }
+
+    /// A running game's frame: the live objects drawn over `backdrop` (the
+    /// map composed without its own technos), lit like the map.
+    pub fn draw_live(
+        &mut self,
+        vfs: &Vfs,
+        backdrop: &Canvas,
+        objects: &[scene::Live],
+        lighting: bool,
+    ) -> Canvas {
+        let mut canvas = backdrop.clone();
+        let light = if lighting {
+            Lighting::from_map(&self.ini).with_lamps(&self.ini, &self.art.rules, &self.art.art)
+        } else {
+            Lighting::default()
+        };
+        let pieces = scene::live(vfs, &mut self.art, objects);
+        scene::draw(&mut canvas, &self.art, &light, pieces);
+        canvas
     }
 
     /// The cells the map's player house sees at the start: within each of

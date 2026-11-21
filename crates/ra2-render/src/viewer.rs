@@ -59,6 +59,17 @@ fn fs(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 /// Something that can draw the map for a set of layers.
 pub trait Composer {
     fn compose(&mut self, layers: Layers) -> Canvas;
+
+    /// For a running game: advance by `elapsed` wall time and return the
+    /// new frame, if it changed. Static maps return `None`.
+    fn frame(&mut self, _layers: Layers, _elapsed: std::time::Duration) -> Option<Canvas> {
+        None
+    }
+
+    /// Whether [`Composer::frame`] should be called continuously.
+    fn is_live(&self) -> bool {
+        false
+    }
 }
 
 impl<F: FnMut(Layers) -> Canvas> Composer for F {
@@ -82,6 +93,7 @@ pub fn run(title: &str, layers: Layers, composer: impl Composer) -> Result<(), S
         scaling: Scaling::default(),
         drag: None,
         error: None,
+        last_frame: None,
     };
     event_loop.run_app(&mut app).map_err(|e| e.to_string())?;
     app.error.map_or(Ok(()), Err)
@@ -420,6 +432,8 @@ struct App<C> {
     scaling: Scaling,
     drag: Option<(PhysicalPosition<f64>, Option<PhysicalPosition<f64>>)>,
     error: Option<String>,
+    /// When the last live frame was made.
+    last_frame: Option<std::time::Instant>,
 }
 
 impl<C: Composer> App<C> {
@@ -577,7 +591,33 @@ fn fit(canvas: &Canvas, max: u32) -> (Vec<u8>, u32, u32, f32) {
     (out, w, h, 1.0 / step as f32)
 }
 
+impl<C: Composer> App<C> {
+    /// For a live composer: advance it and show the new frame.
+    fn advance(&mut self, event_loop: &ActiveEventLoop) {
+        if !self.composer.is_live() {
+            return;
+        }
+        let now = std::time::Instant::now();
+        let elapsed = self.last_frame.map_or_else(Default::default, |t| now - t);
+        self.last_frame = Some(now);
+        if let Some(canvas) = self.composer.frame(self.layers, elapsed)
+            && let Some(gpu) = self.gpu.as_mut()
+        {
+            gpu.renderer.upload(&gpu.device, &gpu.queue, &canvas);
+            gpu.window.request_redraw();
+        }
+        // About sixty times a second.
+        event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
+            now + std::time::Duration::from_millis(16),
+        ));
+    }
+}
+
 impl<C: Composer> ApplicationHandler for App<C> {
+    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        self.advance(event_loop);
+    }
+
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.gpu.is_none()
             && let Err(e) = self.init(event_loop)
