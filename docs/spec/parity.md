@@ -1,6 +1,6 @@
 # The parity lab
 
-**Status:** Recording works against the original. The engine side waits for M4.
+**Status:** Recording works against the original; `parity run` plays scenarios in our engine (objects are placed; movement and combat follow).
 **Crate:** `ra2-parity` (the `parity` tool). The observer is in `parity/recomp/`.
 **Issues:** #23 (observer), #24 (scenarios and runner), #25 (diff), #26 (first scenarios)
 
@@ -56,6 +56,19 @@ JSON lines, one per observed frame:
 - Power and defeat aren't logged yet. Their fields are optional.
 - Creation and removal events are derived from consecutive frames
   (`parity events`).
+
+## Our engine
+
+`parity run <scenario> -o candidate.jsonl` plays a scenario in our engine
+and writes the same log shape: it builds the rules from the install's
+`rulesmd.ini`/`artmd.ini` with the map's sections loaded over them, sets
+up the skirmish as the recorder's (see objects-model.md), and steps to the
+end frame, observing every frame from 1. Then
+`parity diff <scenario> <reference> <candidate>` reports each check.
+
+As of the first M4 slice, frame 1 matches the reference object for object
+in every scenario; the movement and combat checks fail until the
+locomotors and combat land.
 
 ## Scenarios
 

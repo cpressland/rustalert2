@@ -277,6 +277,9 @@ pub struct General {
     /// (`[Cruentus] Value=`).
     pub ore_value: i32,
     pub gem_value: i32,
+    /// `[General] BaseUnit=`: the unit each side starts a skirmish with,
+    /// by side (Allied, Soviet, Yuri).
+    pub base_units: Vec<String>,
 }
 
 /// `[CombatDamage]`.
@@ -536,6 +539,7 @@ impl Rules {
             general: General {
                 ore_value: int(rules.section("Riparius"), "Value", 25),
                 gem_value: int(rules.section("Cruentus"), "Value", 50),
+                base_units: list(rules.section("General"), "BaseUnit"),
             },
             combat_damage: CombatDamage {
                 ion_cannon_damage: int(c, "IonCannonDamage", 0),

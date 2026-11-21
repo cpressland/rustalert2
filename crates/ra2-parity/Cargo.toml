@@ -13,6 +13,8 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+ra2-rules.workspace = true
+ra2-sim.workspace = true
 ra2-vfs.workspace = true
 ra2-formats.workspace = true
 serde.workspace = true
