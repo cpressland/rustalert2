@@ -538,8 +538,19 @@ pub fn collect(
                 &image,
                 u8::try_from(facing.rem_euclid(256)).expect("0..256"),
             ) {
+                // The shadow first, under the body. `[hypothesis]` see objects.md
                 pieces.push(Piece {
                     order: (c.1, c.0, 0),
+                    x: c.0 - sprite.anchor.0,
+                    y: c.1 - sprite.anchor.1,
+                    width: sprite.width,
+                    pixels: sprite.shadow,
+                    palette: pal,
+                    shadow: true,
+                    level: height(x, y),
+                });
+                pieces.push(Piece {
+                    order: (c.1, c.0, 1),
                     x: c.0 - sprite.anchor.0,
                     y: c.1 - sprite.anchor.1,
                     width: sprite.width,

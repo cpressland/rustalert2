@@ -73,7 +73,22 @@ and vehicles in their starting state. Animation is left to the game loop
 - **HVA rotations.** A section's HVA rotation moves its voxels but doesn't
   turn the light. The table is built once for the whole unit. `[recomp]`
 
+## Voxel shadows
+
+- A unit's shadow is a second render of its voxels (`0x00706BD0` →
+  `0x00707280`), blitted by a converter that halves each pixel under it
+  (`(c >> 1) & 0x7BEF` in 16-bit colour). `[recomp]`
+- We render it as every voxel flattened to the ground (z = 0) under the
+  same facing, plotted two pixels wide, and halve what's beneath.
+  `[hypothesis]` (flattening fits what shows: an edge around the unit)
+- The shadow pass also takes a vector set next to the light:
+  `(Lx × −6, 0, 0)` at `0x887420` (`0x00754C00`), = (3, 0, 0). It likely
+  shifts the shadow along the light; we don't apply it yet.
+
 ## Open questions
+
+- What the shadow vector at `0x887420` does to the shadow's position, and
+  whether turrets and barrels cast shadows (we draw all parts).
 
 - Which world axes the light's x and y are. We take map x and y; the
   shading looks right (lit tops, darker camera-facing sides), but a
