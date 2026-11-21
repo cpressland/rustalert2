@@ -1,7 +1,7 @@
 # Locomotors and movement
 
-**Status:** Spec'd from observation (implementation next)
-**Crate:** `ra2-sim`
+**Status:** Implemented for the Hunt scenarios (constants fitted to the reference logs; tracks and the pathfinder still to trace)
+**Crate:** `ra2-sim` (`hunt`)
 **Issue:** #40 (with pathfinding, #39)
 
 ## Scope
@@ -35,7 +35,37 @@ Choosing the route is pathfinding (#39).
   weapon range: the Grizzly and Rhino stop at (38,39), exactly 5 cells
   from the MCV's cell. `[observed]`
 
+## What we implement
+
+Fitted so the three `*-hunts-mcv` scenarios pass every check; each
+constant is `[observed]`, not traced:
+
+- **Facing** is 16 bits, 0 north (−y), clockwise; a map facing `f` (0–255)
+  is `f × 256`. Standing vehicles turn `ROT × 256` a frame toward their
+  first step and move on the frame the turn completes (the Grizzly's
+  135° turn takes 20 frames, so it sets off on frame 20). At corners they
+  turn on the move. Infantry turn at once but set off the frame after
+  choosing a target.
+- **Speed**, in 1/256 leptons a frame: vehicles `speed × 406`, infantry
+  `speed × 277`, where `speed` is the stored value above. Each leg (cell
+  to cell) ends exactly on its point and the rest of the frame's step
+  carries into the next frame.
+- **Route** (`[hypothesis]`, fitted to one route): toward the cell beside
+  the target along the major axis, first one diagonal step, then straight
+  until the rest is diagonal, then diagonal. Vehicles stand on cell
+  centres; infantry on sub-cell spot 2 of each cell.
+- **Stopping**: at the first cell on the route with the target within
+  weapon range.
+
+Results: the Grizzly and Rhino are within 2 and 4 leptons of the original
+at frame 120 and exact at 300; the GI within 53 and 30.
+
 ## Open questions
+
+- Infantry are slower on straight legs (about 9.9 leptons a frame) than
+  on diagonals (about 11); we use one speed.
+- The route rule against more start positions, and the real pathfinder
+  (#39).
 
 - The drive track tables and how speed scales along them (the shorter
   steps).

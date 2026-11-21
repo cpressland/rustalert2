@@ -58,7 +58,21 @@ pub struct Object {
     pub health: i32,
     /// 0–255, as maps give it.
     pub facing: u8,
+    /// The body's facing as the game keeps it: 16 bits, 0 north (−y),
+    /// clockwise.
+    pub dir: u16,
     pub mission: Mission,
+    /// Where it's going and its weapon's reload.
+    pub motion: crate::hunt::Motion,
+}
+
+/// A shell or bullet on its way.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Shot {
+    pub target: u32,
+    pub weapon: ra2_rules::WeaponId,
+    /// The frame it hits on.
+    pub lands: u32,
 }
 
 /// Where infantry stand in a cell, by sub-cell: the centre, then the four
@@ -71,6 +85,7 @@ const SUB_CELLS: [(i32, i32); 5] = [(128, 128), (64, 64), (192, 64), (64, 192), 
 pub struct World {
     pub houses: Vec<House>,
     pub objects: Vec<Object>,
+    pub shots: Vec<Shot>,
     next_id: u32,
 }
 
@@ -136,7 +151,9 @@ impl World {
             },
             health: i32::try_from(health).unwrap_or(i32::MAX),
             facing: p.facing,
+            dir: u16::from(p.facing) << 8,
             mission: Mission::parse(&p.mission),
+            motion: crate::hunt::Motion::default(),
         });
         Some(id)
     }
@@ -159,6 +176,13 @@ impl World {
             h.i32(o.coord.z);
             h.i32(o.health);
             h.u32(u32::from(o.facing));
+            h.u32(u32::from(o.dir));
+            h.i32(o.motion.reload);
+        }
+        h.u32(u32::try_from(self.shots.len()).unwrap_or(u32::MAX));
+        for s in &self.shots {
+            h.u32(s.target);
+            h.u32(s.lands);
         }
     }
 }
