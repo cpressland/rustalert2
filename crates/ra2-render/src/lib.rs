@@ -8,6 +8,7 @@ pub mod canvas;
 pub mod compose;
 pub mod lighting;
 pub mod scene;
+pub mod shroud;
 pub mod terrain;
 pub mod viewer;
 pub mod voxel;

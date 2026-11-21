@@ -285,7 +285,8 @@ fn infantry_facing(facing: i32) -> usize {
     (8 - dir) % 8
 }
 
-/// Collect every object of a map as pieces.
+/// Collect every object of a map as pieces, leaving out those standing on
+/// cells `hidden` says are under shroud.
 #[allow(clippy::too_many_lines)]
 pub fn collect(
     vfs: &Vfs,
@@ -293,6 +294,7 @@ pub fn collect(
     map: &Map,
     map_ini: &Ini,
     stats: &mut SceneStats,
+    hidden: &dyn Fn(i32, i32) -> bool,
 ) -> Vec<Piece> {
     let mut pieces = Vec::new();
     let level = levels(map);
@@ -340,6 +342,9 @@ pub fn collect(
             } else {
                 PaletteKind::Theater
             };
+            if hidden(x, y) {
+                continue;
+            }
             let c = ground(x, y);
             match art.shp(vfs, &image) {
                 Some(d)
@@ -368,6 +373,9 @@ pub fn collect(
             if p.len() < 3 {
                 continue;
             }
+            if hidden(atoi(p[1]), atoi(p[2])) {
+                continue;
+            }
             let c = ground(atoi(p[1]), atoi(p[2]));
             let image = art.image(p[0]);
             match art.shp(vfs, &image) {
@@ -394,6 +402,9 @@ pub fn collect(
     if let Some(s) = map_ini.section("Terrain") {
         for (k, v) in s.entries() {
             let n = atoi(k);
+            if hidden(n % 1000, n / 1000) {
+                continue;
+            }
             let c = ground(n % 1000, n / 1000);
             let image = art.image(v);
             match art.shp(vfs, &image) {
@@ -425,6 +436,9 @@ pub fn collect(
                 continue;
             }
             let (owner, id, x, y) = (p[0], p[1], atoi(p[3]), atoi(p[4]));
+            if hidden(x, y) {
+                continue;
+            }
             let image = art.image(id);
             let (fw, fh) = art
                 .art
@@ -458,6 +472,9 @@ pub fn collect(
             }
             let (owner, id, x, y, sub, facing) =
                 (p[0], p[1], atoi(p[3]), atoi(p[4]), atoi(p[5]), atoi(p[7]));
+            if hidden(x, y) {
+                continue;
+            }
             let image = art.image(id);
             let seq = art
                 .art
@@ -510,6 +527,9 @@ pub fn collect(
                 continue;
             }
             let (owner, id, x, y, facing) = (p[0], p[1], atoi(p[3]), atoi(p[4]), atoi(p[5]));
+            if hidden(x, y) {
+                continue;
+            }
             let image = art.image(id);
             let c = ground(x, y);
             let pal = art.house_palette(owner);

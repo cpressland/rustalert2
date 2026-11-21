@@ -23,3 +23,19 @@ fn gamemd_normal_sets_read_and_light() {
     );
     assert!(t[..245].iter().all(|&l| l <= 32));
 }
+
+#[test]
+fn gamemd_shroud_frame_table_reads() {
+    use ra2_render::shroud::{FrameTable, SOLID};
+    let Ok(install) = SearchContext::from_env().find(Game::YurisRevenge) else {
+        eprintln!("skipped: no Yuri's Revenge install (set RA2_DATA)");
+        return;
+    };
+    let Some(path) = install.inspection.file("gamemd.exe") else {
+        return;
+    };
+    let t = FrameTable::from_gamemd(&std::fs::read(path).unwrap()).expect("1.001 table");
+    assert_eq!(t.frame(0), 0, "no unseen neighbours: nothing drawn");
+    assert_eq!(t.frame(0xFF), SOLID, "all unseen: solid");
+    assert_eq!(t.frame(0x80), 1, "only the (0, -1) neighbour unseen");
+}
