@@ -1,8 +1,8 @@
 # Pathfinding
 
-**Status:** Started (the cell-level search is traced and implemented
-bit-exact; the hierarchical zone corridor that limits it is still to trace,
-#108)
+**Status:** Implemented for open ground (every route the original
+planned in the recorded starts is reproduced; zones on real terrain and
+the threat term are still to trace)
 **Crate:** `ra2-sim` (`pathfind`)
 **Issue:** #39
 
@@ -71,27 +71,40 @@ We hold the single-precision values as their bits and do the adds, the
 square root and the roundings in integers, so the routes match the
 game's bit for bit without floating point in the simulation.
 
+### The whole plan, as implemented
+
+1. **Destination.** A unit attacking goes to the target's cell plus its
+   weapon range less half a cell (infantry: the full range), toward the
+   attacker, each axis cut toward zero. `[observed]` (fits the Grizzly,
+   Rhino and GI from seven starts)
+2. **Corridor.** At each zone level from the top (8×8, 4×4, 2×2 blocks on
+   open ground), a search without an estimate (cost 1 plus the direction
+   bias per step) runs over that level's zones, kept to the zones inside
+   the level above's route. `[observed]` (fits every dumped corridor;
+   `0x0042C290` also adds a threat term and a per-connection weight, both
+   nil on open ground, and has no estimate)
+3. **Cell search** inside the level-0 corridor, as above. The start's
+   neighbours outside the corridor are recorded as reached but not
+   expanded. `[observed]` (every reached cell and cost matches the game's)
+4. **Tidying.** Two diagonal steps a right angle apart become two straight
+   steps; then everything after the first step is re-laid as straight
+   steps first, then diagonals. `[observed]` (every stored route matches;
+   the passes are `0x0042B210` and `0x0042B7F0`)
+5. **Storing.** The unit keeps about 12 steps and drives them, taking each
+   one off a step ahead for the drive tracks; it doesn't re-plan on the
+   way. `[observed]`
+
+All eight routes the original stored (the Grizzly from seven starts and
+four facings, and the Rhino) come out identical, and the hunt scenarios,
+including a new start from the south (`grizzly-hunts-mcv-north`), pass
+every check with units driving these routes.
+
 ### Checked against the game's own searches
 
 The observer can dump, right after a unit plans, the zones its search
-marked as the corridor at each level and every cell its cell search
-reached with its cost (`RA2_OBSERVE_DUMP`). For grizzly-hunts-mcv's
-Grizzly the corridor is a staircase of level-0 blocks, and our search
-inside it reaches the same 33 cells with the same costs, bit for bit, and
-finds the same route: NW, N, N, N, 8 × NW, W to (37,38). `[observed]`
-
-Still to settle (#108):
-
-- **The start.** Start-cell neighbours outside the corridor are recorded
-  as reached but not expanded; but in two other starts the game also
-  passed over an in-corridor neighbour with a better estimate (it went NE
-  then NW where N was best), probably the facing check at `0x00429C8C`.
-- **The destination.** The search's goal isn't the target's cell but a
-  cell part-way, (37,38) here; the stored route then ends at the first
-  cell strictly within range.
-- **Building the corridor** (the zone-level search) and the tidying passes,
-  which turned the found route NW, N, N, N, 8 × NW, W into the stored
-  NW, N, N, 9 × NW (one N and the last W merged into a diagonal).
+marked at each level and every cell its cell search reached with its
+cost (`RA2_OBSERVE_DUMP`). Inside the dumped corridor our cell search
+reaches the same cells with the same costs, bit for bit.
 
 ### What the logs show
 
@@ -116,11 +129,13 @@ up to 20 steps and re-solves stretches through `0x0042BCA0` and
 Without the corridor, the A* from (47,50) to (35,35) on open ground goes
 twelve steps NW and then three N. The original's units go NW, N, N, then
 eleven NW and N: the same search run with the corridor in force, which
-rules out the cells the first route takes early on. The hunters still use
-the route rule fitted to that route (locomotors.md) until #108 lands.
+rules out the cells the first route takes early on.
 
 ## Open questions
 
-- Zone building and the hierarchical search (#108).
-- The route tidying in `0x0042B210` and `0x0042B7F0`.
+- How zones split on real terrain (cliffs, water, buildings), and the zone
+  search's threat term and connection weights.
+- The tidying passes in full: the rule above fits every route recorded
+  but `0x0042B7F0` handles loops and windows of up to 20 steps.
+- When a unit re-plans (a route longer than it stores, a blocked cell).
 - The move-check results for each terrain, unit and occupant.

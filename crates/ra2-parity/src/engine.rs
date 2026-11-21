@@ -66,6 +66,10 @@ pub fn setup(scenario: &Scenario, rules: &Rules, map: &Ini) -> World {
             0,
         );
     }
+    // The map's cells, for route planning.
+    if let Ok(m) = ra2_formats::map::Map::from_ini(map) {
+        world.cells = m.tiles.iter().map(|t| (t.x, t.y)).collect();
+    }
     // Generated maps are flat, so everything stands at level 0.
     for p in placements(map) {
         world.place(rules, &p, 0);
