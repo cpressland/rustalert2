@@ -27,10 +27,10 @@ index 870464e..6910a8b 100644
          static long long last, sum;
 diff --git a/src/runtime/observe.c b/src/runtime/observe.c
 new file mode 100644
-index 0000000..06971c6
+index 0000000..95d3706
 --- /dev/null
 +++ b/src/runtime/observe.c
-@@ -0,0 +1,156 @@
+@@ -0,0 +1,169 @@
 +/* rustalert2 parity observer: per game frame, what the simulation holds.
 + * Written for github.com/cpressland/rustalert2's parity lab (M2); this file
 + * and the two-line hook in hdvox.c are its whole footprint here.
@@ -174,6 +174,19 @@ index 0000000..06971c6
 +            fprintf(f, "# frame %u\n", frame);
 +            dump_vector(f, "house", HOUSES_VA, 0x1000);
 +            dump_vector(f, "techno", TECHNOS_VA, 0x800);
++            {
++                /* The map's per-cell records (10 bytes: zone ids by level,
++                   then two more words). Cell index = y * stride + x. */
++                uint32_t map = 0x87F7E8u, tbl = rd32(map + 0x70), n = rd32(map + 0x6C);
++                uint32_t a = rd32(map + 0xF4), b = rd32(map + 0xF8);
++                fprintf(f, "# zones table %08X cells %u f4 %u f8 %u\n", tbl, n, a, b);
++                for (uint32_t i = 0; i < n && tbl; i++) {
++                    const uint8_t *r = GUEST_PTR(tbl + 10 * i);
++                    int16_t z[5]; memcpy(z, r, 10);
++                    if (z[0] || z[1] || z[2] || z[3] || z[4])
++                        fprintf(f, "zone %u %d %d %d %d %d\n", i, z[0], z[1], z[2], z[3], z[4]);
++                }
++            }
 +            fclose(f);
 +        }
 +        g_dump_frame = -1;
