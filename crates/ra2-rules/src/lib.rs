@@ -272,6 +272,52 @@ pub struct Country {
     pub multiplay: bool,
 }
 
+/// An animation (`[Animations]`; its keys live in the art file).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AnimType {
+    pub id: String,
+    /// `Rate=` as written; its timing belongs to the animation system.
+    pub rate: i32,
+    pub loop_start: i32,
+    pub loop_end: i32,
+    /// −1 loops for ever.
+    pub loop_count: i32,
+    /// The animation that follows this one.
+    pub next: Option<String>,
+    /// Damage dealt each loop, through `warhead`.
+    pub damage: Ratio,
+    pub warhead: Option<WarheadId>,
+    pub translucent: bool,
+    pub shadow: bool,
+}
+
+/// A `[SuperWeaponTypes]` entry.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SuperWeaponType {
+    pub id: String,
+    pub name: String,
+    /// `Type=`: what it does (`MultiMissile`, `IronCurtain`, …).
+    pub kind: String,
+    /// `RechargeTime=`, in minutes, as the game's double.
+    pub recharge_minutes: Ratio,
+    pub is_powered: bool,
+    pub weapon: Option<WeaponId>,
+    /// `Range=` in cells, as the game's double.
+    pub range: Ratio,
+}
+
+/// A `[ParticleSystems]` entry.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParticleSystemType {
+    pub id: String,
+    /// The `[Particles]` type it spawns.
+    pub holds_what: Option<String>,
+    /// `BehavesLike=`: `Smoke`, `Gas`, `Fire`, `Spark`, `Railgun`.
+    pub behaves_like: String,
+    pub particle_cap: i32,
+    pub spawn_frames: i32,
+}
+
 /// General values the simulation uses so far. More of `[General]` arrives
 /// with the systems that use it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -308,6 +354,9 @@ pub struct Rules {
     pub weapons: Vec<WeaponType>,
     pub warheads: Vec<Warhead>,
     pub projectiles: Vec<Projectile>,
+    pub anims: Vec<AnimType>,
+    pub super_weapons: Vec<SuperWeaponType>,
+    pub particle_systems: Vec<ParticleSystemType>,
     pub countries: Vec<Country>,
     /// `[Sides]`: each side's name and the countries it lists.
     pub sides: Vec<(String, Vec<String>)>,
@@ -440,6 +489,22 @@ impl Rules {
                 });
             }
         }
+        // Superweapons name weapons too, so they're read before the weapons.
+        let super_weapons: Vec<SuperWeaponType> = type_list(rules, "SuperWeaponTypes")
+            .into_iter()
+            .map(|id| {
+                let s = rules.section(&id);
+                SuperWeaponType {
+                    name: text(s, "Name").unwrap_or_default(),
+                    kind: text(s, "Type").unwrap_or_default(),
+                    recharge_minutes: ratio(s, "RechargeTime", Ratio::from_value("5")),
+                    is_powered: flag(s, "IsPowered", true),
+                    weapon: text(s, "WeaponType").map(|w| WeaponId(weapon_names.id(&w))),
+                    range: ratio(s, "Range", Ratio::from_value("0")),
+                    id,
+                }
+            })
+            .collect();
         // Weapons, then the projectiles and warheads they name.
         let mut weapons = Vec::new();
         let mut i = 0;
@@ -459,6 +524,39 @@ impl Rules {
             });
             i += 1;
         }
+        // Animations: listed in the rules, defined in the art file; their
+        // warheads join the warhead table.
+        let anims: Vec<AnimType> = type_list(rules, "Animations")
+            .into_iter()
+            .map(|id| {
+                let a = art.section(&id);
+                AnimType {
+                    rate: int(a, "Rate", 1),
+                    loop_start: int(a, "LoopStart", 0),
+                    loop_end: int(a, "LoopEnd", 1),
+                    loop_count: int(a, "LoopCount", 1),
+                    next: text(a, "Next"),
+                    damage: ratio(a, "Damage", Ratio::from_value("0")),
+                    warhead: text(a, "Warhead").map(|w| WarheadId(warhead_names.id(&w))),
+                    translucent: flag(a, "Translucent", false),
+                    shadow: flag(a, "Shadow", false),
+                    id,
+                }
+            })
+            .collect();
+        let particle_systems = type_list(rules, "ParticleSystems")
+            .into_iter()
+            .map(|id| {
+                let s = rules.section(&id);
+                ParticleSystemType {
+                    holds_what: text(s, "HoldsWhat"),
+                    behaves_like: text(s, "BehavesLike").unwrap_or_default(),
+                    particle_cap: int(s, "ParticleCap", 0),
+                    spawn_frames: int(s, "SparkSpawnFrames", 0),
+                    id,
+                }
+            })
+            .collect();
         let warheads = warhead_names
             .0
             .iter()
@@ -540,6 +638,9 @@ impl Rules {
             weapons,
             warheads,
             projectiles,
+            anims,
+            super_weapons,
+            particle_systems,
             countries,
             sides,
             general: General {

@@ -34,6 +34,19 @@ value does in play belongs to the notes of the system that uses it.
 - A techno's art section is its `Image=` (else its ID); buildings take
   `Foundation=` (`WxH`, default 1×1) from there.
 
+### Other tables
+
+- `[Animations]` lists animations; their keys are in the **art** file:
+  `Rate`, `LoopStart`, `LoopEnd`, `LoopCount` (−1 forever), `Next`,
+  `Damage` (a double) and `Warhead`, `Translucent`, `Shadow`. An
+  animation's warhead joins the warhead table. `[community]`
+- `[SuperWeaponTypes]`: `Name`, `Type` (what it does), `RechargeTime` (in
+  minutes, a double), `IsPowered`, `WeaponType` (joins the weapon table,
+  read before the techno weapons) and `Range` (cells, a double).
+  `[community]`
+- `[ParticleSystems]`: `HoldsWhat` (a `[Particles]` type), `BehavesLike`,
+  `ParticleCap` and `SparkSpawnFrames`. `[community]`
+
 ### Units of measure
 
 | Key | Stored as |
@@ -63,6 +76,8 @@ value does in play belongs to the notes of the system that uses it.
 | `AG` (projectile hits ground) | yes `[hypothesis]` |
 | `ConditionYellow`, `ConditionRed` | 50%, 25% `[community]` |
 | Ore and gem value (`[Riparius]`/`[Cruentus]` `Value=`) | 25, 50 |
+| Animation `Rate`, `LoopEnd`, `LoopCount` | 1, 1, 1 `[hypothesis]` |
+| Superweapon `RechargeTime`, `IsPowered` | 5 minutes, yes `[hypothesis]` |
 
 Armor types, in `Verses=` order: none, flak, plate, light, medium, heavy,
 wood, steel, concrete, special_1, special_2. Unknown names read as none.
