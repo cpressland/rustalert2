@@ -15,3 +15,4 @@
 pub mod coords;
 pub mod rng;
 pub mod tick;
+pub mod world;

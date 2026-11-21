@@ -9,9 +9,13 @@
 // Rules entries are naturally lists of yes/no keys.
 #![allow(clippy::struct_excessive_bools)]
 
+pub mod scenario;
+
 use std::collections::BTreeMap;
 
-use ra2_formats::ini::{Ini, Section, atoi, parse_bool, parse_list, parse_number};
+pub use ra2_formats::ini::Ini;
+
+use ra2_formats::ini::{Section, atoi, parse_bool, parse_list, parse_number};
 
 /// A factor the game keeps as a double (`Verses=` percentages,
 /// `PercentAtMax=`, `ProneDamage=`), held as the double's exact bits so the
