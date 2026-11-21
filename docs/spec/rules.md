@@ -41,7 +41,7 @@ value does in play belongs to the notes of the system that uses it.
 | `Range=`, `MinimumRange=`, `CellSpread=` | leptons: cells × 256, truncated `[community]` |
 | `Verses=`, `PercentAtMax=`, `ProneDamage=`, `ConditionYellow/Red=` | the double the game reads, kept as its bits |
 | `ROF=` | frames |
-| `Speed=` (technos) | as written; its meaning belongs to the locomotors |
+| `Speed=` (technos) | as written, and as the game keeps it: clamped 0–100, × 256 / 100, capped at 255 `[recomp 0x0071465A]` |
 | `Sight=` | cells |
 
 - Factors the game keeps as doubles are applied by multiplying in double
