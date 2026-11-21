@@ -6,6 +6,7 @@
 use ra2_rules::{Kind, Rules};
 
 use crate::coords::{Coord, LEPTONS_PER_CELL};
+use crate::pathfind;
 use crate::rng::Randomizer;
 use crate::world::{Mission, Object, Shot, World};
 
@@ -22,10 +23,13 @@ const FULL_TURN: i32 = 65_536;
 const SPOTS: [(i32, i32); 5] = [(128, 128), (64, 64), (192, 64), (64, 192), (192, 192)];
 
 /// Where an object is going and how far along it is.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Motion {
     /// The object it hunts.
     pub target: Option<u32>,
+    /// The planned route still to drive, as directions (see
+    /// `pathfind::DIRECTIONS`), planned once toward its attack position.
+    pub route: Vec<u8>,
     /// The leg in progress: from, to, and leptons travelled along it.
     pub leg: Option<(Coord, Coord, i32)>,
     /// Sub-lepton progress, in 1/256ths.
@@ -80,40 +84,18 @@ fn turn(from: i32, to: i32, rate: i32) -> i32 {
     }
 }
 
+fn to_cell(c: Coord) -> (i16, i16) {
+    (
+        i16::try_from(c.x.div_euclid(LEPTONS_PER_CELL)).unwrap_or(0),
+        i16::try_from(c.y.div_euclid(LEPTONS_PER_CELL)).unwrap_or(0),
+    )
+}
+
 fn cell_centre(c: Coord) -> Coord {
     Coord {
         x: c.x.div_euclid(LEPTONS_PER_CELL) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
         y: c.y.div_euclid(LEPTONS_PER_CELL) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
         z: c.z,
-    }
-}
-
-/// The next cell centre on the way from `here` toward the cell beside the
-/// target on the side the hunter comes from, along the major axis: the
-/// first step is diagonal, then straight until the rest is a diagonal, then
-/// diagonal. `[hypothesis]` (fitted to the one route in the reference logs:
-/// (47,50) to beside (35,35) goes diagonal, north, north, then diagonally
-/// to (35,36); the pathfinder itself is #39)
-fn next_cell(here: Coord, target: Coord, rolling: bool) -> Coord {
-    let (tx, ty) = (target.x - here.x, target.y - here.y);
-    let mut goal = target;
-    if tx.abs() >= ty.abs() {
-        goal.x -= tx.signum() * LEPTONS_PER_CELL;
-    } else {
-        goal.y -= ty.signum() * LEPTONS_PER_CELL;
-    }
-    let (dx, dy) = (goal.x - here.x, goal.y - here.y);
-    let (sx, sy) = if !rolling || dx.abs() == dy.abs() || dx == 0 || dy == 0 {
-        (dx.signum(), dy.signum())
-    } else if dx.abs() > dy.abs() {
-        (dx.signum(), 0)
-    } else {
-        (0, dy.signum())
-    };
-    Coord {
-        x: here.x + sx * LEPTONS_PER_CELL,
-        y: here.y + sy * LEPTONS_PER_CELL,
-        z: here.z,
     }
 }
 
@@ -210,8 +192,44 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
                 o.motion.arrived = true;
                 o.motion.arrived_at = frame;
             } else {
-                let next = next_cell(cell, cell_centre(target_at), o.motion.rolling);
-                o.motion.leg = Some((o.coord, stand(next), 0));
+                // Plan once, when there's no route left: toward the cell
+                // the weapon reaches from, through the game's planner.
+                let here = to_cell(cell);
+                if o.motion.route.is_empty() {
+                    // Infantry close to their full range; vehicles to half
+                    // a cell inside it. `[observed]` (the GI walks to
+                    // (37,38) where range less half a cell gives (37,37))
+                    let reach = weapon.range + if infantry { 128 } else { 0 };
+                    let goal = pathfind::approach(here, to_cell(target_at), reach);
+                    let cells = &world.cells;
+                    let valid = |c: (i16, i16)| {
+                        if cells.is_empty() {
+                            (c.0 - here.0).abs() <= 32 && (c.1 - here.1).abs() <= 32
+                        } else {
+                            cells.contains(&c)
+                        }
+                    };
+                    o.motion.route = pathfind::plan(here, goal, &valid).unwrap_or_default();
+                    o.motion.route.reverse();
+                }
+                let next = match o.motion.route.pop() {
+                    Some(d) => {
+                        let (dx, dy) = pathfind::DIRECTIONS[usize::from(d)];
+                        Coord {
+                            x: cell.x + i32::from(dx) * LEPTONS_PER_CELL,
+                            y: cell.y + i32::from(dy) * LEPTONS_PER_CELL,
+                            z: cell.z,
+                        }
+                    }
+                    // Nowhere planned to go: stand and wait in range.
+                    None => cell,
+                };
+                if next == cell {
+                    o.motion.arrived = true;
+                    o.motion.arrived_at = frame;
+                } else {
+                    o.motion.leg = Some((o.coord, stand(next), 0));
+                }
             }
         }
         if let Some((from, to, _)) = o.motion.leg {

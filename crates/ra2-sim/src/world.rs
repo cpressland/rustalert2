@@ -86,6 +86,9 @@ pub struct World {
     pub houses: Vec<House>,
     pub objects: Vec<Object>,
     pub shots: Vec<Shot>,
+    /// The map's cells, for route planning. Empty means unknown: routes
+    /// then keep to 32 cells round the unit.
+    pub cells: std::collections::BTreeSet<(i16, i16)>,
     next_id: u32,
 }
 

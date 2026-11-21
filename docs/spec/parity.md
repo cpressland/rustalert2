@@ -66,8 +66,8 @@ up the skirmish as the recorder's (see objects-model.md), and steps to the
 end frame, observing every frame from 1. Then
 `parity diff <scenario> <reference> <candidate>` reports each check.
 
-With the Hunt mission (#38, #40, #41), all 15 checks of the three
-`*-hunts-mcv` scenarios pass. The reference logs stay on the developer's
+With the Hunt mission (#38, #40, #41) and the game's route planner (#39),
+all 20 checks of the four `*-hunts-mcv*` scenarios pass. The reference logs stay on the developer's
 machine; CI runs `engine::hunt_tests`, which replays the Grizzly scenario
 from rules values written into the test.
 

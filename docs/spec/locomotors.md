@@ -50,9 +50,8 @@ constant is `[observed]`, not traced:
   `speed × 277`, where `speed` is the stored value above. Each leg (cell
   to cell) ends exactly on its point and the rest of the frame's step
   carries into the next frame.
-- **Route** (`[hypothesis]`, fitted to one route): toward the cell beside
-  the target along the major axis, first one diagonal step, then straight
-  until the rest is diagonal, then diagonal. Vehicles stand on cell
+- **Route**: the game's planner (pathfinding.md), planned once toward the
+  attack position and driven step by step. Vehicles stand on cell
   centres; infantry on sub-cell spot 2 of each cell.
 - **Stopping**: at the first cell on the route with the target within
   weapon range.
@@ -64,8 +63,8 @@ at frame 120 and exact at 300; the GI within 53 and 30.
 
 - Infantry are slower on straight legs (about 9.9 leptons a frame) than
   on diagonals (about 11); we use one speed.
-- The route rule against more start positions, and the real pathfinder
-  (#39).
+- Infantry's stored route (it lives elsewhere in `InfantryClass`), to
+  confirm they plan like vehicles.
 
 - The drive track tables and how speed scales along them (the shorter
   steps).

@@ -229,7 +229,23 @@ pub fn find_path(
     goal: (i16, i16),
     passable: &dyn Fn((i16, i16)) -> bool,
 ) -> Option<Vec<(i16, i16)>> {
+    search(start, goal, passable, true)
+}
+
+/// The search itself. With `heuristic` off the estimate is the cost alone,
+/// as in the zone-level search. The start's neighbours that `passable`
+/// turns away are still recorded as reached (so they're never revisited
+/// cheaply) but not expanded. `[observed]` (search dumps)
+fn search(
+    start: (i16, i16),
+    goal: (i16, i16),
+    passable: &dyn Fn((i16, i16)) -> bool,
+    heuristic: bool,
+) -> Option<Vec<(i16, i16)>> {
     let distance = |c: (i16, i16)| {
+        if !heuristic {
+            return 0;
+        }
         let (dx, dy) = (i64::from(goal.0 - c.0), i64::from(goal.1 - c.1));
         u64::try_from(dx * dx + dy * dy).expect("positive")
     };
@@ -253,6 +269,11 @@ pub fn find_path(
         for (d, (dx, dy)) in DIRECTIONS.iter().enumerate() {
             let cell = (nodes[cur].cell.0 + dx, nodes[cur].cell.1 + dy);
             if !passable(cell) {
+                if nodes[cur].parent.is_none() {
+                    reached
+                        .entry(cell)
+                        .or_insert_with(|| add_f32(add_f32(CLEAR_COST, BIAS[d]), 0));
+                }
                 continue;
             }
             if reached
@@ -309,6 +330,158 @@ pub fn find_path(
         };
     }
     None
+}
+
+/// Zone sizes by level, from the top. On open ground the game's zones are
+/// aligned square blocks of these sizes. `[observed]` (zone dumps; how
+/// they split on real terrain is still to trace)
+const ZONE_SIZES: [i16; 3] = [8, 4, 2];
+
+/// The corridor: the level-0 zones (2×2 blocks, by block coordinate) a
+/// route may use. At each level a search without an estimate runs over
+/// that level's blocks, kept to the blocks inside the level above's route.
+/// `[observed]` (fits every dumped corridor; the game's step cost also has
+/// a threat term and a per-connection weight, both nil on open ground)
+fn corridor(
+    start: (i16, i16),
+    goal: (i16, i16),
+    valid: &dyn Fn((i16, i16)) -> bool,
+) -> Option<std::collections::BTreeSet<(i16, i16)>> {
+    let mut parent: Option<(i16, std::collections::BTreeSet<(i16, i16)>)> = None;
+    for size in ZONE_SIZES {
+        let block = |c: (i16, i16)| (c.0.div_euclid(size), c.1.div_euclid(size));
+        let ok = |b: (i16, i16)| {
+            let (x0, y0) = (
+                i32::from(b.0) * i32::from(size),
+                i32::from(b.1) * i32::from(size),
+            );
+            let (Ok(x0), Ok(y0)) = (i16::try_from(x0), i16::try_from(y0)) else {
+                return false;
+            };
+            let inside_parent = parent
+                .as_ref()
+                .is_none_or(|(ps, set)| set.contains(&(x0.div_euclid(*ps), y0.div_euclid(*ps))));
+            inside_parent && (0..size).any(|y| (0..size).any(|x| valid((x0 + x, y0 + y))))
+        };
+        let (from, to) = (block(start), block(goal));
+        let mut route: std::collections::BTreeSet<(i16, i16)> =
+            search(from, to, &ok, false)?.into_iter().collect();
+        route.insert(from);
+        parent = Some((size, route));
+    }
+    parent.map(|(_, set)| set)
+}
+
+/// Tidy a found route as the game does before storing it: two diagonal
+/// steps a right angle apart become two straight steps; then everything
+/// after the first step is re-laid as straight steps first, then
+/// diagonals, covering the same ground in the fewest steps. `[observed]`
+/// (every stored route recorded; the passes are `0x0042B210` and
+/// `0x0042B7F0`)
+pub fn tidy(route: &[u8]) -> Vec<u8> {
+    let mut r = route.to_vec();
+    for i in 0..r.len().saturating_sub(1) {
+        let (a, b) = (r[i], r[i + 1]);
+        if a % 2 == 1 && b % 2 == 1 && matches!((b + 8 - a) % 8, 2 | 6) {
+            let (da, db) = (DIRECTIONS[usize::from(a)], DIRECTIONS[usize::from(b)]);
+            let mid = (i16::midpoint(da.0, db.0), i16::midpoint(da.1, db.1));
+            let s = u8::try_from(DIRECTIONS.iter().position(|&d| d == mid).expect("straight"))
+                .expect("small");
+            r[i] = s;
+            r[i + 1] = s;
+        }
+    }
+    if r.len() < 2 {
+        return r;
+    }
+    let (dx, dy) = r[1..].iter().fold((0i16, 0i16), |(x, y), &d| {
+        let (sx, sy) = DIRECTIONS[usize::from(d)];
+        (x + sx, y + sy)
+    });
+    let mut out = vec![r[0]];
+    out.extend(line(dx, dy));
+    out
+}
+
+/// The fewest steps covering `(dx, dy)`: straight steps along the longer
+/// axis first, then diagonals.
+fn line(dx: i16, dy: i16) -> Vec<u8> {
+    let (sx, sy) = (dx.signum(), dy.signum());
+    let dir = |d: (i16, i16)| {
+        u8::try_from(
+            DIRECTIONS
+                .iter()
+                .position(|&x| x == d)
+                .expect("a direction"),
+        )
+        .expect("small")
+    };
+    let diagonal = dx.abs().min(dy.abs());
+    let straight = dx.abs().max(dy.abs()) - diagonal;
+    let along = if dx.abs() > dy.abs() {
+        (sx, 0)
+    } else {
+        (0, sy)
+    };
+    let mut out = Vec::new();
+    for _ in 0..straight {
+        out.push(dir(along));
+    }
+    for _ in 0..diagonal {
+        out.push(dir((sx, sy)));
+    }
+    out
+}
+
+/// Plan a route from `start` to `goal` over `valid` cells: the corridor,
+/// the cell search inside it, then the tidying. Directions are indices
+/// into [`DIRECTIONS`].
+pub fn plan(
+    start: (i16, i16),
+    goal: (i16, i16),
+    valid: &dyn Fn((i16, i16)) -> bool,
+) -> Option<Vec<u8>> {
+    if start == goal {
+        return Some(Vec::new());
+    }
+    let zones = corridor(start, goal, valid)?;
+    let inside = |c: (i16, i16)| {
+        c == start || (valid(c) && zones.contains(&(c.0.div_euclid(2), c.1.div_euclid(2))))
+    };
+    let cells = search(start, goal, &inside, true)?;
+    let mut steps = Vec::with_capacity(cells.len());
+    let mut at = start;
+    for c in cells {
+        let d = (c.0 - at.0, c.1 - at.1);
+        steps.push(
+            u8::try_from(DIRECTIONS.iter().position(|&x| x == d).expect("adjacent"))
+                .expect("small"),
+        );
+        at = c;
+    }
+    Some(tidy(&steps))
+}
+
+/// Where a unit goes to attack: the target's cell, plus its weapon range
+/// less half a cell, toward the attacker, each axis cut toward zero.
+/// `[observed]` (fits the destinations of three weapons and seven starts)
+pub fn approach(from: (i16, i16), target: (i16, i16), range_leptons: i32) -> (i16, i16) {
+    let (dx, dy) = (i64::from(from.0 - target.0), i64::from(from.1 - target.1));
+    let d2 = dx * dx + dy * dy;
+    if d2 == 0 {
+        return target;
+    }
+    let r = i64::from((range_leptons - 128).max(0));
+    // |offset| = floor(|d| × r / (256 × sqrt(d2))), found exactly.
+    let axis = |d: i64| -> i16 {
+        let num = (d.abs() * r).pow(2);
+        let mut k = 0i64;
+        while (k + 1).pow(2) * 65_536 * d2 <= num {
+            k += 1;
+        }
+        i16::try_from(k * d.signum()).unwrap_or(0)
+    };
+    (target.0 + axis(dx), target.1 + axis(dy))
 }
 
 #[cfg(test)]
@@ -384,6 +557,47 @@ mod tests {
         };
         let p = find_path((47, 50), (37, 38), &allowed).unwrap();
         assert_eq!(dirs((47, 50), &p), "NW,N,N,N,NW,NW,NW,NW,NW,NW,NW,NW,W");
+    }
+
+    /// Every route the original stored in the recorded starts (Grizzly from
+    /// seven cells, Rhino from one) toward the MCV at (35,35), or the
+    /// enemy MCV at (65,65) for the start nearer it.
+    type Case = ((i16, i16), (i16, i16), i32, &'static str);
+
+    #[test]
+    fn planned_routes_are_the_games() {
+        // The recordings' 50×50 map spans cells 7 to 92 on each axis.
+        let open = |c: (i16, i16)| (7..=92).contains(&c.0) && (7..=92).contains(&c.1);
+        let cases: [Case; 8] = [
+            (
+                (47, 50),
+                (35, 35),
+                1280,
+                "NW,N,N,NW,NW,NW,NW,NW,NW,NW,NW,NW",
+            ),
+            ((40, 50), (35, 35), 1280, "N,N,N,N,N,N,N,NW,NW,NW,NW"),
+            ((45, 50), (35, 35), 1280, "NW,N,N,N,N,NW,NW,NW,NW,NW,NW,NW"),
+            ((47, 44), (35, 35), 1280, "W,W,NW,NW,NW,NW,NW,NW,NW"),
+            ((50, 40), (35, 35), 1280, "W,W,W,W,W,W,W,NW,NW,NW,NW"),
+            (
+                (50, 47),
+                (35, 35),
+                1280,
+                "NW,W,W,NW,NW,NW,NW,NW,NW,NW,NW,NW",
+            ),
+            ((52, 52), (65, 65), 1280, "SE,SE,SE,SE,SE,SE,SE,SE,SE,SE"),
+            ((47, 50), (35, 35), 1472, "NW,N,N,NW,NW,NW,NW,NW,NW,NW,NW"),
+        ];
+        let names = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+        for (start, target, range, want) in cases {
+            let goal = approach(start, target, range);
+            let route = plan(start, goal, &open).unwrap();
+            let got: Vec<&str> = route.iter().map(|&d| names[usize::from(d)]).collect();
+            assert_eq!(got.join(","), want, "from {start:?}");
+        }
+        assert_eq!(approach((47, 50), (35, 35), 1280), (37, 38));
+        assert_eq!(approach((47, 50), (35, 35), 1472), (38, 39));
+        assert_eq!(approach((47, 50), (35, 35), 1024), (37, 37));
     }
 
     #[test]
