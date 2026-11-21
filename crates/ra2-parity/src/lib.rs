@@ -3,6 +3,7 @@
 //! See `docs/spec/parity.md`.
 
 pub mod diff;
+pub mod engine;
 pub mod log;
 pub mod mapgen;
 pub mod record;

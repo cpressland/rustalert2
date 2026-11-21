@@ -81,6 +81,18 @@ impl Log {
         Ok(Log { frames })
     }
 
+    /// Write JSON lines, as [`Log::read`] reads them.
+    ///
+    /// # Errors
+    /// If writing fails.
+    pub fn write(&self, mut w: impl io::Write) -> io::Result<()> {
+        for f in &self.frames {
+            serde_json::to_writer(&mut w, f).map_err(io::Error::other)?;
+            w.write_all(b"\n")?;
+        }
+        Ok(())
+    }
+
     /// The last observed frame at or before `frame`.
     pub fn at(&self, frame: u32) -> Option<&Frame> {
         match self.frames.binary_search_by_key(&frame, |f| f.frame) {

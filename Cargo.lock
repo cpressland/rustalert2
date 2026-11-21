@@ -1665,6 +1665,8 @@ version = "0.0.0"
 dependencies = [
  "clap",
  "ra2-formats",
+ "ra2-rules",
+ "ra2-sim",
  "ra2-vfs",
  "serde",
  "serde_json",
