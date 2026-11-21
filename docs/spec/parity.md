@@ -66,9 +66,10 @@ up the skirmish as the recorder's (see objects-model.md), and steps to the
 end frame, observing every frame from 1. Then
 `parity diff <scenario> <reference> <candidate>` reports each check.
 
-As of the first M4 slice, frame 1 matches the reference object for object
-in every scenario; the movement and combat checks fail until the
-locomotors and combat land.
+With the Hunt mission (#38, #40, #41), all 15 checks of the three
+`*-hunts-mcv` scenarios pass. The reference logs stay on the developer's
+machine; CI runs `engine::hunt_tests`, which replays the Grizzly scenario
+from rules values written into the test.
 
 ## Scenarios
 

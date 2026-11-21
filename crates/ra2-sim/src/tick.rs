@@ -87,6 +87,8 @@ pub struct Sim {
     frame: u32,
     rng: Randomizer,
     world: World,
+    /// The rules objects act by; without them objects stand still.
+    rules: Option<ra2_rules::Rules>,
 }
 
 impl Sim {
@@ -101,6 +103,15 @@ impl Sim {
             frame: 0,
             rng: Randomizer::new(seed),
             world,
+            rules: None,
+        }
+    }
+
+    /// A game: `world` played by `rules`.
+    pub fn start(seed: u32, rules: ra2_rules::Rules, world: World) -> Sim {
+        Sim {
+            rules: Some(rules),
+            ..Sim::with_world(seed, world)
         }
     }
 
@@ -126,6 +137,9 @@ impl Sim {
                     value: self.rng.ranged(min, max),
                 }),
             }
+        }
+        if let Some(rules) = &self.rules {
+            crate::hunt::update(&mut self.world, rules, &mut self.rng, self.frame + 1);
         }
         self.frame += 1;
         events
@@ -181,7 +195,7 @@ mod tests {
         assert_eq!(hashes[299], PINNED);
     }
 
-    const PINNED: u64 = 10_693_829_126_038_112_946;
+    const PINNED: u64 = 11_520_121_364_907_886_290;
 
     #[test]
     fn speeds_run_from_sixty_to_ten_frames_a_second() {

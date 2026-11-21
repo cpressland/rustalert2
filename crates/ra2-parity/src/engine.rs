@@ -115,7 +115,7 @@ pub fn observe(sim: &Sim, rules: &Rules) -> Frame {
 
 /// Play `scenario` to its end frame, observing every frame from 1.
 pub fn run(scenario: &Scenario, rules: &Rules, map: &Ini, seed: u32) -> Log {
-    let mut sim = Sim::with_world(seed, setup(scenario, rules, map));
+    let mut sim = Sim::start(seed, rules.clone(), setup(scenario, rules, map));
     let mut frames = Vec::new();
     while sim.frame() < scenario.end_frame {
         sim.step(&[]);
@@ -163,5 +163,72 @@ mod tests {
             ]
         );
         assert_eq!(log.at(3).unwrap().frame, 3);
+    }
+}
+
+#[cfg(test)]
+mod hunt_tests {
+    use super::*;
+
+    /// The grizzly-hunts-mcv scenario with its rules values written out, so
+    /// CI (which has no game data) checks what the reference log shows:
+    /// the Grizzly sets off on frame 20, stops at (38,39) on frame 159 and
+    /// its first shell lands on frame 170, then every 60–62 frames.
+    #[test]
+    fn a_grizzly_hunts_an_mcv_as_in_the_reference_log() {
+        let scenario = Scenario::parse(
+            "name='t'\nmap='t.yrm'\nend_frame=300\nhuman_start=[35,35]\n\
+             [generate]\nname='t'\nwidth=50\nheight=50\nstarts=[[35,35],[65,65]]\n\
+             [[generate.house]]\nname='Neutral'\n\
+             [[generate.unit]]\nowner='Neutral'\ntype='MTNK'\nx=47\ny=50\nfacing=64\nmission='Hunt'\n",
+        )
+        .unwrap();
+        let rules = Rules::from_ini(
+            &Ini::parse(
+                b"[General]\nBaseUnit=AMCV,SMCV\n[VehicleTypes]\n1=AMCV\n2=SMCV\n3=MTNK\n\
+                  [Warheads]\n1=AP\n\
+                  [Countries]\n1=British\n2=Russians\n[British]\nSide=GDI\n[Russians]\nSide=Nod\n\
+                  [AMCV]\nStrength=1000\nArmor=heavy\n[SMCV]\nStrength=1000\nArmor=heavy\n\
+                  [MTNK]\nStrength=300\nArmor=heavy\nSpeed=7\nROT=5\nPrimary=105mm\nTurret=yes\n\
+                  [105mm]\nDamage=65\nROF=60\nRange=5\nProjectile=Cannon\nSpeed=40\nWarhead=AP\n\
+                  [Cannon]\nArcing=true\n\
+                  [AP]\nVerses=25%,25%,15%,75%,100%,100%,65%,45%,60%,60%,100%\n",
+            ),
+            &Ini::parse(b""),
+        );
+        let map = Ini::parse(crate::mapgen::write(scenario.generate.as_ref().unwrap()).as_bytes());
+        let log = run(&scenario, &rules, &map, 1);
+        let tank = |f: u32| {
+            let o = log
+                .at(f)
+                .unwrap()
+                .objects
+                .iter()
+                .find(|o| o.type_id == "MTNK")
+                .cloned()
+                .unwrap();
+            (o.x, o.y)
+        };
+        let mcv = |f: u32| {
+            log.at(f)
+                .unwrap()
+                .objects
+                .iter()
+                .find(|o| o.type_id == "AMCV")
+                .unwrap()
+                .hp
+        };
+        assert_eq!(tank(19), (12160, 12928), "still turning");
+        assert_ne!(tank(20), tank(19), "sets off on frame 20");
+        assert_eq!(tank(159), (9856, 10112), "stops at (38,39)");
+        assert_eq!(tank(300), tank(159));
+        assert_eq!((mcv(169), mcv(170)), (1000, 935), "first hit on frame 170");
+        let hits = (171..=300)
+            .filter(|&f| mcv(f) < mcv(f - 1))
+            .collect::<Vec<_>>();
+        assert!(
+            hits.len() == 2 && (230..=232).contains(&hits[0]),
+            "{hits:?}"
+        );
     }
 }
