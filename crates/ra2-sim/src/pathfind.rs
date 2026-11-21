@@ -369,6 +369,9 @@ mod tests {
         let p = find_path((2, 4), (8, 4), &open).unwrap();
         assert_eq!(*p.last().unwrap(), (8, 4));
         assert!(p.iter().all(|&c| open(c)));
-        assert!(p.iter().any(|c| c.1 >= 9 || c.1 < 0), "round an end of the wall");
+        assert!(
+            p.iter().any(|c| c.1 >= 9 || c.1 < 0),
+            "round an end of the wall"
+        );
     }
 }
