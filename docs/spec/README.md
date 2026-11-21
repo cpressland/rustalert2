@@ -53,7 +53,7 @@ their art ships in); those are reported, not drawn.
 | System | Note | Status |
 |---|---|---|
 | Ticks, game speed and RNG | [tick.md](tick.md) | Implemented |
-| Rules tables | | Not started |
+| Rules tables | [rules.md](rules.md) | Implemented |
 | Object model and missions | | Not started |
 | Pathfinding and occupancy | | Not started |
 | Locomotors | | Not started |

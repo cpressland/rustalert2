@@ -1688,6 +1688,7 @@ name = "ra2-rules"
 version = "0.0.0"
 dependencies = [
  "ra2-formats",
+ "ra2-vfs",
 ]
 
 [[package]]
