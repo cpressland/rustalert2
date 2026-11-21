@@ -308,6 +308,21 @@ pub fn collect(
     stats: &mut SceneStats,
     hidden: &dyn Fn(i32, i32) -> bool,
 ) -> Vec<Piece> {
+    collect_with(vfs, art, map, map_ini, stats, hidden, true)
+}
+
+/// As [`collect`], leaving out the map's buildings, vehicles and infantry
+/// when `technos` is off (a running game draws its own; see [`live`]).
+#[allow(clippy::too_many_lines)]
+pub fn collect_with(
+    vfs: &Vfs,
+    art: &mut Art,
+    map: &Map,
+    map_ini: &Ini,
+    stats: &mut SceneStats,
+    hidden: &dyn Fn(i32, i32) -> bool,
+    technos: bool,
+) -> Vec<Piece> {
     let mut pieces = Vec::new();
     let level = levels(map);
     let height = |x: i32, y: i32| -> i32 {
@@ -451,7 +466,7 @@ pub fn collect(
 
     // Buildings: owner,type,health,x,y,... The SHP is centred on the
     // foundation's middle.
-    if let Some(s) = map_ini.section("Structures") {
+    if let Some(s) = map_ini.section("Structures").filter(|_| technos) {
         for (_, v) in s.entries() {
             let p: Vec<&str> = v.split(',').collect();
             if p.len() < 5 {
@@ -549,7 +564,7 @@ pub fn collect(
     }
 
     // Infantry: owner,type,health,x,y,subcell,mission,facing,...
-    if let Some(s) = map_ini.section("Infantry") {
+    if let Some(s) = map_ini.section("Infantry").filter(|_| technos) {
         for (_, v) in s.entries() {
             let p: Vec<&str> = v.split(',').collect();
             if p.len() < 8 {
@@ -605,7 +620,7 @@ pub fn collect(
         }
     }
     // Vehicles: owner,type,health,x,y,facing,mission,... Voxel models.
-    if let Some(s) = map_ini.section("Units") {
+    if let Some(s) = map_ini.section("Units").filter(|_| technos) {
         for (_, v) in s.entries() {
             let p: Vec<&str> = v.split(',').collect();
             if p.len() < 6 {
@@ -681,6 +696,99 @@ pub fn tile_anims(vfs: &Vfs, art: &mut Art, anims: &[crate::terrain::PlacedAnim]
                 false,
                 a.cell,
             );
+        }
+    }
+    pieces
+}
+
+/// What kind of object a live object is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LiveKind {
+    Building,
+    Vehicle,
+    Infantry,
+    Aircraft,
+}
+
+/// An object in a running game, as the renderer needs it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Live {
+    pub kind: LiveKind,
+    /// The rules ID.
+    pub type_id: String,
+    /// The owning house's name, for its colours.
+    pub owner: String,
+    /// Its centre, in leptons (`z` is height).
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
+    /// 0–255.
+    pub facing: u8,
+}
+
+/// A point in leptons on screen: cells are 60×30 diamonds, 256 leptons a
+/// side, and a height level (104 leptons) is 15 pixels up. Matches the
+/// cell-centre placement of map objects.
+pub fn lepton_screen(x: i32, y: i32, z: i32) -> (i32, i32) {
+    ((x - y) * 30 / 256, (x + y) * 15 / 256 - z * 15 / 104)
+}
+
+/// The pieces for a running game's objects: vehicles as voxels (with their
+/// shadows), infantry on their `Ready` frame by facing, buildings on
+/// frame 0 with their bib.
+pub fn live(vfs: &Vfs, art: &mut Art, objects: &[Live]) -> Vec<Piece> {
+    let mut pieces = Vec::new();
+    for o in objects {
+        let image = art.image(&o.type_id);
+        let c = lepton_screen(o.x, o.y, o.z);
+        let at = (o.x.div_euclid(256), o.y.div_euclid(256), o.z / 104);
+        let pal = art.house_palette(&o.owner);
+        match o.kind {
+            LiveKind::Vehicle | LiveKind::Aircraft => {
+                if let Some(sprite) = art.vehicle(vfs, &image, o.facing) {
+                    for (layer, pixels, shadow) in
+                        [(0, sprite.shadow, true), (1, sprite.pixels, false)]
+                    {
+                        pieces.push(Piece {
+                            order: (c.1, c.0, layer),
+                            x: c.0 - sprite.anchor.0,
+                            y: c.1 - sprite.anchor.1,
+                            width: sprite.width,
+                            pixels,
+                            palette: pal,
+                            shadow,
+                            at,
+                        });
+                    }
+                } else if let Some(d) = art.shp(vfs, &image) {
+                    push_frame(&mut pieces, &d, 0, c, (c.1, c.0, 0), pal, true, at);
+                }
+            }
+            LiveKind::Infantry => {
+                let seq = art
+                    .art
+                    .get(&image, "Sequence")
+                    .unwrap_or_default()
+                    .to_string();
+                let ready = art.art.get(&seq, "Ready").map_or((0, 1), |r| {
+                    let f: Vec<i32> = r.split(',').map(atoi).collect();
+                    (
+                        f.first().copied().unwrap_or(0),
+                        f.get(2).copied().unwrap_or(1),
+                    )
+                });
+                let frame = usize::try_from(ready.0).unwrap_or(0)
+                    + infantry_facing(i32::from(o.facing))
+                        * usize::try_from(ready.1.max(1)).unwrap_or(1);
+                if let Some(d) = art.shp(vfs, &image) {
+                    push_frame(&mut pieces, &d, frame, c, (c.1, c.0, 0), pal, true, at);
+                }
+            }
+            LiveKind::Building => {
+                if let Some(d) = art.shp(vfs, &image) {
+                    push_frame(&mut pieces, &d, 0, c, (c.1, c.0, 0), pal, true, at);
+                }
+            }
         }
     }
     pieces

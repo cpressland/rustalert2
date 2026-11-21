@@ -39,7 +39,10 @@ cargo run --release -p ra2tool -- shp png gi.shp --house DarkBlue --count 8 -o /
 cargo run --release -p ra2tool -- map view all01umd.map
 ```
 
-The parity lab (`cargo run -p ra2-parity -- record | diff | events | summary`)
+`cargo run --release -p ra2-game -- parity/scenarios/grizzly-hunts-mcv.toml`
+plays a scenario live: the simulation at game speed, drawn as it runs.
+
+The parity lab (`cargo run -p ra2-parity -- record | run | diff | events | summary`)
 records scenarios in the original game through the recomp and compares them
 with our engine; see [docs/spec/parity.md](docs/spec/parity.md).
 

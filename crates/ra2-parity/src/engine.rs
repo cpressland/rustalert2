@@ -10,6 +10,48 @@ use ra2_sim::world::World;
 use crate::log::{Frame, House, Log, Object};
 use crate::scenario::Scenario;
 
+/// Find the install, mount it, and build the rules (with the scenario
+/// map's sections loaded over `rulesmd.ini`, as the game does) and the map.
+///
+/// # Errors
+/// If there's no install or a file is missing.
+pub fn prepare(
+    scenario: &Scenario,
+    game_dir: Option<&std::path::Path>,
+) -> std::io::Result<(ra2_vfs::mount::Vfs, Rules, Ini)> {
+    use ra2_vfs::install::{Game, Inspection, SearchContext};
+    use std::io;
+    let inspection = match game_dir {
+        Some(d) => Inspection::of(d)?,
+        None => {
+            SearchContext::from_env()
+                .find(Game::YurisRevenge)
+                .map_err(io::Error::other)?
+                .inspection
+        }
+    };
+    let mut vfs = ra2_vfs::mount::Vfs::new(inspection);
+    vfs.mount_startup(Game::YurisRevenge);
+    let read = |n: &str| -> io::Result<Ini> {
+        let d = vfs
+            .read(n)?
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, format!("{n}: not found")))?;
+        Ok(Ini::parse(&d))
+    };
+    let map = match &scenario.generate {
+        Some(spec) => Ini::parse(crate::mapgen::write(spec).as_bytes()),
+        None => read(&scenario.map)?,
+    };
+    let mut rules_ini = read("rulesmd.ini")?;
+    for section in map.sections() {
+        for (k, v) in section.entries() {
+            rules_ini.put(&section.name, k, v);
+        }
+    }
+    let rules = Rules::from_ini(&rules_ini, &read("artmd.ini")?);
+    Ok((vfs, rules, map))
+}
+
 /// The skirmish the recorder starts: the human (British, 10,000 credits)
 /// at `human_start`, one AI (Russians, 50,000) at the next start point,
 /// then the map's own houses `Neutral` and `Special`. `[observed]` (every
