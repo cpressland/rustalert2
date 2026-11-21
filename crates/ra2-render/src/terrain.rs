@@ -139,6 +139,7 @@ struct Piece {
     y: i32,
     width: usize,
     pixels: Vec<u8>,
+    light: crate::lighting::Light,
 }
 
 /// Draw a map's terrain onto a canvas: base diamonds in row order, then
@@ -186,6 +187,7 @@ pub fn draw(
         let level = i32::from(t.level);
         let top = Cell::new(t.x, t.y).screen(level);
         let row = i32::from(t.x) + i32::from(t.y);
+        let cell_light = light.cell(i32::from(t.x), i32::from(t.y), level);
         // The diamond, unpacked into its 60x30 box.
         let (w, h) = (tmp.tile_width as usize, tmp.tile_height as usize);
         let mut boxed = vec![0u8; w * h];
@@ -208,6 +210,7 @@ pub fn draw(
             y: top.y,
             width: w,
             pixels: boxed,
+            light: cell_light,
         });
         if let Some(e) = &cell.extra {
             pieces.push(Piece {
@@ -216,15 +219,16 @@ pub fn draw(
                 y: top.y + e.y - cell.y,
                 width: e.width as usize,
                 pixels: e.image.clone(),
+                light: cell_light,
             });
         }
     }
     pieces.sort_by_key(|p| p.order);
-    let mut lit: BTreeMap<u8, [Rgb; 256]> = BTreeMap::new();
+    let mut lit: BTreeMap<crate::lighting::Light, [Rgb; 256]> = BTreeMap::new();
     for p in pieces {
         let palette = lit
-            .entry(p.order.2)
-            .or_insert_with(|| light.apply(&lib.palette, i32::from(p.order.2)));
+            .entry(p.light)
+            .or_insert_with(|| crate::lighting::Lighting::lit(&lib.palette, p.light));
         canvas.blit(p.x, p.y, p.width, &p.pixels, palette, false);
     }
     stats

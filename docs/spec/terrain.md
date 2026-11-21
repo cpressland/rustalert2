@@ -38,10 +38,9 @@ decoding is in [tmp.md](tmp.md), and the projection is in
 
 ## Open questions
 
-- Water animation (`[Animations]` of the theater art) and the per-cell
-  ramp lighting the game applies to slopes.
-- Whether the game uses the template's own height map for ramps or the
-  cell's level alone.
+- Water animation (`[Animations]` of the theater art).
+- Ramps are lit by their cell's level alone (see lighting.md); a slope
+  term would sit in the cell lighting routine and none has turned up.
 
 ## Parity
 
