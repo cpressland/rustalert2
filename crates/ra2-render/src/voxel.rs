@@ -152,6 +152,8 @@ pub struct Sprite {
     pub width: usize,
     pub height: usize,
     pub pixels: Vec<u8>,
+    /// The shadow in the same box: 1 where the ground is darkened.
+    pub shadow: Vec<u8>,
     /// The unit's ground position within the sprite.
     pub anchor: (i32, i32),
 }
@@ -166,6 +168,7 @@ struct Model<'a> {
 /// With `normals`, each voxel is lit by its normal for this facing (the
 /// light is turned into the model's frame; sections' own HVA rotations
 /// don't turn it further, as in the game); without, it's flat-shaded.
+#[allow(clippy::too_many_lines)]
 pub fn render(
     models: &[(&Vxl, Option<&Hva>)],
     facing: u8,
@@ -187,6 +190,8 @@ pub fn render(
     let mut tables: [Option<[u8; 256]>; 5] = [None; 5];
     // Each voxel to screen pixels, depth and colour.
     let mut points: Vec<(i32, i32, f32, u8)> = Vec::new();
+    // Each voxel flattened onto the ground, for the shadow.
+    let mut shadow_points: Vec<(i32, i32)> = Vec::new();
     for m in &models {
         for (si, s) in m.vxl.sections.iter().enumerate() {
             let mode = usize::from(s.normals_mode).min(4);
@@ -235,19 +240,27 @@ pub fn render(
                 };
                 #[allow(clippy::cast_possible_truncation)]
                 points.push((sx.round() as i32, sy.round() as i32, wx + wy + wz, color));
+                #[allow(clippy::cast_possible_truncation)]
+                shadow_points.push((sx.round() as i32, ((wx + wy) * half_h / lpc).round() as i32));
             }
         }
     }
     if points.is_empty() {
         return Sprite::default();
     }
+    let all = || {
+        points
+            .iter()
+            .map(|p| (p.0, p.1))
+            .chain(shadow_points.iter().copied())
+    };
     let (x0, y0) = (
-        points.iter().map(|p| p.0).min().unwrap_or(0) - 1,
-        points.iter().map(|p| p.1).min().unwrap_or(0) - 1,
+        all().map(|p| p.0).min().unwrap_or(0) - 1,
+        all().map(|p| p.1).min().unwrap_or(0) - 1,
     );
     let (x1, y1) = (
-        points.iter().map(|p| p.0).max().unwrap_or(0) + 2,
-        points.iter().map(|p| p.1).max().unwrap_or(0) + 2,
+        all().map(|p| p.0).max().unwrap_or(0) + 2,
+        all().map(|p| p.1).max().unwrap_or(0) + 2,
     );
     let (w, h) = (
         usize::try_from(x1 - x0).unwrap_or(1),
@@ -269,10 +282,22 @@ pub fn render(
             }
         }
     }
+    let mut shadow = vec![0u8; w * h];
+    for (x, y) in shadow_points {
+        for dx in 0..2 {
+            if let (Ok(px), Ok(py)) = (usize::try_from(x - x0 + dx), usize::try_from(y - y0))
+                && px < w
+                && py < h
+            {
+                shadow[py * w + px] = 1;
+            }
+        }
+    }
     Sprite {
         width: w,
         height: h,
         pixels,
+        shadow,
         anchor: (-x0, -y0),
     }
 }
@@ -330,6 +355,22 @@ mod tests {
         // Rotating a cube by a quarter turn gives the same footprint.
         let r = render(&[(&v, None)], 64, None, None);
         assert_eq!((r.width, r.height), (s.width, s.height));
+    }
+
+    #[test]
+    fn shadow_is_the_model_flattened_onto_the_ground() {
+        let v = cube();
+        let s = render(&[(&v, None)], 0, None, None);
+        assert_eq!(s.shadow.len(), s.pixels.len());
+        let rows = |img: &[u8]| -> Vec<usize> {
+            (0..s.height)
+                .filter(|y| img[y * s.width..(y + 1) * s.width].iter().any(|&p| p != 0))
+                .collect()
+        };
+        let (body, shadow) = (rows(&s.pixels), rows(&s.shadow));
+        // The shadow lies no higher than the body's lowest rows: no height.
+        assert!(shadow[0] > body[0]);
+        assert!(shadow.last() <= body.last());
     }
 
     #[test]
