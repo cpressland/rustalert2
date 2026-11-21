@@ -1,6 +1,6 @@
 # Terrain and height
 
-**Status:** Implemented (water animation and ramp lighting to come)
+**Status:** Implemented (tile animations drawn at frame 0; their timing comes with the game loop)
 **Crate:** `ra2-render` (`terrain`)
 **Issue:** #29
 
@@ -36,9 +36,26 @@ decoding is in [tmp.md](tmp.md), and the projection is in
 - Maps that name missing tiles still draw: they fall back as described
   above, and are never an error.
 
+## Tile animations
+
+- A theater INI section named after a tile set's `SetName` attaches an
+  animation to tiles of that set: `TileNNAnim=` (art name),
+  `TileNNXOffset`, `TileNNYOffset`, `TileNNAttachesTo` (the template's
+  sub-tile it hangs off) and `TileNNZAdjust`. Waterfalls and tunnel tops
+  use it. `[observed]` (temperatmd.ini)
+- We draw frame 0 of each, with the objects, centred on the attaching
+  cell's centre plus the offsets, in the iso palette (their art has
+  `ShouldUseCellDrawer=yes`), sorted `YSortAdjust` pixels further down.
+  `[hypothesis]` (anchor and palette)
+
 ## Open questions
 
-- Water animation (`[Animations]` of the theater art).
+- The anchor of tile animations: one shipped map has waterfalls and it's
+  a night map, too dark to check placement by eye. The recomp comparison
+  (#35) is the check. Their frame timing (`Rate`, `LoopStart`/`LoopEnd`)
+  comes with the game loop.
+- Water itself isn't animated in RA2; open water is static tiles.
+  `[observed]`
 - Ramps are lit by their cell's level alone (see lighting.md); a slope
   term would sit in the cell lighting routine and none has turned up.
 

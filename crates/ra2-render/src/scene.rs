@@ -657,6 +657,35 @@ pub fn collect(
     pieces
 }
 
+/// Tile animations (waterfalls, tunnel tops) as pieces: frame 0, centred
+/// on the attaching cell's centre plus the theater's offset, in the iso
+/// palette, sorted `YSortAdjust` lower down the screen. `[hypothesis]`
+pub fn tile_anims(vfs: &Vfs, art: &mut Art, anims: &[crate::terrain::PlacedAnim]) -> Vec<Piece> {
+    let mut pieces = Vec::new();
+    for a in anims {
+        let (x, y, level) = a.cell;
+        let (Ok(cx), Ok(cy)) = (i16::try_from(x), i16::try_from(y)) else {
+            continue;
+        };
+        let top = Cell::new(cx, cy).screen(level);
+        let c = (top.x + a.anim.offset.0, top.y + 15 + a.anim.offset.1);
+        let sort = art.art.get(&a.anim.name, "YSortAdjust").map_or(0, atoi);
+        if let Some(d) = art.shp(vfs, &a.anim.name) {
+            push_frame(
+                &mut pieces,
+                &d,
+                0,
+                c,
+                (top.y + 15 + sort, top.x, 0),
+                PaletteKind::Iso,
+                false,
+                a.cell,
+            );
+        }
+    }
+    pieces
+}
+
 /// Draw pieces in order onto a canvas, lit by the map's lighting.
 pub fn draw(
     canvas: &mut Canvas,

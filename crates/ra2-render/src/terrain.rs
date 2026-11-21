@@ -22,6 +22,27 @@ pub struct TileLibrary {
     /// The tile palette (`ISO{ext}.PAL`), 8-bit.
     pub palette: [Rgb; 256],
     templates: BTreeMap<u32, Option<Tmp>>,
+    /// Animations attached to tiles, by (set, index in set).
+    anims: BTreeMap<(usize, u32), TileAnim>,
+}
+
+/// An animation a theater attaches to a tile (`[<SetName>] TileNNAnim=`):
+/// waterfalls, tunnel tops.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TileAnim {
+    pub name: String,
+    /// Pixels from the attaching cell's centre on screen.
+    pub offset: (i32, i32),
+    /// The template cell (sub-tile) the animation hangs off.
+    pub attaches_to: u8,
+}
+
+/// A tile animation placed on the map.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PlacedAnim {
+    pub anim: TileAnim,
+    /// The attaching cell and its height level.
+    pub cell: (i32, i32, i32),
 }
 
 /// How a cell's tile number was resolved.
@@ -50,11 +71,35 @@ impl TileLibrary {
             .ok_or_else(|| {
                 io::Error::new(io::ErrorKind::NotFound, format!("{pal_name} not found"))
             })?;
+        let ini = Ini::parse(&ini);
+        let sets = tile_sets(&ini);
+        let mut anims = BTreeMap::new();
+        for (i, set) in sets.iter().enumerate() {
+            let Some(sec) = ini.section(&set.name) else {
+                continue;
+            };
+            for k in 0..set.tiles {
+                let key = |what: &str| format!("Tile{:02}{what}", k + 1);
+                let Some(name) = sec.get(&key("Anim")) else {
+                    continue;
+                };
+                let num = |what: &str| sec.get(&key(what)).map_or(0, ra2_formats::ini::atoi);
+                anims.insert(
+                    (i, k),
+                    TileAnim {
+                        name: name.to_string(),
+                        offset: (num("XOffset"), num("YOffset")),
+                        attaches_to: u8::try_from(num("AttachesTo")).unwrap_or(0),
+                    },
+                );
+            }
+        }
         Ok(TileLibrary {
             theater,
-            sets: tile_sets(&Ini::parse(&ini)),
+            sets,
             palette: pal.to_rgb8(),
             templates: BTreeMap::new(),
+            anims,
         })
     }
 
@@ -68,6 +113,11 @@ impl TileLibrary {
             k -= s.tiles;
         }
         None
+    }
+
+    /// The animation attached to a tile number, if any.
+    pub fn anim(&self, tile: u32) -> Option<&TileAnim> {
+        self.anims.get(&self.locate(tile)?)
     }
 
     /// The first tile number of set `index`.
@@ -144,7 +194,8 @@ struct Piece {
 
 /// Draw a map's terrain onto a canvas: base diamonds in row order, then
 /// extra art (cliff faces and the like) in row order over them. Cells
-/// `hidden` says are under shroud aren't drawn, as in the game.
+/// `hidden` says are under shroud aren't drawn, as in the game. Returns
+/// the tile animations to draw with the objects.
 pub fn draw(
     canvas: &mut Canvas,
     vfs: &Vfs,
@@ -152,9 +203,10 @@ pub fn draw(
     map: &Map,
     light: &crate::lighting::Lighting,
     hidden: &dyn Fn(i16, i16) -> bool,
-) -> TerrainStats {
+) -> (TerrainStats, Vec<PlacedAnim>) {
     let mut stats = TerrainStats::default();
     let mut pieces = Vec::new();
+    let mut anims = Vec::new();
     for t in &map.tiles {
         stats.cells += 1;
         if hidden(t.x, t.y) {
@@ -173,6 +225,14 @@ pub fn draw(
                 0
             }
         };
+        if let Some(a) = lib.anim(tile)
+            && a.attaches_to == t.subtile
+        {
+            anims.push(PlacedAnim {
+                anim: a.clone(),
+                cell: (i32::from(t.x), i32::from(t.y), i32::from(t.level)),
+            });
+        }
         let Some(tmp) = lib.template(vfs, tile) else {
             continue;
         };
@@ -231,7 +291,7 @@ pub fn draw(
             .or_insert_with(|| crate::lighting::Lighting::lit(&lib.palette, p.light));
         canvas.blit(p.x, p.y, p.width, &p.pixels, palette, false);
     }
-    stats
+    (stats, anims)
 }
 
 /// The world-pixel bounds of a map's cells, with a margin for raised cells

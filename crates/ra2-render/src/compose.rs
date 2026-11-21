@@ -133,8 +133,10 @@ impl MapView {
         };
         let seen = layers.shroud.then(|| self.revealed());
         let hidden = |x: i16, y: i16| seen.as_ref().is_some_and(|s| !s.contains(&(x, y)));
+        let (terrain, anims) =
+            terrain::draw(&mut canvas, vfs, &mut self.lib, &self.map, &light, &hidden);
         let mut stats = Stats {
-            terrain: terrain::draw(&mut canvas, vfs, &mut self.lib, &self.map, &light, &hidden),
+            terrain,
             ..Stats::default()
         };
         if layers.objects {
@@ -144,7 +146,7 @@ impl MapView {
                     i16::try_from(y).unwrap_or(i16::MAX),
                 )
             };
-            let pieces = scene::collect(
+            let mut pieces = scene::collect(
                 vfs,
                 &mut self.art,
                 &self.map,
@@ -152,6 +154,7 @@ impl MapView {
                 &mut stats.scene,
                 &hidden_object,
             );
+            pieces.extend(scene::tile_anims(vfs, &mut self.art, &anims));
             scene::draw(&mut canvas, &self.art, &light, pieces);
         }
         if let Some(seen) = &seen {
