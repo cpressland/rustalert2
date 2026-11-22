@@ -119,7 +119,8 @@ then the Chrono Warp's on where to. `[observed]`
   `[observed]`
 - Its damage (`DominatorDamage=` with `DominatorWarhead=`, whose
   `Verses=` hit only buildings) falls off over the warhead's spread as the
-  Nuke's does. `[hypothesis]` (no buildings in range in the scenario)
+  Nuke's does. Each building cell is hurt on its own (see
+  [repair.md](repair.md)). `[observed]` (`yuri-heal-repair`)
 
 ### Weather Storm (`Type=LightningStorm`)
 

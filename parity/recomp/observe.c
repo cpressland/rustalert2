@@ -179,6 +179,7 @@ static void write_frame(uint32_t frame) {
    0x6F bytes; send times at 0xA83A54), for house 0:
      D <type>                     deploy house 0's first object of <type>
      S <type>                     sell it
+     R <type>                     repair it
      P <rtti> <index> <naval>     produce
      A <rtti> <index> <naval>     abandon (cancel) that production
      H <rtti> <index> <naval>     hold (suspend) it; produce again resumes
@@ -210,7 +211,7 @@ static void run_orders(uint32_t frame) {
         ev[2] = 0; /* house 0 */
         uint32_t now = frame;
         memcpy(ev + 3, &now, 4);
-        if (kind == 'D' || kind == 'S') {
+        if (kind == 'D' || kind == 'S' || kind == 'R') {
             uint32_t tv = rd32(TECHNOS_VA + DVC_ITEMS), tn = rd32(TECHNOS_VA + DVC_COUNT);
             for (uint32_t i = 0; i < tn; i++) {
                 uint32_t t = rd32(tv + 4 * i), owner = rd32(t + TECHNO_OWNER);
@@ -219,11 +220,11 @@ static void run_orders(uint32_t frame) {
                 if (!kind_of(class_name(t), &kname, &type_off)) continue;
                 if (strcmp((const char *)GUEST_PTR(rd32(t + type_off) + 0x24), arg)) continue;
                 uint32_t id = rd32(t + 0x10);   /* AbstractClass::UniqueID */
-                ev[0] = kind == 'D' ? 9 : 22;   /* DEPLOY, SELL */
+                ev[0] = kind == 'D' ? 9 : kind == 'S' ? 22 : 21; /* DEPLOY, SELL, REPAIR */
                 memcpy(ev + 7, &id, 4);
                 ev[0xB] = 0x34;                 /* a target that is an object */
                 queue_event(ev);
-                fprintf(g_out, "# order %u %s %s id %u\n", frame, kind == 'D' ? "deploy" : "sell", arg, id);
+                fprintf(g_out, "# order %u %s %s id %u\n", frame, kind == 'D' ? "deploy" : kind == 'S' ? "sell" : "repair", arg, id);
                 break;
             }
         } else if (kind == 'F') {

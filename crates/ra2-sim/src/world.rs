@@ -87,6 +87,8 @@ pub struct Object {
     pub shielded_until: u32,
     /// Killed, and taken away on this frame (infantry linger as they die).
     pub dies_at: Option<u32>,
+    /// A building its owner has ordered repaired.
+    pub repairing: bool,
 }
 
 /// Something on its way down: a superweapon's missile.
@@ -248,6 +250,7 @@ impl World {
             sold_at: None,
             shielded_until: 0,
             dies_at: None,
+            repairing: false,
         });
         Some(id)
     }
@@ -276,6 +279,7 @@ impl World {
             sold_at: None,
             shielded_until: 0,
             dies_at: None,
+            repairing: false,
         });
         id
     }

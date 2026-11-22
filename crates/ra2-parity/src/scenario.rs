@@ -68,6 +68,8 @@ pub enum OrderKind {
     Place,
     /// Sell the player's first building of the type.
     Sell,
+    /// Start (or stop) repairing the player's first building of the type.
+    Repair,
     /// Cancel building the type: what's been paid comes back.
     Abandon,
     /// Hold building the type; producing it again resumes.
