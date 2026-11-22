@@ -265,7 +265,7 @@ mod hunt_tests {
                   [Warheads]\n1=AP\n\
                   [Countries]\n1=British\n2=Russians\n[British]\nSide=GDI\n[Russians]\nSide=Nod\n\
                   [AMCV]\nStrength=1000\nArmor=heavy\n[SMCV]\nStrength=1000\nArmor=heavy\n\
-                  [MTNK]\nStrength=300\nArmor=heavy\nSpeed=7\nROT=5\nPrimary=105mm\nTurret=yes\n\
+                  [MTNK]\nStrength=300\nArmor=heavy\nSpeed=7\nROT=5\nAccelerates=no\nPrimary=105mm\nTurret=yes\n\
                   [105mm]\nDamage=65\nROF=60\nRange=5\nProjectile=Cannon\nSpeed=40\nWarhead=AP\n\
                   [Cannon]\nArcing=true\n\
                   [AP]\nVerses=25%,25%,15%,75%,100%,100%,65%,45%,60%,60%,100%\n",

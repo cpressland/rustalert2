@@ -10,9 +10,7 @@ to come.
 ## Scope
 
 Ore on the map, the Harvest mission, and how a load becomes credits.
-Route planning is in pathfinding.md; driving is in locomotors.md, except
-the War Miner's speed profile, fitted here until #40 traces the drive
-locomotor.
+Route planning is in pathfinding.md; driving is in locomotors.md.
 
 ## Sources
 
@@ -110,13 +108,13 @@ refinery's side of the radio conversation is traced:
 4. 31 frames later it drives back to the cell it remembered, and looks for
    ore again.
 
-### Driving `[observed]`
+### Driving
 
-The War Miner starts at a crawl (1,206/256 leptons a frame), speeds up by
-120/256 a frame to its top speed (`Speed=` fraction × 406/256), and slows
-by the same back to the crawl once its destination is within two cells. A
-one-cell hop between ore cells is all crawl. It turns on the spot before
-setting off, at `ROT=` × 256 a frame.
+As locomotors.md describes: the War Miner accelerates (it doesn't set
+`Accelerates=no`), so it sets off at a crawl, speeds up, and slows within
+500 leptons of the cell it's going to. A one-cell hop between ore cells is
+all crawl. It turns on the spot before setting off, at `ROT=` × 256 a
+frame.
 
 ## Quirks we match
 
@@ -137,7 +135,7 @@ setting off, at `ROT=` × 256 a frame.
 
 `parity/scenarios/harvester-ore.toml`: 12 checks — cargo at four frames,
 positions on the first and second loads and on the pad, ore left on the
-map, and credits before and after the payment. Our timing runs within about
-8 frames of the original throughout, and the payment lands on the same
-frame (1530). The Russian AI's own War Miner reaches the field after frame
+map, and credits before and after the payment. Our timing runs up to about 20
+frames ahead of the original by the first unload (1509 against 1530),
+from the corner stops we don't make yet. The Russian AI's own War Miner reaches the field after frame
 2200, so checks stop there.

@@ -1,7 +1,7 @@
 # Locomotors and movement
 
-**Status:** Implemented for the Hunt scenarios (constants fitted to the reference logs; tracks and the pathfinder still to trace)
-**Crate:** `ra2-sim` (`hunt`)
+**Status:** Implemented for the Hunt and Harvest scenarios: acceleration and slowing traced; the per-unit lepton rate and the drive tracks (curves, corner stops) still fitted or open
+**Crate:** `ra2-sim` (`hunt`, `harvest`)
 **Issue:** #40 (with pathfinding, #39)
 
 ## Scope
@@ -11,9 +11,15 @@ Choosing the route is pathfinding (#39).
 
 ## Sources
 
-- The recomp: how `Speed=` is stored (`0x0071465A`).
+- The recomp: how `Speed=` is stored (`0x0071465A`); the drive locomotor
+  (`DriveLocomotionClass`, its `ILocomotion` table at `0x007E7EB0`:
+  `Process` `0x004B0500`, the start of each move `0x004B0F20`, moving
+  `0x004B2630`); `TechnoTypeClass` defaults (`0x00710BB2`, `0x00711651`)
+  and reading (`0x0071247C`, `0x00715402`); a foot's current speed
+  (`0x004DB1A0`) and `Set_Speed` (`0x004D3710`).
 - Parity reference logs of `grizzly-hunts-mcv`, `rhino-hunts-mcv` and
-  `gi-hunts-mcv` (flat clear map, one hunter driving to an idle MCV).
+  `gi-hunts-mcv` (flat clear map, one hunter driving to an idle MCV), and
+  `harv-hunts-mcv` and `harvester-ore` (a War Miner, which accelerates).
 
 ## Behaviour
 
@@ -23,6 +29,25 @@ Choosing the route is pathfinding (#39).
 - On clear ground a Drive unit covers about 1.6 leptons a frame per point
   of that stored value: the Grizzly's steps are mostly 27–28 leptons, the
   Rhino's 23–25. `[observed]`
+- A foot keeps a speed fraction (a double, `FootClass +0x578`) and its
+  locomotor a target fraction (normally 1). Each frame a Drive unit sets
+  the fraction: `[recomp 0x004B0F69]`
+  - not `Accelerates=` (default yes; the Grizzly and Rhino set no): the
+    target, at once;
+  - within `SlowdownDistance=` leptons (default 500) of where it's going:
+    less `speed × DeaccelerationFactor=` (default 0.002), but not below
+    0.3;
+  - else below the target: plus `AccelerationFactor=` (default 0.03), up
+    to the target.
+  Not while it's on a turning track (index 64 or more), nor for a unit
+  type with `Passive=yes`.
+- What it moves on a frame is the stored speed × that fraction (× house
+  and veterancy multipliers), truncated: a War Miner (stored 10) moves 3
+  points at a crawl and gains a point about every 3 frames. `[recomp
+  0x004DB1A0]`
+- An accelerating unit sets off at the crawl, 0.3. `[observed]` (the War
+  Miner's first steps; where the fraction is set at the start isn't
+  traced)
 - Infantry (Walk) are slower than the stored value suggests: the GI's
   steps are mostly 10–11 leptons. `[observed]`
 - Drive units follow the cell grid, not a straight line: the Grizzly's
@@ -46,8 +71,10 @@ constant is `[observed]`, not traced:
   135° turn takes 20 frames, so it sets off on frame 20). At corners they
   turn on the move. Infantry turn at once but set off the frame after
   choosing a target.
-- **Speed**, in 1/256 leptons a frame: vehicles `speed × 406`, infantry
-  `speed × 277`, where `speed` is the stored value above. Each leg (cell
+- **Speed**, in 1/256 leptons a frame: vehicles `points × 406`, where
+  `points` is the stored speed × the fraction above, truncated (we keep
+  the fraction in millionths, not as a double, so a frame now and then may
+  be a point off); infantry `speed × 277`. Each leg (cell
   to cell) ends exactly on its point and the rest of the frame's step
   carries into the next frame.
 - **Route**: the game's planner (pathfinding.md), planned once toward the
@@ -71,10 +98,17 @@ at frame 120 and exact at 300; the GI within 53 and 30.
 - The constant behind 1.6 leptons per speed point, and terrain speed
   multipliers.
 - The start delay: the hunt mission's scan interval or the turret/body
-  turning first.
+  turning first. The War Miner on Hunt sets off 8 frames later than the
+  Grizzly does.
+- Corners: the original mostly curves through them (drive tracks), but
+  sometimes stops and turns on the spot for about 5 frames (the War Miner
+  at (50,46) and (52,45) in `harvester-ore`); we always turn on the move,
+  so our miner runs up to about 20 frames ahead by its first unload.
 
 ## Parity
 
 | Check | How | Tolerance |
 |---|---|---|
 | Hunter positions at frames 120 and 300 | `grizzly-hunts-mcv`, `rhino-hunts-mcv`, `gi-hunts-mcv` | 64 and 32 leptons |
+| An accelerating hunter slowing and standing, at 300 and 400 | `harv-hunts-mcv` | 64 leptons |
+| A harvester's round, cell hops at a crawl | `harvester-ore` (economy.md) | see there |
