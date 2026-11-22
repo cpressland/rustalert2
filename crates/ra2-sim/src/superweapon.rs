@@ -32,6 +32,23 @@ impl Super {
     }
 }
 
+/// A cell's centre.
+fn cell_centre(cell: (i16, i16)) -> crate::coords::Coord {
+    crate::coords::Coord {
+        x: i32::from(cell.0) * crate::coords::LEPTONS_PER_CELL
+            + crate::coords::LEPTONS_PER_CELL / 2,
+        y: i32::from(cell.1) * crate::coords::LEPTONS_PER_CELL
+            + crate::coords::LEPTONS_PER_CELL / 2,
+        z: 0,
+    }
+}
+
+/// Frames an infantryman killed by the Iron Curtain lingers. `[observed]`
+const INFANTRY_DEATH_FRAMES: u32 = 15;
+/// Frames from launching the Nuke to its landing. `[observed]` (one launch,
+/// ten cells from its silo; the missile's flight isn't traced)
+const NUKE_FLIGHT_FRAMES: u32 = 419;
+
 /// One frame of every house's superweapons, after power is worked out.
 ///
 /// - A building's `SuperWeapon=` comes to its house the frame after the
@@ -45,6 +62,10 @@ impl Super {
 ///   (`allied-force-shield`; the hold is `SuperClass +0x70`)
 /// - It's charged the frame after its time runs out. `[observed]`
 pub fn update(world: &mut World, rules: &Rules, frame: u32) {
+    land(world, rules, frame);
+    world
+        .objects
+        .retain(|o| o.dies_at.is_none_or(|d| d > frame));
     // What each house's buildings give it, and since when.
     let mut given: Vec<(u32, usize, u32)> = Vec::new();
     for o in &world.objects {
@@ -104,6 +125,39 @@ pub fn update(world: &mut World, rules: &Rules, frame: u32) {
     }
 }
 
+/// Strikes that land this frame: the Nuke's blast hits everything within its
+/// warhead's `CellSpread=` (see `production::splash`), its `Verses=` by
+/// armour. Things it kills go at once. `[observed]` (the radiation it
+/// leaves isn't modelled yet)
+fn land(world: &mut World, rules: &Rules, frame: u32) {
+    let (now, later): (Vec<_>, Vec<_>) = world.strikes.drain(..).partition(|s| s.lands <= frame);
+    world.strikes = later;
+    for s in now {
+        let weapon = rules.weapon(s.weapon);
+        let Some(wh) = weapon.warhead.map(|w| rules.warhead(w)) else {
+            continue;
+        };
+        let at = crate::coords::Coord {
+            x: i32::from(s.cell.0) * crate::coords::LEPTONS_PER_CELL
+                + crate::coords::LEPTONS_PER_CELL / 2,
+            y: i32::from(s.cell.1) * crate::coords::LEPTONS_PER_CELL
+                + crate::coords::LEPTONS_PER_CELL / 2,
+            z: 0,
+        };
+        for o in &mut world.objects {
+            if o.limbo || o.shielded_until > frame {
+                continue;
+            }
+            let full = wh.verses[rules.technos[o.techno].armor.index()].of(weapon.damage);
+            let d = crate::hunt::distance(o.coord, at);
+            o.health -= ra2_rules::production::splash(full, d, wh.cell_spread, wh.percent_at_max);
+        }
+    }
+    world
+        .objects
+        .retain(|o| o.health > 0 || o.dies_at.is_some());
+}
+
 /// Fire a house's charged superweapon at `cell`, on the frame the order
 /// takes effect: its charge starts again from the frame before.
 /// `[observed]` Then its effect:
@@ -133,10 +187,36 @@ pub fn fire(
     s.start = Some(frame - 1);
     s.frames = recharge_frames(&rules.super_weapons[kind]);
     let g = &rules.general;
-    if rules.super_weapons[kind]
-        .kind
-        .eq_ignore_ascii_case("ForceShield")
+    let sw = &rules.super_weapons[kind];
+    if sw.kind.eq_ignore_ascii_case("IronCurtain") {
+        // Within `Range=` cells of the target: infantry die (taken away 15
+        // frames later), everything else is invulnerable for
+        // `IronCurtainDuration=`. `[observed]` (a GI on the target died, one
+        // two cells off didn't; the invulnerability isn't observed yet)
+        let reach = sw.range.of(crate::coords::LEPTONS_PER_CELL);
+        let at = cell_centre(cell);
+        let until = frame + u32::try_from(g.iron_curtain_duration).unwrap_or(0);
+        for o in &mut world.objects {
+            if o.limbo || crate::hunt::distance(o.coord, at) > reach {
+                continue;
+            }
+            if o.kind == Kind::Infantry {
+                o.health = 0;
+                o.dies_at = Some(frame + INFANTRY_DEATH_FRAMES);
+            } else {
+                o.shielded_until = until;
+            }
+        }
+    } else if sw.kind.eq_ignore_ascii_case("MultiMissile")
+        && let Some(weapon) = g.nuke_payload
     {
+        world.strikes.push(crate::world::Strike {
+            lands: frame + NUKE_FLIGHT_FRAMES,
+            cell,
+            weapon,
+        });
+    }
+    if sw.kind.eq_ignore_ascii_case("ForceShield") {
         let reach = g.force_shield_radius * crate::coords::LEPTONS_PER_CELL;
         let at = crate::coords::Coord {
             x: i32::from(cell.0) * crate::coords::LEPTONS_PER_CELL
