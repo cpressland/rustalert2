@@ -213,7 +213,14 @@ fn run(cmd: Command) -> io::Result<bool> {
             };
             let work = work.join(&s.name);
             std::fs::create_dir_all(&work)?;
+            let orders = if s.orders.is_empty() {
+                String::new()
+            } else {
+                let (_, rules, _) = ra2_parity::engine::prepare(&s, Some(&install))?;
+                ra2_parity::engine::observer_orders(&s, &rules)
+            };
             let r = ra2_parity::record::Recorder {
+                orders,
                 exe: recomp,
                 install,
                 work: work.clone(),

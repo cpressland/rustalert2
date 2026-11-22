@@ -23,6 +23,40 @@ pub struct Scenario {
     pub human_start: Option<[i32; 2]>,
     #[serde(default, rename = "check")]
     pub checks: Vec<Check>,
+    /// The human player's orders, in frame order: what its clicks would
+    /// have sent. The recorder queues them in the original as events; our
+    /// engine applies them on the same frames.
+    #[serde(default, rename = "order")]
+    pub orders: Vec<OrderSpec>,
+}
+
+/// One order of the human player (house 0).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OrderSpec {
+    /// The frame it's sent on.
+    pub frame: u32,
+    pub what: OrderKind,
+    /// The rules ID it concerns: the unit to deploy, or what to build or
+    /// place.
+    #[serde(rename = "type")]
+    pub type_id: String,
+    /// Where to place a building: its top-left cell.
+    #[serde(default)]
+    pub x: i32,
+    #[serde(default)]
+    pub y: i32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OrderKind {
+    /// Deploy the player's first object of the type (an MCV unpacks).
+    Deploy,
+    /// Start building the type.
+    Produce,
+    /// Place the finished building.
+    Place,
 }
 
 /// What objects a check looks at.
@@ -60,6 +94,13 @@ pub enum Check {
     Hp {
         #[serde(flatten)]
         filter: Filter,
+        at: u32,
+        #[serde(default)]
+        tolerance: u32,
+    },
+    /// A house's power produced and drawn at a frame.
+    Power {
+        house: u32,
         at: u32,
         #[serde(default)]
         tolerance: u32,

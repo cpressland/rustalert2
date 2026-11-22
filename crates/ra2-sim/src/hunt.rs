@@ -199,7 +199,7 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
             world
                 .objects
                 .iter()
-                .filter(|o| o.owner != me.owner)
+                .filter(|o| o.owner != me.owner && !o.limbo)
                 .min_by_key(|o| (i64::from(distance(o.coord, me.coord)), o.id))
         })
         .map(|o| (o.id, o.coord));

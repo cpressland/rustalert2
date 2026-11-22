@@ -63,6 +63,8 @@ static void dump_vector(FILE *f, const char *what, uint32_t vec, uint32_t bytes)
 /* Field offsets, found from a memory dump of a running skirmish (see
  * rustalert2's docs/spec/parity.md) and matching the community's YRpp. */
 #define HOUSE_INDEX    0x30u        /* int */
+#define HOUSE_POWER_OUT   0x53A4u   /* int: power produced (0x004FCE30) */
+#define HOUSE_POWER_DRAIN 0x53A8u   /* int: power drawn */
 #define HOUSE_TYPE     0x34u        /* HouseTypeClass* */
 #define HOUSE_BALANCE  0x30Cu       /* int: credits */
 #define OBJ_HEALTH     0x6Cu        /* int */
@@ -100,7 +102,9 @@ static void write_frame(uint32_t frame) {
         uint32_t h = rd32(hv + 4 * i);
         fprintf(g_out, "%s{\"index\":%u,\"country\":", i ? "," : "", rd32(h + HOUSE_INDEX));
         json_id(g_out, rd32(h + HOUSE_TYPE));
-        fprintf(g_out, ",\"credits\":%d}", (int32_t)rd32(h + HOUSE_BALANCE));
+        fprintf(g_out, ",\"credits\":%d,\"power_output\":%d,\"power_drain\":%d}",
+                (int32_t)rd32(h + HOUSE_BALANCE), (int32_t)rd32(h + HOUSE_POWER_OUT),
+                (int32_t)rd32(h + HOUSE_POWER_DRAIN));
     }
     fputs("],\"objects\":[", g_out);
     int first = 1;
@@ -145,6 +149,72 @@ static void write_frame(uint32_t frame) {
     fputs("]}\n", g_out);
 }
 
+/* Orders: RA2_OBSERVE_ORDERS is a list of `frame kind args...`, separated
+   by `;`. Each becomes the event the human player's click would queue
+   (EventClass::OutList, 0xA802C8: count, head, tail, then 128 events of
+   0x6F bytes; send times at 0xA83A54), for house 0:
+     D <type>                     deploy house 0's first object of <type>
+     P <rtti> <index> <naval>     produce
+     L <rtti> <index> <naval> <x> <y>   place at a cell
+   Layout from the constructors at 0x004C65E0, 0x004C6970, 0x004C6AE0. */
+#define OUTLIST        0xA802C8u
+#define EVENT_SIZE     0x6Fu
+static void queue_event(const uint8_t *ev) {
+    if ((int32_t)rd32(OUTLIST) >= 128) return;
+    uint32_t tail = rd32(OUTLIST + 8);
+    memcpy(GUEST_PTR(OUTLIST + 0xC + tail * EVENT_SIZE), ev, EVENT_SIZE);
+    *(uint32_t *)GUEST_PTR(0xA83A54u + 4u * tail) = 0;
+    *(uint32_t *)GUEST_PTR(OUTLIST + 8) = (tail + 1) & 0x7F;
+    *(uint32_t *)GUEST_PTR(OUTLIST) = rd32(OUTLIST) + 1;
+}
+
+static void run_orders(uint32_t frame) {
+    const char *spec = getenv("RA2_OBSERVE_ORDERS");
+    if (!spec) return;
+    char buf[4096];
+    snprintf(buf, sizeof buf, "%s", spec);
+    for (char *save = NULL, *o = strtok_r(buf, ";", &save); o; o = strtok_r(NULL, ";", &save)) {
+        unsigned at; char kind; char arg[64];
+        if (sscanf(o, "%u %c %63s", &at, &kind, arg) != 3 || at != frame) continue;
+        uint8_t ev[0x6F]; memset(ev, 0, sizeof ev);
+        ev[2] = 0; /* house 0 */
+        uint32_t now = frame;
+        memcpy(ev + 3, &now, 4);
+        if (kind == 'D') {
+            uint32_t tv = rd32(TECHNOS_VA + DVC_ITEMS), tn = rd32(TECHNOS_VA + DVC_COUNT);
+            for (uint32_t i = 0; i < tn; i++) {
+                uint32_t t = rd32(tv + 4 * i), owner = rd32(t + TECHNO_OWNER);
+                const char *kname; uint32_t type_off;
+                if (!owner || rd32(owner + HOUSE_INDEX) != 0) continue;
+                if (!kind_of(class_name(t), &kname, &type_off)) continue;
+                if (strcmp((const char *)GUEST_PTR(rd32(t + type_off) + 0x24), arg)) continue;
+                uint32_t id = rd32(t + 0x10);   /* AbstractClass::UniqueID */
+                ev[0] = 9;                      /* DEPLOY */
+                memcpy(ev + 7, &id, 4);
+                ev[0xB] = 0x34;                 /* a target that is an object */
+                queue_event(ev);
+                fprintf(g_out, "# order %u deploy %s id %u\n", frame, arg, id);
+                break;
+            }
+        } else if (kind == 'P' || kind == 'L') {
+            int rtti, index, naval, x = 0, y = 0;
+            int n = sscanf(o, "%u %c %d %d %d %d %d", &at, &kind, &rtti, &index, &naval, &x, &y);
+            if (n < 5) continue;
+            ev[0] = kind == 'P' ? 14 : 11;      /* PRODUCE, PLACE */
+            memcpy(ev + 7, &rtti, 4);
+            memcpy(ev + 0xB, &index, 4);
+            memcpy(ev + 0xF, &naval, 4);
+            if (kind == 'L') {
+                int16_t cx = (int16_t)x, cy = (int16_t)y;
+                memcpy(ev + 0x13, &cx, 2);
+                memcpy(ev + 0x15, &cy, 2);
+            }
+            queue_event(ev);
+            fprintf(g_out, "# order %u %s %d %d\n", frame, kind == 'P' ? "produce" : "place", rtti, index);
+        }
+    }
+}
+
 static long g_every = 1;
 static long g_end = -1;
 
@@ -164,6 +234,7 @@ void ra2_observe_tick(void) {
     g_last_frame = frame;
     if (rd32(HOUSES_VA + DVC_COUNT) == 0) return;          /* not in a game yet */
     if (frame % (uint32_t)g_every == 0) write_frame(frame);
+    run_orders(frame);
     if (g_dump_frame >= 0 && (long)frame >= g_dump_frame) {
         char name[1024];
         if (g_dump_every > 0)

@@ -9,6 +9,7 @@
 // Rules entries are naturally lists of yes/no keys.
 #![allow(clippy::struct_excessive_bools)]
 
+pub mod production;
 pub mod scenario;
 
 use std::collections::BTreeMap;
@@ -36,6 +37,19 @@ impl Ratio {
     /// The game's reading of a number: `50%` and `.5` both give a half.
     pub fn from_value(v: &str) -> Ratio {
         Ratio(parse_number(v).to_bits())
+    }
+
+    /// A number the game keeps as a single-precision float, widened.
+    pub fn from_value_f32(v: &str) -> Ratio {
+        #[allow(clippy::cast_possible_truncation)]
+        let f = parse_number(v) as f32;
+        Ratio(f64::from(f).to_bits())
+    }
+
+    /// The value as a double, for the rules' own arithmetic
+    /// ([`production`]).
+    pub fn value(self) -> f64 {
+        f64::from_bits(self.0)
     }
 
     /// From a double's bits.
@@ -224,6 +238,14 @@ pub struct TechnoType {
     pub foundation: (i32, i32),
     /// Gathers ore (`Harvester=`).
     pub harvester: bool,
+    /// Units: the building it unpacks into (`DeploysInto=`).
+    pub deploys_into: Option<String>,
+    /// Buildings: what kind of thing it builds (`Factory=`).
+    pub factory: Option<Kind>,
+    /// `BuildTimeMultiplier=`, a float in the game. `[recomp 0x0071437C]`
+    pub build_time_multiplier: Ratio,
+    /// Buildings: a wall (`Wall=`), built slower.
+    pub wall: bool,
     /// Bails a harvester holds, or a refinery stores (`Storage=`).
     pub storage: i32,
     /// The buildings it docks with (`Dock=`).
@@ -353,6 +375,19 @@ pub struct General {
     /// `[General] BaseUnit=`: the unit each side starts a skirmish with,
     /// by side (Allied, Soviet, Yuri).
     pub base_units: Vec<String>,
+    /// Minutes to build 1,000 credits' worth (`BuildSpeed=`).
+    pub build_speed: Ratio,
+    /// The time multiplier per extra factory of a kind
+    /// (`MultipleFactory=`, a float).
+    pub multiple_factory: Ratio,
+    /// Low power: the slowest production goes (`MinLowPowerProductionSpeed=`),
+    /// the fastest while short at all (`MaxLowPowerProductionSpeed=`), and
+    /// how hard a shortfall bites (`LowPowerPenaltyModifier=`); floats.
+    pub min_low_power_speed: Ratio,
+    pub max_low_power_speed: Ratio,
+    pub low_power_penalty: Ratio,
+    /// How much slower walls build (`WallBuildSpeedCoefficient=`).
+    pub wall_build_speed: Ratio,
 }
 
 /// `[CombatDamage]`.
@@ -414,6 +449,10 @@ fn list(s: Option<&Section>, key: &str) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+fn f32_ratio(s: Option<&Section>, key: &str, default: &str) -> Ratio {
+    Ratio::from_value_f32(s.and_then(|s| s.get(key)).unwrap_or(default))
 }
 
 fn ratio(s: Option<&Section>, key: &str, default: Ratio) -> Ratio {
@@ -521,6 +560,20 @@ impl Rules {
                     power: int(s, "Power", 0),
                     foundation,
                     harvester: flag(s, "Harvester", false),
+                    deploys_into: text(s, "DeploysInto"),
+                    factory: text(s, "Factory").and_then(|f| {
+                        match f.trim().to_ascii_lowercase().as_str() {
+                            "buildingtype" => Some(Kind::Building),
+                            "unittype" => Some(Kind::Vehicle),
+                            "infantrytype" => Some(Kind::Infantry),
+                            "aircrafttype" => Some(Kind::Aircraft),
+                            _ => None,
+                        }
+                    }),
+                    build_time_multiplier: s
+                        .and_then(|s| s.get("BuildTimeMultiplier"))
+                        .map_or(Ratio::ONE, Ratio::from_value_f32),
+                    wall: flag(s, "Wall", false),
                     storage: int(s, "Storage", 0),
                     dock: list(s, "Dock"),
                     queueing_cell: text(a, "QueueingCell")
@@ -691,6 +744,32 @@ impl Rules {
                 tiberium_short_scan: int(rules.section("General"), "TiberiumShortScan", 6),
                 tiberium_long_scan: int(rules.section("General"), "TiberiumLongScan", 32),
                 base_units: list(rules.section("General"), "BaseUnit"),
+                build_speed: ratio(
+                    rules.section("General"),
+                    "BuildSpeed",
+                    Ratio::from_value("0.7"),
+                ),
+                multiple_factory: f32_ratio(rules.section("General"), "MultipleFactory", "1"),
+                min_low_power_speed: f32_ratio(
+                    rules.section("General"),
+                    "MinLowPowerProductionSpeed",
+                    "0.5",
+                ),
+                max_low_power_speed: f32_ratio(
+                    rules.section("General"),
+                    "MaxLowPowerProductionSpeed",
+                    "0.9",
+                ),
+                low_power_penalty: f32_ratio(
+                    rules.section("General"),
+                    "LowPowerPenaltyModifier",
+                    "1",
+                ),
+                wall_build_speed: ratio(
+                    rules.section("General"),
+                    "WallBuildSpeedCoefficient",
+                    Ratio::from_value("1"),
+                ),
             },
             combat_damage: CombatDamage {
                 ion_cannon_damage: int(c, "IonCannonDamage", 0),
