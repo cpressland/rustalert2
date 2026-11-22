@@ -434,6 +434,21 @@ pub struct General {
     pub dominator_warhead: Option<WarheadId>,
     pub dominator_damage: i32,
     pub dominator_capture_range: i32,
+    /// The Weather Storm: its warhead and damage (`LightningWarhead=`,
+    /// `LightningDamage=`), how long before it starts and how long it lasts
+    /// (`LightningDeferment=`, `LightningStormDuration=`), and how often it
+    /// strikes its target (`LightningHitDelay=`), in frames.
+    pub lightning_warhead: Option<WarheadId>,
+    pub lightning_damage: i32,
+    pub lightning_deferment: i32,
+    pub lightning_duration: i32,
+    pub lightning_hit_delay: i32,
+    /// Paratroopers: who each side's planes drop, and how many of each
+    /// (`AmerParaDropInf=`/`Num=`, `AllyParaDrop…`, `SovParaDrop…`,
+    /// `YuriParaDrop…`), and how near the target the plane starts dropping
+    /// (`ParadropRadius=`, leptons).
+    pub para_drops: Vec<(String, Vec<(String, i32)>)>,
+    pub paradrop_radius: i32,
     /// How long the Iron Curtain makes things invulnerable, in frames
     /// (`[CombatDamage] IronCurtainDuration=`).
     pub iron_curtain_duration: i32,
@@ -745,6 +760,8 @@ impl Rules {
             .map(|w| WarheadId(warhead_names.id(&w)));
         let dominator_warhead = text(rules.section("General"), "DominatorWarhead")
             .map(|w| WarheadId(warhead_names.id(&w)));
+        let lightning_warhead = text(rules.section("General"), "LightningWarhead")
+            .map(|w| WarheadId(warhead_names.id(&w)));
         let warheads = warhead_names
             .0
             .iter()
@@ -871,6 +888,25 @@ impl Rules {
                 nuke_payload: Some(nuke_payload),
                 mutate_warhead,
                 dominator_warhead,
+                lightning_warhead,
+                lightning_damage: int(rules.section("General"), "LightningDamage", 250),
+                lightning_deferment: int(rules.section("General"), "LightningDeferment", 250),
+                lightning_duration: int(rules.section("General"), "LightningStormDuration", 180),
+                lightning_hit_delay: int(rules.section("General"), "LightningHitDelay", 10),
+                para_drops: ["Amer", "Ally", "Sov", "Yuri"]
+                    .iter()
+                    .map(|p| {
+                        let g = rules.section("General");
+                        let inf = list(g, &format!("{p}ParaDropInf"));
+                        let num = list(g, &format!("{p}ParaDropNum"));
+                        let each = inf
+                            .into_iter()
+                            .zip(num.iter().map(|n| atoi(n)).chain(std::iter::repeat(1)))
+                            .collect();
+                        ((*p).to_string(), each)
+                    })
+                    .collect(),
+                paradrop_radius: int(rules.section("General"), "ParadropRadius", 1024),
                 dominator_damage: int(rules.section("General"), "DominatorDamage", 1000),
                 dominator_capture_range: int(rules.section("General"), "DominatorCaptureRange", 1),
                 iron_curtain_duration: int(c, "IronCurtainDuration", 750),

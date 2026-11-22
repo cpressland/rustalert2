@@ -1,0 +1,159 @@
+name = "american-storm-paradrop"
+description = """
+The human plays the Americans: deploys, builds a power plant, an Air Force
+Command (American paratroopers) and a Weather Controller, drops
+paratroopers on an empty field, and calls a Weather Storm on a lone
+Neutral Grizzly with nothing else within reach of its random bolts. The
+map's rules make both buildings cheap, powerless and buildable from the
+Construction Yard alone, and both superweapons recharge in 18 seconds."""
+map = "parity_american_storm_paradrop.yrm"
+end_frame = 2300
+human_start = [35, 35]
+human_country = "Americans"
+super_weapons = true
+
+[generate]
+name = "american-storm-paradrop"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[AMRADR]
+Prerequisite=GACNST
+Cost=500
+Power=0
+
+[GAWEAT]
+Prerequisite=GACNST
+Cost=500
+Power=0
+
+[AmericanParaDropSpecial]
+RechargeTime=.3
+
+[LightningStormSpecial]
+RechargeTime=.3
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 45
+y = 22
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "AMRADR"
+
+[[order]]
+frame = 900
+what = "place"
+type = "AMRADR"
+x = 38
+y = 37
+
+[[order]]
+frame = 910
+what = "produce"
+type = "GAWEAT"
+
+[[order]]
+frame = 1190
+what = "place"
+type = "GAWEAT"
+x = 34
+y = 38
+
+[[order]]
+frame = 1250
+what = "fire"
+type = "AmericanParaDropSpecial"
+x = 25
+y = 45
+
+[[order]]
+frame = 1500
+what = "fire"
+type = "LightningStormSpecial"
+x = 45
+y = 22
+
+# Paratroopers, fired at 1251: eight GIs aboard at once (in limbo); the
+# first jumps 179 frames later and one every 5 frames after, each falling 3
+# leptons a frame to the cell under the plane. Which spot of the cell each
+# takes looks random, so positions are within a cell.
+[[check]]
+what = "supers"
+house = 0
+at = 1251
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "E1"
+owner = 0
+at = 1251
+tolerance = 0
+
+[[check]]
+what = "position"
+type = "E1"
+owner = 0
+at = 2300
+tolerance = 256
+
+# The Weather Storm, fired at 1501: its target is struck for 250 every 10
+# frames from 1824; the lone Grizzly there survives one strike.
+[[check]]
+what = "supers"
+house = 0
+at = 1501
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "MTNK"
+owner = 2
+at = 1823
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "MTNK"
+owner = 2
+at = 1824
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "MTNK"
+owner = 2
+at = 1834
+tolerance = 0
+
+[[check]]
+what = "supers"
+house = 0
+at = 1771
+tolerance = 0
