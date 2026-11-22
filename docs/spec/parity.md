@@ -42,6 +42,7 @@ the community's YRpp headers. `[observed]`
 | Type | `BuildingClass +0x520`, `UnitClass +0x6C4`, `InfantryClass +0x6C0` | shared by objects of one type; the rules ID is at `+0x24` of the type |
 | House index, country, credits | `HouseClass +0x30`, `+0x34` (type), `+0x30C` | indices 0 to 7; the human's 10,000 untouched while the AIs' change |
 | Power produced, drawn | `HouseClass +0x53A4`, `+0x53A8` | the power ratio the build time reads (`0x004FCE30`) |
+| Superweapons | `HouseClass +0x254`: one `SuperClass*` per type; `+0x30`/`+0x38` charge timer, `+0x6D` present, `+0x6F` charged, `+0x70` on hold | the class's vtable (`0x007F3FE8`) found by scanning the house; the fields from its update (`0x006CBCA0`) and a recording |
 | Cargo | `TechnoClass +0x33C`: four `float`s, bails of each ore kind | counts 1 to 40 a bail at a time as a War Miner harvests, back to 0 as the refinery pays |
 | Cells | `MapClass` (`0x0087F7E8`) `+0x13C`: `CellClass*` per cell, index `y × 512 + x` | the lookup `0x005657A0` |
 | Overlay, its data | `CellClass +0x44` (`int`, −1 for none), `+0x11E` (byte) | the overlay goes from 102 (`TIB01`) to −1 when its data has counted down from 11 to 0 |
@@ -57,6 +58,8 @@ JSON lines, one per observed frame:
 ```
 
 - `cargo` appears on objects carrying ore or gems: their bails, in total.
+- `supers` (on a house) lists its superweapons: type index, charged,
+  on hold, frames left.
 - `ore` lists every cell holding ore or gems: x, y, the overlay's index in
   `[OverlayTypes]`, and its data.
 
@@ -91,6 +94,11 @@ A scenario is TOML in `parity/scenarios/`:
   of a given size, skirmish start points, and pre-placed units, infantry and
   structures with a mission (`Hunt`, `Guard`…). See `mapgen.rs`.
 - **`human_start`**: the cell the human player must start at (see below).
+- **`human_country`**, **`credits`**: the human's country (`British`) and
+  starting credits (10,000); **`super_weapons`**: whether the skirmish
+  allows superweapons (no). **`[generate] rules`**: INI text added to the
+  map, which the game and our engine load over `rulesmd.ini`, e.g. to make
+  something cheaper or quicker to record.
 - **`[[order]]`**: the human player's orders: `frame`, `what` (`deploy`,
   `produce` or `place`), `type`, and `x`/`y` for placing. The recorder
   passes them to the observer, which queues the event the sidebar or a
@@ -102,6 +110,8 @@ A scenario is TOML in `parity/scenarios/`:
   - `credits` of a house at a frame;
   - `hp`: total hit points of matching objects at a frame;
   - `power`: a house's power produced and drawn at a frame;
+  - `supers`: a house's superweapons at a frame (each one's type, charged,
+    on hold, and frames left within the tolerance);
   - `cargo`: total bails carried by matching objects at a frame;
   - `ore`: bails left on the map (every ore cell's data, summed) at a frame;
   - `position`: each object paired with its nearest counterpart; the worst

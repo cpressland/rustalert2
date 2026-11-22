@@ -195,6 +195,45 @@ pub fn compare(s: &Scenario, reference: &Log, candidate: Option<&Log>) -> Vec<Ou
                     pass: within(r, k, *tolerance),
                 }
             }
+            Check::Supers {
+                house,
+                at,
+                tolerance,
+            } => {
+                let supers = |l: &Log| {
+                    l.at(*at)
+                        .and_then(|f| f.houses.iter().find(|h| h.index == *house))
+                        .map(|h| {
+                            let mut v = h.supers.clone();
+                            v.sort_unstable();
+                            v
+                        })
+                };
+                let (r, k) = (supers(reference), candidate.and_then(|_| supers(cand)));
+                let fmt = |v: &Option<Vec<[i32; 4]>>| {
+                    v.as_ref().map_or("-".into(), |v| {
+                        v.iter()
+                            .map(|s| format!("{}:{}{}/{}", s[0], s[1], s[2], s[3]))
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    })
+                };
+                let pass = match (&r, &k) {
+                    (Some(a), Some(b)) => {
+                        a.len() == b.len()
+                            && a.iter()
+                                .zip(b)
+                                .all(|(x, y)| x[..3] == y[..3] && x[3].abs_diff(y[3]) <= *tolerance)
+                    }
+                    _ => false,
+                };
+                Outcome {
+                    check: format!("superweapons of house {house} at {at} (±{tolerance})"),
+                    reference: fmt(&r),
+                    candidate: fmt(&k),
+                    pass,
+                }
+            }
             Check::Power {
                 house,
                 at,

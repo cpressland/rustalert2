@@ -107,6 +107,16 @@ pub fn refund(rules: &Rules, t: &TechnoType) -> i32 {
     (X80::int(t.cost) * X80::double(rules.general.refund_percent.value())).trunc()
 }
 
+/// Frames a superweapon takes to charge: `RechargeTime=` (minutes) × 900,
+/// truncated; 4500 (five minutes) if it's 0. `[recomp 0x006CED6E,
+/// 0x006CE5E9]`
+pub fn recharge_frames(sw: &crate::SuperWeaponType) -> i32 {
+    if sw.recharge_minutes.value() == 0.0 {
+        return 4500;
+    }
+    (X80::double(sw.recharge_minutes.value()) * X80::double(900.0)).trunc()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

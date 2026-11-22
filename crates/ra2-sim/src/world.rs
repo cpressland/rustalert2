@@ -142,6 +142,8 @@ pub struct World {
     pub factories: Vec<crate::production::Factory>,
     /// Units unpacking into buildings: the unit and the frame it's done.
     pub deploying: Vec<(u32, u32)>,
+    /// Every house's superweapons.
+    pub supers: Vec<crate::superweapon::Super>,
     next_id: u32,
 }
 
