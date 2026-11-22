@@ -18,6 +18,9 @@ pub struct Super {
     pub frames: i32,
     pub charged: bool,
     pub on_hold: bool,
+    /// The Chronosphere: aimed at this cell on this frame, waiting for the
+    /// Chrono Warp's click.
+    pub armed: Option<((i16, i16), u32)>,
 }
 
 impl Super {
@@ -48,6 +51,10 @@ const INFANTRY_DEATH_FRAMES: u32 = 15;
 /// Frames from launching the Nuke to its landing. `[observed]` (one launch,
 /// ten cells from its silo; the missile's flight isn't traced)
 const NUKE_FLIGHT_FRAMES: u32 = 419;
+/// Frames from the Chrono Warp's click to its units reaching the target.
+/// `[observed]` (the same over 5 and 28 cells: likely `ChronoDelay=` (60)
+/// and two frames)
+const CHRONO_FRAMES: u32 = 62;
 
 /// One frame of every house's superweapons, after power is worked out.
 ///
@@ -66,6 +73,13 @@ pub fn update(world: &mut World, rules: &Rules, frame: u32) {
     world
         .objects
         .retain(|o| o.dies_at.is_none_or(|d| d > frame));
+    let (now, later): (Vec<_>, Vec<_>) = world.warps.drain(..).partition(|w| w.1 <= frame);
+    world.warps = later;
+    for (id, _, to) in now {
+        if let Some(o) = world.objects.iter_mut().find(|o| o.id == id) {
+            o.coord = to;
+        }
+    }
     // What each house's buildings give it, and since when.
     let mut given: Vec<(u32, usize, u32)> = Vec::new();
     for o in &world.objects {
@@ -98,10 +112,17 @@ pub fn update(world: &mut World, rules: &Rules, frame: u32) {
                 frames: recharge_frames(&rules.super_weapons[kind]),
                 charged: false,
                 on_hold: false,
+                armed: None,
             });
         }
     }
     for s in &mut world.supers {
+        // Aimed, the Chronosphere shows as charged again from the next
+        // frame, until it's warped. `[observed]`
+        if let Some((_, at)) = s.armed {
+            s.charged = frame > at;
+            continue;
+        }
         let h = &world.houses[usize::try_from(s.house).unwrap_or(0)];
         let short = h.power_output < h.power_drain;
         if s.charged {
@@ -158,6 +179,47 @@ fn land(world: &mut World, rules: &Rules, frame: u32) {
         .retain(|o| o.health > 0 || o.dies_at.is_some());
 }
 
+/// The Chrono Warp's click: the house's aimed Chronosphere starts charging
+/// again (from the frame before), infantry within its `Range=` of where it
+/// was aimed die (taken away 15 frames later), and the other units there
+/// reach the same place relative to `to` after `CHRONO_FRAMES`. Buildings
+/// stay. `[observed]` (two Grizzlies, a third out of range, and a GI)
+fn warp(world: &mut World, rules: &Rules, frame: u32, house: u32, to: (i16, i16)) {
+    let Some(s) = world
+        .supers
+        .iter_mut()
+        .find(|s| s.house == house && s.armed.is_some())
+    else {
+        return;
+    };
+    let Some((from, _)) = s.armed.take() else {
+        return;
+    };
+    s.charged = false;
+    s.start = Some(frame - 1);
+    s.frames = recharge_frames(&rules.super_weapons[s.kind]);
+    let reach = rules.super_weapons[s.kind]
+        .range
+        .of(crate::coords::LEPTONS_PER_CELL);
+    let (src, dst) = (cell_centre(from), cell_centre(to));
+    for o in &mut world.objects {
+        if o.limbo || o.kind == Kind::Building || crate::hunt::distance(o.coord, src) > reach {
+            continue;
+        }
+        if o.kind == Kind::Infantry {
+            o.health = 0;
+            o.dies_at = Some(frame + INFANTRY_DEATH_FRAMES);
+        } else {
+            let at = crate::coords::Coord {
+                x: o.coord.x - src.x + dst.x,
+                y: o.coord.y - src.y + dst.y,
+                z: o.coord.z,
+            };
+            world.warps.push((o.id, frame + CHRONO_FRAMES, at));
+        }
+    }
+}
+
 /// Fire a house's charged superweapon at `cell`, on the frame the order
 /// takes effect: its charge starts again from the frame before.
 /// `[observed]` Then its effect:
@@ -176,6 +238,13 @@ pub fn fire(
     kind: usize,
     cell: (i16, i16),
 ) {
+    if rules.super_weapons[kind]
+        .kind
+        .eq_ignore_ascii_case("ChronoWarp")
+    {
+        warp(world, rules, frame, house, cell);
+        return;
+    }
     let Some(s) = world
         .supers
         .iter_mut()
@@ -184,6 +253,14 @@ pub fn fire(
         return;
     };
     s.charged = false;
+    if rules.super_weapons[kind]
+        .kind
+        .eq_ignore_ascii_case("ChronoSphere")
+    {
+        // Aimed: it waits for the Chrono Warp's click. `[observed]`
+        s.armed = Some((cell, frame));
+        return;
+    }
     s.start = Some(frame - 1);
     s.frames = recharge_frames(&rules.super_weapons[kind]);
     let g = &rules.general;

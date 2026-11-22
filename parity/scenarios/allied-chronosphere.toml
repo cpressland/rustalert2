@@ -1,0 +1,154 @@
+name = "allied-chronosphere"
+description = """
+The British player builds a power plant and a Chronosphere, then
+teleports a group of Neutral units (two Grizzlies and a GI) from far
+north-east of the base to far south-west: the Chronosphere's click on the
+group, then the Chrono Warp's on where they go. The map's rules make the
+Chronosphere cheap, powerless and buildable from the Construction Yard,
+recharging in 18 seconds."""
+map = "parity_allied_chronosphere.yrm"
+end_frame = 1700
+human_start = [35, 35]
+super_weapons = true
+
+[generate]
+name = "allied-chronosphere"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[GACSPH]
+Prerequisite=GACNST
+Cost=500
+Power=0
+
+[ChronoSphereSpecial]
+RechargeTime=.3
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 45
+y = 25
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 46
+y = 25
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 45
+y = 26
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 48
+y = 25
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GACSPH"
+
+[[order]]
+frame = 900
+what = "place"
+type = "GACSPH"
+x = 38
+y = 37
+
+[[order]]
+frame = 1300
+what = "fire"
+type = "ChronoSphereSpecial"
+x = 45
+y = 25
+
+[[order]]
+frame = 1310
+what = "fire"
+type = "ChronoWarpSpecial"
+x = 25
+y = 45
+
+# Aimed at 1301 (the Chronosphere shows uncharged for that frame), warped
+# at 1311: its charge restarts from 1310, the GI in range dies (taken
+# away 15 frames later), and the two Grizzlies in range arrive 62 frames
+# later in the same places relative to the target. The third, three
+# cells off, stays.
+[[check]]
+what = "supers"
+house = 0
+at = 1301
+tolerance = 0
+
+[[check]]
+what = "supers"
+house = 0
+at = 1302
+tolerance = 0
+
+[[check]]
+what = "supers"
+house = 0
+at = 1311
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "E1"
+owner = 2
+at = 1311
+tolerance = 0
+
+[[check]]
+what = "event"
+type = "E1"
+owner = 2
+event = "removed"
+window = 0
+
+[[check]]
+what = "position"
+type = "MTNK"
+owner = 2
+at = 1372
+tolerance = 0
+
+[[check]]
+what = "position"
+type = "MTNK"
+owner = 2
+at = 1373
+tolerance = 0
+
+[[check]]
+what = "supers"
+house = 0
+at = 1581
+tolerance = 0
