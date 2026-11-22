@@ -7,7 +7,7 @@
 use ra2_rules::{Kind, Rules};
 
 use crate::coords::{Coord, LEPTONS_PER_CELL};
-use crate::hunt::{DRIVE_SPEED, cell_centre, distance, step_facing, to_cell, travel, turn};
+use crate::hunt::{cell_centre, distance, step_facing, throttle, to_cell, travel, turn};
 use crate::pathfind;
 use crate::rng::Randomizer;
 use crate::world::{Mission, World};
@@ -31,15 +31,6 @@ const DOCK_SPEED: i32 = 1150;
 /// `[observed]`
 const UNLOAD_FRAMES: u32 = 40;
 const LEAVE_FRAMES: u32 = 31;
-/// Driving: a crawl to start and finish on, and how fast the speed changes
-/// toward top speed or back, in 1/256 leptons a frame. It slows when the
-/// destination is within two cells. `[observed]` (the War Miner's speed
-/// frame by frame; the drive locomotor itself is #40)
-const CRAWL: i32 = 1206;
-const SPEED_STEP: i32 = 120;
-const SLOW_WITHIN: i32 = 2 * LEPTONS_PER_CELL;
-/// A diagonal step's length, in leptons.
-const DIAGONAL: i32 = 362;
 
 /// Where a harvester is in its round, as the game's mission status.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -443,36 +434,14 @@ fn drive(world: &mut World, rules: &Rules, i: usize) {
             o.dir = u16::try_from(turn(facing, want, t.rot * 256)).unwrap_or(0);
         }
         if i32::from(o.dir) == want {
-            // Leptons to go: the rest of this leg, then the route.
-            let left = o.motion.leg.map_or(0, |(f, t, done)| distance(f, t) - done)
-                + o.motion
-                    .route
-                    .iter()
-                    .map(|&d| {
-                        if d % 2 == 1 {
-                            DIAGONAL
-                        } else {
-                            LEPTONS_PER_CELL
-                        }
-                    })
-                    .sum::<i32>();
-            let top = t.speed_fraction * DRIVE_SPEED;
-            let aim = if left <= SLOW_WITHIN {
-                CRAWL.min(top)
-            } else {
-                top
+            let to_goal = Coord {
+                x: i32::from(goal.0) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
+                y: i32::from(goal.1) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
+                z: o.coord.z,
             };
-            o.motion.speed = if o.motion.rolling {
-                if o.motion.speed < aim {
-                    (o.motion.speed + SPEED_STEP).min(aim)
-                } else {
-                    (o.motion.speed - SPEED_STEP).max(aim)
-                }
-            } else {
-                CRAWL.min(top)
-            };
+            let speed = throttle(o, t, distance(to_goal, o.coord));
             o.motion.rolling = true;
-            if travel(o, o.motion.speed) && to_cell(o.coord) == goal {
+            if travel(o, speed) && to_cell(o.coord) == goal {
                 o.harvest.dest = None;
                 o.harvest.planned = None;
                 o.motion.rolling = false;

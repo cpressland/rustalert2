@@ -199,6 +199,16 @@ pub struct TechnoType {
     /// capped at 255. `[recomp 0x0071465A]`
     pub speed_fraction: i32,
     pub rot: i32,
+    /// Drivers: whether it speeds up from a crawl rather than setting off
+    /// at full speed (`Accelerates=`, default yes), by how much of full
+    /// speed a frame (`AccelerationFactor=`, default 0.03), and how it
+    /// slows within `SlowdownDistance=` leptons (default 500) of where it's
+    /// going: by `DeaccelerationFactor=` (default 0.002) × `speed_fraction`
+    /// a frame. `[recomp 0x00710BB2, 0x00711651]`
+    pub accelerates: bool,
+    pub acceleration_factor: Ratio,
+    pub deacceleration_factor: Ratio,
+    pub slowdown_distance: i32,
     pub owner: Vec<String>,
     pub prerequisite: Vec<String>,
     pub primary: Option<WeaponId>,
@@ -487,6 +497,18 @@ impl Rules {
                         .and_then(|s| s.get("Speed"))
                         .map_or(0, |v| (atoi(v).clamp(0, 100) * 256 / 100).min(255)),
                     rot: int(s, "ROT", 0),
+                    accelerates: flag(s, "Accelerates", true),
+                    acceleration_factor: ratio(
+                        s,
+                        "AccelerationFactor",
+                        Ratio::from_bits(0x3F9E_B851_EB85_1EB8),
+                    ),
+                    deacceleration_factor: ratio(
+                        s,
+                        "DeaccelerationFactor",
+                        Ratio::from_bits(0x3F60_624D_D2F1_A9FC),
+                    ),
+                    slowdown_distance: int(s, "SlowdownDistance", 500),
                     owner: list(s, "Owner"),
                     prerequisite: list(s, "Prerequisite"),
                     primary: weapon("Primary"),

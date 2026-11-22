@@ -43,9 +43,51 @@ pub struct Motion {
     pub arrived_at: u32,
     /// Frames until its weapon is ready.
     pub reload: i32,
-    /// Its speed, in 1/256 leptons a frame, for drivers that speed up and
-    /// slow down (see `harvest::drive`).
+    /// How much of its full speed it's doing, in millionths; 0 before it
+    /// first moves. See [`throttle`].
     pub speed: i32,
+    /// The cell centre its route ends at.
+    pub goal: Option<Coord>,
+}
+
+/// Full speed, in the millionths [`Motion::speed`] keeps.
+const FULL: i32 = 1_000_000;
+/// The slowest a driver slows to, and starts at. `[recomp 0x004B10D0]`
+/// (0.3 as a float; starting at it is `[observed]`)
+const CRAWL: i32 = 300_000;
+
+/// A factor in millionths, rounded.
+fn micro(r: ra2_rules::Ratio) -> i32 {
+    (r.of(2_000_000) + 1) / 2
+}
+
+/// This frame's speed for a driver, in 1/256 leptons, `dist` leptons from
+/// where it's going. Units that don't accelerate go at full speed. Others
+/// slow by `DeaccelerationFactor × speed_fraction` a frame, to no less than
+/// a crawl, once within `SlowdownDistance`; else they gain
+/// `AccelerationFactor` a frame up to full speed. What it moves is the
+/// type's speed times that, truncated, in the same units as a full-speed
+/// driver. `[recomp 0x004B0F69]` (the speed is a double in the game; we
+/// keep millionths, so a frame now and then may differ by one unit)
+pub(crate) fn throttle(o: &mut Object, t: &ra2_rules::TechnoType, dist: i32) -> i32 {
+    let m = &mut o.motion;
+    if t.accelerates {
+        if m.speed < CRAWL {
+            m.speed = CRAWL;
+        } else if dist < t.slowdown_distance {
+            let by = i32::try_from(
+                i64::from(micro(t.deacceleration_factor)) * i64::from(t.speed_fraction),
+            )
+            .unwrap_or(FULL);
+            m.speed = (m.speed - by).max(CRAWL);
+        } else {
+            m.speed = (m.speed + micro(t.acceleration_factor)).min(FULL);
+        }
+    } else {
+        m.speed = FULL;
+    }
+    let units = i64::from(t.speed_fraction) * i64::from(m.speed) / i64::from(FULL);
+    i32::try_from(units).unwrap_or(0) * DRIVE_SPEED
 }
 
 fn isqrt(v: i64) -> i32 {
@@ -204,6 +246,11 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
                     // (37,38) where range less half a cell gives (37,37))
                     let reach = weapon.range + if infantry { 128 } else { 0 };
                     let goal = pathfind::approach(here, to_cell(target_at), reach);
+                    o.motion.goal = Some(Coord {
+                        x: i32::from(goal.0) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
+                        y: i32::from(goal.1) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
+                        z: cell.z,
+                    });
                     let cells = &world.cells;
                     let valid = |c: (i16, i16)| {
                         if cells.is_empty() {
@@ -245,8 +292,13 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
             }
             if i32::from(o.dir) == want {
                 o.motion.rolling = true;
-                let speed = if infantry { WALK_SPEED } else { DRIVE_SPEED };
-                travel(o, t.speed_fraction * speed);
+                let speed = if infantry {
+                    t.speed_fraction * WALK_SPEED
+                } else {
+                    let dist = o.motion.goal.map_or(i32::MAX, |g| distance(g, o.coord));
+                    throttle(o, t, dist)
+                };
+                travel(o, speed);
             }
         }
     }
@@ -325,6 +377,46 @@ fn land(world: &mut World, rules: &Rules, frame: u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn accelerating_drivers_crawl_off_speed_up_and_slow_near_the_end() {
+        let rules = ra2_rules::Rules::from_ini(
+            &ra2_rules::Ini::parse(b"[VehicleTypes]\n1=HARV\n2=MTNK\n[HARV]\nSpeed=4\n[MTNK]\nSpeed=7\nAccelerates=no\n"),
+            &ra2_rules::Ini::parse(b""),
+        );
+        let (harv, mtnk) = (&rules.technos[0], &rules.technos[1]);
+        let mut o = crate::world::World::default();
+        o.add_house("Neutral", 0);
+        let p = ra2_rules::scenario::Placement {
+            kind: ra2_rules::Kind::Vehicle,
+            type_id: "HARV".into(),
+            owner: "Neutral".into(),
+            cell: (1, 1),
+            sub_cell: 0,
+            health: 256,
+            facing: 0,
+            mission: "Guard".into(),
+        };
+        o.place(&rules, &p, 0);
+        let unit = &mut o.objects[0];
+        let far = 10_000;
+        // Points a frame: 3 at the crawl, one more about every 3 frames.
+        let points: Vec<i32> = (0..25)
+            .map(|_| throttle(unit, harv, far) / DRIVE_SPEED)
+            .collect();
+        assert_eq!(&points[..5], &[3, 3, 3, 3, 4]);
+        assert_eq!(points[24], 10, "full speed after about 23 frames");
+        // Within 500 leptons it loses 0.02 a frame, down to the crawl.
+        let slowing: Vec<i32> = (0..40)
+            .map(|_| throttle(unit, harv, 300) / DRIVE_SPEED)
+            .collect();
+        assert_eq!(slowing[0], 9);
+        assert_eq!(*slowing.last().expect("some"), 3);
+        // Units that don't accelerate go at full speed at once.
+        let mut tank = o.objects[0].clone();
+        tank.motion = Motion::default();
+        assert_eq!(throttle(&mut tank, mtnk, far), 17 * DRIVE_SPEED);
+    }
 
     #[test]
     fn turning_goes_the_short_way_at_the_turn_rate() {

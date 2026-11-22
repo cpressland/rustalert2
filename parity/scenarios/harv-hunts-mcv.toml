@@ -1,0 +1,46 @@
+name = "harv-hunts-mcv"
+description = """
+A War Miner on Hunt, owned by Neutral, drives from the middle of a flat clear
+map to the idle human player's MCV. Unlike the Grizzly and Rhino (which set
+Accelerates=false), it starts at a crawl, speeds up, and slows within
+SlowdownDistance of where it's going.
+
+In a skirmish the map's objects are read before the player houses exist, so
+only Neutral and Special can own them; Neutral is hostile to the players."""
+map = "parity_harv_hunts_mcv.yrm"
+end_frame = 500
+human_start = [35, 35]
+
+[generate]
+name = "harv-hunts-mcv"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "HARV"
+x = 47
+y = 50
+facing = 64
+mission = "Hunt"
+
+
+# It sets off about 8 frames later than ours (open question in
+# locomotors.md), so positions are checked once it's slowing and standing.
+[[check]]
+what = "position"
+type = "HARV"
+owner = 2
+at = 300
+tolerance = 64
+
+[[check]]
+what = "position"
+type = "HARV"
+owner = 2
+at = 400
+tolerance = 64
