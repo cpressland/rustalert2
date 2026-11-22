@@ -4,7 +4,7 @@
 use ra2_formats::ini::Ini;
 use ra2_rules::Rules;
 use ra2_rules::scenario::{Placement, placements};
-use ra2_sim::tick::Sim;
+use ra2_sim::tick::{Order, Sim};
 use ra2_sim::world::{Ore, World};
 
 use crate::log::{Frame, House, Log, Object};
@@ -136,9 +136,75 @@ pub fn setup(scenario: &Scenario, rules: &Rules, map: &Ini) -> World {
     world
 }
 
+/// The game's `AbstractType` of a type list, as production and placing
+/// events name what they build. `[recomp 0x006AB4FF]` (the sidebar's
+/// cameo; values per the community's `YRpp` headers; placing names the
+/// object's kind, one less)
+fn type_rtti(kind: ra2_rules::Kind) -> i32 {
+    match kind {
+        ra2_rules::Kind::Aircraft => 3,
+        ra2_rules::Kind::Building => 7,
+        ra2_rules::Kind::Infantry => 16,
+        ra2_rules::Kind::Vehicle => 41,
+    }
+}
+
+/// A type's position in its list (`[BuildingTypes]` and so on), as the
+/// game numbers its type arrays.
+fn type_index(rules: &Rules, id: &str) -> Option<(ra2_rules::Kind, usize)> {
+    let t = rules
+        .technos
+        .iter()
+        .position(|t| t.id.eq_ignore_ascii_case(id))?;
+    let kind = rules.technos[t].kind;
+    let index = rules.technos[..t].iter().filter(|o| o.kind == kind).count();
+    Some((kind, index))
+}
+
+/// A scenario's orders as the observer reads them (`RA2_OBSERVE_ORDERS`,
+/// see `parity/recomp/observe.c`). Orders naming unknown types are left
+/// out.
+pub fn observer_orders(scenario: &Scenario, rules: &Rules) -> String {
+    use crate::scenario::OrderKind;
+    scenario
+        .orders
+        .iter()
+        .filter_map(|o| {
+            Some(match o.what {
+                OrderKind::Deploy => format!("{} D {}", o.frame, o.type_id),
+                OrderKind::Produce => {
+                    let (kind, index) = type_index(rules, &o.type_id)?;
+                    format!("{} P {} {index} 0", o.frame, type_rtti(kind))
+                }
+                OrderKind::Place => {
+                    let (kind, index) = type_index(rules, &o.type_id)?;
+                    format!(
+                        "{} L {} {index} 0 {} {}",
+                        o.frame,
+                        type_rtti(kind) - 1,
+                        o.x,
+                        o.y
+                    )
+                }
+            })
+        })
+        .collect::<Vec<_>>()
+        .join(";")
+}
+
 /// What the world holds, as a log frame.
 pub fn observe(sim: &Sim, rules: &Rules) -> Frame {
     let world = sim.world();
+    let logged = |o: &ra2_sim::world::Object| {
+        if o.limbo {
+            (0, 0)
+        } else if o.kind == ra2_rules::Kind::Building {
+            let (x, y) = ra2_sim::production::top_left(rules, o);
+            (x * 256 + 128, y * 256 + 128)
+        } else {
+            (o.coord.x, o.coord.y)
+        }
+    };
     Frame {
         frame: sim.frame(),
         houses: world
@@ -148,8 +214,8 @@ pub fn observe(sim: &Sim, rules: &Rules) -> Frame {
                 index: h.index,
                 country: h.country.clone(),
                 credits: h.credits,
-                power_output: 0,
-                power_drain: 0,
+                power_output: h.power_output,
+                power_drain: h.power_drain,
                 defeated: false,
             })
             .collect(),
@@ -167,9 +233,11 @@ pub fn observe(sim: &Sim, rules: &Rules) -> Frame {
                 .to_string(),
                 type_id: rules.technos[o.techno].id.clone(),
                 owner: o.owner,
-                x: o.coord.x,
-                y: o.coord.y,
-                z: o.coord.z,
+                // The game logs a building at its top-left cell's centre, and
+                // anything in limbo at 0.
+                x: logged(o).0,
+                y: logged(o).1,
+                z: if o.limbo { 0 } else { o.coord.z },
                 hp: o.health,
                 cargo: o.cargo,
             })
@@ -189,12 +257,48 @@ pub fn observe(sim: &Sim, rules: &Rules) -> Frame {
     }
 }
 
+/// The scenario's orders for the human player (house 0), by the frame
+/// they're sent on: they take effect on the next, as the original executes
+/// the events.
+pub fn sim_orders(scenario: &Scenario, rules: &Rules) -> Vec<(u32, Order)> {
+    use crate::scenario::OrderKind;
+    use ra2_sim::production::Build;
+    scenario
+        .orders
+        .iter()
+        .filter_map(|o| {
+            let techno = rules
+                .technos
+                .iter()
+                .position(|t| t.id.eq_ignore_ascii_case(&o.type_id))?;
+            let house = 0;
+            let cell = (i16::try_from(o.x).ok()?, i16::try_from(o.y).ok()?);
+            let b = match o.what {
+                OrderKind::Deploy => Build::Deploy { house, techno },
+                OrderKind::Produce => Build::Produce { house, techno },
+                OrderKind::Place => Build::Place {
+                    house,
+                    techno,
+                    cell,
+                },
+            };
+            Some((o.frame, Order::Build(b)))
+        })
+        .collect()
+}
+
 /// Play `scenario` to its end frame, observing every frame from 1.
 pub fn run(scenario: &Scenario, rules: &Rules, map: &Ini, seed: u32) -> Log {
     let mut sim = Sim::start(seed, rules.clone(), setup(scenario, rules, map));
     let mut frames = Vec::new();
+    let orders = sim_orders(scenario, rules);
     while sim.frame() < scenario.end_frame {
-        sim.step(&[]);
+        let now: Vec<Order> = orders
+            .iter()
+            .filter(|(f, _)| *f == sim.frame())
+            .map(|(_, o)| o.clone())
+            .collect();
+        sim.step(&now);
         frames.push(observe(&sim, rules));
     }
     Log { frames }

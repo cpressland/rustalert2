@@ -16,6 +16,9 @@ pub struct House {
     /// (`Neutral`, `Special`).
     pub country: String,
     pub credits: i32,
+    /// Power produced and drawn by its buildings.
+    pub power_output: i32,
+    pub power_drain: i32,
 }
 
 /// What an object is doing.
@@ -69,6 +72,11 @@ pub struct Object {
     pub cargo_value: i32,
     /// Where a harvester is in its round.
     pub harvest: crate::harvest::Harvest,
+    /// Not on the map: being built, or finished and waiting to be placed.
+    pub limbo: bool,
+    /// The frame a building was placed on (power output counts from the
+    /// next).
+    pub placed: u32,
 }
 
 /// Ore or gems on a cell.
@@ -128,6 +136,10 @@ pub struct World {
     pub cells: std::collections::BTreeSet<(i16, i16)>,
     /// Ore and gems, by cell.
     pub ore: std::collections::BTreeMap<(i16, i16), Ore>,
+    /// What each house is building.
+    pub factories: Vec<crate::production::Factory>,
+    /// Units unpacking into buildings: the unit and the frame it's done.
+    pub deploying: Vec<(u32, u32)>,
     next_id: u32,
 }
 
@@ -139,6 +151,8 @@ impl World {
             index,
             country: country.to_string(),
             credits,
+            power_output: 0,
+            power_drain: 0,
         });
         index
     }
@@ -199,8 +213,35 @@ impl World {
             cargo: 0,
             cargo_value: 0,
             harvest: crate::harvest::Harvest::default(),
+            limbo: false,
+            placed: 0,
         });
         Some(id)
+    }
+
+    /// A new object of type `techno` for house `owner`, at full health.
+    pub fn spawn(&mut self, rules: &Rules, techno: usize, owner: u32, coord: Coord) -> u32 {
+        let t = &rules.technos[techno];
+        let id = self.next_id;
+        self.next_id += 1;
+        self.objects.push(Object {
+            id,
+            kind: t.kind,
+            techno,
+            owner,
+            coord,
+            health: t.strength.max(1),
+            facing: 0,
+            dir: 0,
+            mission: Mission::Guard,
+            motion: crate::hunt::Motion::default(),
+            cargo: 0,
+            cargo_value: 0,
+            harvest: crate::harvest::Harvest::default(),
+            limbo: false,
+            placed: 0,
+        });
+        id
     }
 
     /// Feed the world into a state hash, in a fixed order.
@@ -210,6 +251,8 @@ impl World {
             h.u32(house.index);
             h.bytes(house.country.as_bytes());
             h.i32(house.credits);
+            h.i32(house.power_output);
+            h.i32(house.power_drain);
         }
         h.u32(u32::try_from(self.objects.len()).unwrap_or(u32::MAX));
         for o in &self.objects {

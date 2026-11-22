@@ -195,6 +195,27 @@ pub fn compare(s: &Scenario, reference: &Log, candidate: Option<&Log>) -> Vec<Ou
                     pass: within(r, k, *tolerance),
                 }
             }
+            Check::Power {
+                house,
+                at,
+                tolerance,
+            } => {
+                let power = |l: &Log| {
+                    l.at(*at)
+                        .and_then(|f| f.houses.iter().find(|h| h.index == *house))
+                        .map(|h| (i64::from(h.power_output), i64::from(h.power_drain)))
+                };
+                let (r, k) = (power(reference), candidate.and_then(|_| power(cand)));
+                let fmt = |v: Option<(i64, i64)>| v.map_or("-".into(), |(o, d)| format!("{o}/{d}"));
+                Outcome {
+                    check: format!("power of house {house} at {at} (±{tolerance})"),
+                    reference: fmt(r),
+                    candidate: fmt(k),
+                    pass: matches!((r, k), (Some(a), Some(b))
+                        if a.0.abs_diff(b.0) <= u64::from(*tolerance)
+                            && a.1.abs_diff(b.1) <= u64::from(*tolerance)),
+                }
+            }
             Check::Cargo {
                 filter,
                 at,

@@ -1,0 +1,158 @@
+name = "allied-base"
+description = """
+The human player (British) deploys its MCV and builds a power plant, a
+barracks, a GI, a second barracks and two more GIs, by orders the recorder
+queues as the sidebar's clicks would. Covers deploying, build times, paying
+for production a step at a time, placing buildings, power, and the second
+factory's speed-up. Nothing else is near: the AI starts in the far corner."""
+map = "parity_allied_base.yrm"
+end_frame = 1700
+human_start = [35, 35]
+
+[generate]
+name = "allied-base"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+
+[[generate.house]]
+name = "Neutral"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAPILE"
+
+[[order]]
+frame = 900
+what = "place"
+type = "GAPILE"
+x = 38
+y = 37
+
+[[order]]
+frame = 910
+what = "produce"
+type = "E1"
+
+[[order]]
+frame = 1100
+what = "produce"
+type = "GAPILE"
+
+[[order]]
+frame = 1400
+what = "place"
+type = "GAPILE"
+x = 41
+y = 37
+
+[[order]]
+frame = 1410
+what = "produce"
+type = "E1"
+
+[[order]]
+frame = 1500
+what = "produce"
+type = "E1"
+
+# Deploying: the Construction Yard stands 26 frames after the order lands.
+[[check]]
+what = "event"
+type = "GACNST"
+owner = 0
+event = "created"
+window = 0
+
+# Paying for the power plant a step at a time (9-frame steps): part way,
+# and all 800 once it's done.
+[[check]]
+what = "credits"
+house = 0
+at = 300
+tolerance = 0
+
+[[check]]
+what = "credits"
+house = 0
+at = 590
+tolerance = 0
+
+# Placed: power counts from the next frame; the barracks draws 10.
+[[check]]
+what = "position"
+type = "GAPOWR"
+owner = 0
+at = 700
+tolerance = 0
+
+[[check]]
+what = "power"
+house = 0
+at = 602
+tolerance = 0
+
+[[check]]
+what = "power"
+house = 0
+at = 1000
+tolerance = 0
+
+# The first GI: 2-frame steps, out of the barracks the frame after.
+[[check]]
+what = "credits"
+house = 0
+at = 950
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "E1"
+owner = 0
+at = 1020
+tolerance = 0
+
+# Two barracks: GIs at 1-frame steps (× MultipleFactory 0.8).
+[[check]]
+what = "credits"
+house = 0
+at = 1440
+tolerance = 0
+
+[[check]]
+what = "credits"
+house = 0
+at = 1700
+tolerance = 0
+
+[[check]]
+what = "position"
+type = "GAPILE"
+owner = 0
+at = 1700
+tolerance = 0
+
+[[check]]
+what = "position"
+type = "E1"
+owner = 0
+at = 1700
+tolerance = 0

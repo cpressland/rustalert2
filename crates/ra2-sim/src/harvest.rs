@@ -167,6 +167,7 @@ fn mission(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i
                 .iter()
                 .filter(|b| {
                     b.kind == Kind::Building
+                        && !b.limbo
                         && b.owner == me.owner
                         && t.dock
                             .iter()
@@ -250,7 +251,7 @@ pub fn find_ore(world: &World, rules: &Rules, i: usize, radius: i32) -> Option<(
 /// foundation).
 fn occupied(world: &World, rules: &Rules, cell: (i16, i16), me: u32) -> bool {
     world.objects.iter().any(|o| {
-        if o.id == me {
+        if o.id == me || o.limbo {
             return false;
         }
         if o.kind == Kind::Building {

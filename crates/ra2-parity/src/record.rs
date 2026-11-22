@@ -39,6 +39,9 @@ pub struct Recorder {
     /// Extra files to put in the game folder (experiments: a loose INI, an
     /// extra archive).
     pub extra: Vec<PathBuf>,
+    /// The scenario's orders as the observer reads them
+    /// (`RA2_OBSERVE_ORDERS`; see `engine::observer_orders`).
+    pub orders: String,
 }
 
 /// Set `key=value` in `[section]` of INI text, adding either if missing.
@@ -182,6 +185,9 @@ impl Recorder {
         .arg(&game);
         for p in MENU_PRESSES {
             cmd.args(["--press", p]);
+        }
+        if !self.orders.is_empty() {
+            cmd.env("RA2_OBSERVE_ORDERS", &self.orders);
         }
         cmd.env("RA2_OBSERVE", out)
             .env("RA2_OBSERVE_END", scenario.end_frame.to_string())

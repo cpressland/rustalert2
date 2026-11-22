@@ -73,6 +73,8 @@ pub enum Order {
     /// Draw from the game's random numbers: a stand-in that exercises the
     /// lockstep path until real orders (move, attack, build) land.
     Roll { min: i32, max: i32 },
+    /// Deploy, produce or place (see `production`).
+    Build(crate::production::Build),
 }
 
 /// Something that happened in a frame, for the presentation and the logs.
@@ -136,11 +138,17 @@ impl Sim {
                 Order::Roll { min, max } => events.push(Event::Rolled {
                     value: self.rng.ranged(min, max),
                 }),
+                Order::Build(b) => {
+                    if let Some(rules) = &self.rules {
+                        crate::production::order(&mut self.world, rules, self.frame + 1, b);
+                    }
+                }
             }
         }
         if let Some(rules) = &self.rules {
             crate::hunt::update(&mut self.world, rules, &mut self.rng, self.frame + 1);
             crate::harvest::update(&mut self.world, rules, &mut self.rng, self.frame + 1);
+            crate::production::update(&mut self.world, rules, self.frame + 1);
         }
         self.frame += 1;
         events
