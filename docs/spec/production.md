@@ -118,8 +118,10 @@ takes effect. When the house's power changes, every factory's rate is
 worked out again, but the step already under way keeps its timing; the
 new rate applies from the next one. `[recomp 0x004CA6E0]` (`[observed]` in
 `allied-queue-sell`: 2-frame steps become 4 when the power plant goes) A
-factory starts a step only if the house can afford its payment. `[recomp
-0x004C9F64]` (running out isn't recorded yet) On each of the first 53
+house that can't afford a step's payment doesn't take the step: the
+factory tries again a rate later, and so on until it can. The last step
+pays whatever is still owed (nothing, by then). `[recomp 0x004C9B20]`
+(running out isn't recorded; a unit test covers it) On each of the first 53
 steps it takes what's still owed ÷ the payments left, rounded down. So a
 power plant pays 15 for 48 steps, then 16 for 5. On the 54th step it's
 done. Recorded for three costs and step lengths of 9, 5, 2 and 1 frames.
@@ -152,7 +154,6 @@ the house's output and drain when an order starts.
 
 ## Open questions
 
-- What happens when credits run out part way.
 - The rest of placement (terrain, other houses' units) and the build-up
   animation itself.
 - Aircraft and ships leaving their factories; which factory is primary
