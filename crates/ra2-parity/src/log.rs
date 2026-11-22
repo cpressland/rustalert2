@@ -45,6 +45,14 @@ pub struct Object {
     pub z: i32,
     /// Hit points.
     pub hp: i32,
+    /// Bails of ore or gems carried, when any.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub cargo: i32,
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_zero(v: &i32) -> bool {
+    *v == 0
 }
 
 /// Everything observed at one frame.
@@ -55,6 +63,10 @@ pub struct Frame {
     pub houses: Vec<House>,
     #[serde(default)]
     pub objects: Vec<Object>,
+    /// Every cell holding ore or gems: x, y, overlay, and the overlay's
+    /// data (bails left, less one).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ore: Vec<[i32; 4]>,
 }
 
 /// A whole log, frames in order.

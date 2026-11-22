@@ -13,6 +13,7 @@
 #![deny(clippy::float_arithmetic)]
 
 pub mod coords;
+pub mod harvest;
 pub mod hunt;
 pub mod pathfind;
 pub mod rng;

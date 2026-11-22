@@ -44,6 +44,7 @@ The observer reads environment variables:
 | `RA2_OBSERVE_END=N` | log frame N, then exit the game |
 | `RA2_OBSERVE_DUMP=N` | at frame N, also dump raw house and object memory, and every cell's zone record (`zone <index> <level 0> <level 1> <level 2> <w3> <w4>`, index `y × (w + h + 1) + x`), and the pathfinder's last search (the corridor zones it stamped at each level, and every cell its cell search reached with its cost), to `path.dump` |
 | `RA2_OBSERVE_DUMP_EVERY=K` | repeat that dump every K frames, each to `path.dump.<frame>` |
+| `RA2_OBSERVE_CELLS=x0,y0,x1,y1` | in each dump, also the first 0x180 bytes of every `CellClass` in that rectangle (`cell <x> <y> <bytes>`) |
 
 `parity record` sets these, lays out a game folder and drives the menus, so
 normally you don't run the recomp by hand:

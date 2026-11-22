@@ -140,6 +140,7 @@ impl Sim {
         }
         if let Some(rules) = &self.rules {
             crate::hunt::update(&mut self.world, rules, &mut self.rng, self.frame + 1);
+            crate::harvest::update(&mut self.world, rules, &mut self.rng, self.frame + 1);
         }
         self.frame += 1;
         events
@@ -195,7 +196,7 @@ mod tests {
         assert_eq!(hashes[299], PINNED);
     }
 
-    const PINNED: u64 = 11_520_121_364_907_886_290;
+    const PINNED: u64 = 9_787_166_747_450_217_714;
 
     #[test]
     fn speeds_run_from_sixty_to_ten_frames_a_second() {

@@ -64,6 +64,43 @@ pub struct Object {
     pub mission: Mission,
     /// Where it's going and its weapon's reload.
     pub motion: crate::hunt::Motion,
+    /// Bails of ore or gems it carries, and what they're worth.
+    pub cargo: i32,
+    pub cargo_value: i32,
+    /// Where a harvester is in its round.
+    pub harvest: crate::harvest::Harvest,
+}
+
+/// Ore or gems on a cell.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Ore {
+    /// The overlay's index in `[OverlayTypes]`.
+    pub overlay: u8,
+    /// Its data: bails left, less one.
+    pub data: u8,
+}
+
+impl Ore {
+    /// Whether an overlay is ore or gems: the ore and gem overlays of
+    /// `[OverlayTypes]` (`GEM01`–`GEM12`, `TIB01`–`TIB20`, `TIB2_01`–`TIB3_20`).
+    pub fn is_ore(overlay: u8) -> bool {
+        matches!(overlay, 27..=38 | 102..=121 | 127..=166)
+    }
+
+    /// Credits a bail of it is worth.
+    pub fn bail_value(self, rules: &Rules) -> i32 {
+        if (27..=38).contains(&self.overlay) {
+            rules.general.gem_value
+        } else {
+            rules.general.ore_value
+        }
+    }
+
+    /// What a harvester looking for ore weighs it at: a bail's value times
+    /// its data plus one. `[recomp 0x00485020]`
+    pub fn worth(self, rules: &Rules) -> i32 {
+        self.bail_value(rules) * (i32::from(self.data) + 1)
+    }
 }
 
 /// A shell or bullet on its way.
@@ -89,6 +126,8 @@ pub struct World {
     /// The map's cells, for route planning. Empty means unknown: routes
     /// then keep to 32 cells round the unit.
     pub cells: std::collections::BTreeSet<(i16, i16)>,
+    /// Ore and gems, by cell.
+    pub ore: std::collections::BTreeMap<(i16, i16), Ore>,
     next_id: u32,
 }
 
@@ -157,6 +196,9 @@ impl World {
             dir: u16::from(p.facing) << 8,
             mission: Mission::parse(&p.mission),
             motion: crate::hunt::Motion::default(),
+            cargo: 0,
+            cargo_value: 0,
+            harvest: crate::harvest::Harvest::default(),
         });
         Some(id)
     }
@@ -181,6 +223,14 @@ impl World {
             h.u32(u32::from(o.facing));
             h.u32(u32::from(o.dir));
             h.i32(o.motion.reload);
+            h.i32(o.cargo);
+        }
+        h.u32(u32::try_from(self.ore.len()).unwrap_or(u32::MAX));
+        for (&(x, y), ore) in &self.ore {
+            h.i32(i32::from(x));
+            h.i32(i32::from(y));
+            h.u32(u32::from(ore.overlay));
+            h.u32(u32::from(ore.data));
         }
         h.u32(u32::try_from(self.shots.len()).unwrap_or(u32::MAX));
         for s in &self.shots {

@@ -64,6 +64,20 @@ pub enum Check {
         #[serde(default)]
         tolerance: u32,
     },
+    /// Bails carried by the matching objects, in total, at a frame.
+    Cargo {
+        #[serde(flatten)]
+        filter: Filter,
+        at: u32,
+        #[serde(default)]
+        tolerance: u32,
+    },
+    /// Bails of ore left on the map at a frame: each ore cell's data, summed.
+    Ore {
+        at: u32,
+        #[serde(default)]
+        tolerance: u32,
+    },
     /// Where the matching objects are at a frame: each object of one log is
     /// paired with the nearest unpaired one of the other, and every pair
     /// must be within the tolerance, in leptons.

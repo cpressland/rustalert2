@@ -31,6 +31,35 @@ pub struct MapSpec {
     pub infantry: Vec<ObjectSpec>,
     #[serde(default, rename = "structure")]
     pub structures: Vec<ObjectSpec>,
+    /// Ore and gem fields.
+    #[serde(default)]
+    pub ore: Vec<OreSpec>,
+}
+
+/// A rectangle of ore (or gems) on the map.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct OreSpec {
+    /// The top cell and size, in map cells.
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
+    /// The overlay's position in the rules' `[OverlayTypes]` (102 is
+    /// `TIB01`, ore).
+    #[serde(default = "default_ore")]
+    pub overlay: u8,
+    /// The growth stage, 0 to 11 (11 is full).
+    #[serde(default = "full_ore")]
+    pub density: u8,
+}
+
+fn default_ore() -> u8 {
+    102
+}
+
+fn full_ore() -> u8 {
+    11
 }
 
 fn default_theater() -> String {
@@ -116,8 +145,9 @@ fn packed_section(ini: &mut String, name: &str, data: &[u8], compression: Compre
     ini.push('\n');
 }
 
-/// Terrain (every cell clear: tile 0, level 0) and empty overlays.
-fn write_terrain(ini: &mut String, w: i32, h: i32) {
+/// Terrain (every cell clear: tile 0, level 0) and the overlays: none,
+/// except the ore fields.
+fn write_terrain(ini: &mut String, w: i32, h: i32, ore: &[OreSpec]) {
     let mut iso = Vec::new();
     for (x, y) in cells(w, h) {
         iso.extend_from_slice(&i16::try_from(x).expect("small map").to_le_bytes());
@@ -127,13 +157,21 @@ fn write_terrain(ini: &mut String, w: i32, h: i32) {
     }
     iso.extend_from_slice(&[0; 4]);
     packed_section(ini, "IsoMapPack5", &iso, Compression::Lzo);
-    packed_section(ini, "OverlayPack", &vec![0xff; 512 * 512], Compression::Lcw);
-    packed_section(
-        ini,
-        "OverlayDataPack",
-        &vec![0; 512 * 512],
-        Compression::Lcw,
-    );
+    let (mut overlay, mut data) = (vec![0xffu8; 512 * 512], vec![0u8; 512 * 512]);
+    for o in ore {
+        for y in o.y..o.y + o.height {
+            for x in o.x..o.x + o.width {
+                if let Ok(i) = usize::try_from(y * 512 + x)
+                    && i < overlay.len()
+                {
+                    overlay[i] = o.overlay;
+                    data[i] = o.density;
+                }
+            }
+        }
+    }
+    packed_section(ini, "OverlayPack", &overlay, Compression::Lcw);
+    packed_section(ini, "OverlayDataPack", &data, Compression::Lcw);
 }
 
 /// Write the map as INI text.
@@ -224,7 +262,7 @@ pub fn write(spec: &MapSpec) -> String {
         )
     });
 
-    write_terrain(&mut ini, w, h);
+    write_terrain(&mut ini, w, h, &spec.ore);
     ini
 }
 
