@@ -117,6 +117,18 @@ pub fn recharge_frames(sw: &crate::SuperWeaponType) -> i32 {
     (X80::double(sw.recharge_minutes.value()) * X80::double(900.0)).trunc()
 }
 
+/// A blast's damage `distance` leptons from where it lands: `damage` (after
+/// the warhead's `Verses=`) × (1 − (1 − `PercentAtMax=`) × distance ÷
+/// `CellSpread=`), truncated; nothing beyond the spread. `[observed]`
+/// (the Nuke: 247 of 600 at 6 cells, 70 at 9)
+pub fn splash(damage: i32, distance: i32, spread: i32, percent_at_max: crate::Ratio) -> i32 {
+    if spread <= 0 || distance > spread {
+        return 0;
+    }
+    let falloff = 1.0 - (1.0 - percent_at_max.value()) * f64::from(distance) / f64::from(spread);
+    (X80::int(damage) * X80::double(falloff)).trunc()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

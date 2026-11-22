@@ -1,0 +1,226 @@
+name = "soviet-curtain-nuke"
+description = """
+The Russian player deploys, builds a power plant, an Iron Curtain and a
+Nuclear Missile Silo, and fires each at Neutral units standing well away
+from the base. The map's rules make both superweapon buildings cheap,
+powerless and buildable from the Construction Yard alone, and both
+superweapons recharge in 18 seconds, so the scenario records quickly."""
+map = "parity_soviet_curtain_nuke.yrm"
+end_frame = 2400
+human_start = [35, 35]
+human_country = "Russians"
+super_weapons = true
+
+[generate]
+name = "soviet-curtain-nuke"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[NAIRON]
+Prerequisite=NACNST
+Cost=500
+Power=0
+
+[NAMISL]
+Prerequisite=NACNST
+Cost=500
+Power=0
+
+[IronCurtainSpecial]
+RechargeTime=.3
+
+[NukeSpecial]
+RechargeTime=.3
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+# The Iron Curtain's targets: a GI on the target cell and one two cells
+# away, and a Grizzly beside it.
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 45
+y = 25
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 45
+y = 23
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 46
+y = 25
+
+# The Nuke's: Grizzlies on the target and 3, 6 and 9 cells west, and a GI
+# 3 cells north.
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 25
+y = 45
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 22
+y = 45
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 19
+y = 45
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 16
+y = 45
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 25
+y = 42
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "SMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "NAPOWR"
+
+[[order]]
+frame = 430
+what = "place"
+type = "NAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 440
+what = "produce"
+type = "NAIRON"
+
+[[order]]
+frame = 720
+what = "place"
+type = "NAIRON"
+x = 38
+y = 36
+
+[[order]]
+frame = 730
+what = "produce"
+type = "NAMISL"
+
+[[order]]
+frame = 1010
+what = "place"
+type = "NAMISL"
+x = 34
+y = 38
+
+[[order]]
+frame = 1100
+what = "fire"
+type = "IronCurtainSpecial"
+x = 45
+y = 25
+
+[[order]]
+frame = 1400
+what = "fire"
+type = "NukeSpecial"
+x = 25
+y = 45
+
+# Both superweapons granted the frame after their buildings are placed,
+# charging for 270 frames (.3 is read as a float, 0.300000012, so × 900 is
+# a hair over 270).
+[[check]]
+what = "supers"
+house = 0
+at = 722
+tolerance = 0
+
+[[check]]
+what = "supers"
+house = 0
+at = 1012
+tolerance = 0
+
+# The Iron Curtain at 1101: the GI on the target dies (taken away 15 frames
+# later), the one two cells off doesn't, and the Grizzly beside it lives.
+[[check]]
+what = "supers"
+house = 0
+at = 1101
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "E1"
+owner = 2
+at = 1101
+tolerance = 0
+
+[[check]]
+what = "event"
+type = "E1"
+owner = 2
+event = "removed"
+window = 0
+
+[[check]]
+what = "count"
+type = "E1"
+owner = 2
+at = 1116
+tolerance = 0
+
+# The Nuke, launched at 1401, lands at 1820: the Grizzlies on the target and
+# 3 cells off and the GI go; 6 and 9 cells off they keep 53 and 230 of 300
+# (600 × (1 − 0.98 × distance ÷ 10 cells)).
+[[check]]
+what = "supers"
+house = 0
+at = 1401
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "MTNK"
+owner = 2
+at = 1819
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "MTNK"
+owner = 2
+at = 1820
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "MTNK"
+owner = 2
+at = 1820
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "E1"
+owner = 2
+at = 1820
+tolerance = 0

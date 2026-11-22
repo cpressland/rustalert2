@@ -35,15 +35,22 @@ impl Ratio {
     /// 1.0
     pub const ONE: Ratio = Ratio(0x3FF0_0000_0000_0000);
 
-    /// The game's reading of a number: `50%` and `.5` both give a half.
+    /// The game's reading of a number (`INIClass::Get_Double`): `sscanf`
+    /// into a single-precision float, widened to a double, then × 0.01 if
+    /// it has a `%`. So `.3` is 0.300000012, and `50%` and `.5` both give
+    /// a half. `[recomp 0x00528558]`
     pub fn from_value(v: &str) -> Ratio {
-        Ratio(parse_number(v).to_bits())
+        #[allow(clippy::cast_possible_truncation)]
+        let f = f64::from(ra2_formats::ini::atof(v) as f32);
+        let f = if v.contains('%') { f * 0.01 } else { f };
+        Ratio(f.to_bits())
     }
 
-    /// A number the game keeps as a single-precision float, widened.
+    /// A number the game keeps as a single-precision float: read as
+    /// [`Ratio::from_value`] reads it, then rounded to a float.
     pub fn from_value_f32(v: &str) -> Ratio {
         #[allow(clippy::cast_possible_truncation)]
-        let f = parse_number(v) as f32;
+        let f = f64::from_bits(Ratio::from_value(v).0) as f32;
         Ratio(f64::from(f).to_bits())
     }
 
@@ -414,6 +421,11 @@ pub struct General {
     pub wall_build_speed: Ratio,
     /// Aircraft's height in flight, in leptons (`FlightLevel=`).
     pub flight_level: i32,
+    /// The Nuke's blast (`[NukePayload]`).
+    pub nuke_payload: Option<WeaponId>,
+    /// How long the Iron Curtain makes things invulnerable, in frames
+    /// (`[CombatDamage] IronCurtainDuration=`).
+    pub iron_curtain_duration: i32,
     /// The Force Shield: how far round its target buildings are shielded
     /// (cells), for how long, and how long its house's power is out
     /// (frames). `ForceShieldRadius=`, `ForceShieldDuration=`,
@@ -662,6 +674,9 @@ impl Rules {
                 }
             })
             .collect();
+        // The nuke's blast, which the game finds by name.
+        // `[recomp]` (the string `NukePayload` in `gamemd.exe`)
+        let nuke_payload = WeaponId(weapon_names.id("NukePayload"));
         // Weapons, then the projectiles and warheads they name.
         let mut weapons = Vec::new();
         let mut i = 0;
@@ -837,6 +852,8 @@ impl Rules {
                     "1",
                 ),
                 flight_level: int(rules.section("General"), "FlightLevel", 1500),
+                nuke_payload: Some(nuke_payload),
+                iron_curtain_duration: int(c, "IronCurtainDuration", 750),
                 force_shield_radius: int(rules.section("General"), "ForceShieldRadius", 4),
                 force_shield_duration: int(rules.section("General"), "ForceShieldDuration", 500),
                 force_shield_blackout: int(

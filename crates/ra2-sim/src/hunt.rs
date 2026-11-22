@@ -375,7 +375,9 @@ fn land(world: &mut World, rules: &Rules, frame: u32) {
         });
         o.health -= damage;
     }
-    world.objects.retain(|o| o.health > 0);
+    world
+        .objects
+        .retain(|o| o.health > 0 || o.dies_at.is_some());
 }
 
 #[cfg(test)]

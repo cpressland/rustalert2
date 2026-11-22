@@ -1,7 +1,8 @@
 # Superweapons
 
-**Status:** Charging and firing parity-checked; of the effects, the Force
-Shield's blackout. The other superweapons' effects are still to come.
+**Status:** Charging and firing parity-checked. Effects so far: the Force
+Shield's blackout, the Iron Curtain on infantry, and the Nuke's blast.
+The rest are still to come.
 **Crate:** `ra2-rules` (`production::recharge_frames`), `ra2-sim`
 (`superweapon`)
 **Issue:** #45
@@ -39,8 +40,9 @@ The recorder turns superweapons on for a scenario that asks
 | Charged | `+0x6F` | ready to fire |
 | On hold | `+0x70` | not charging |
 
-- **Charge time:** `RechargeTime=` (minutes) × 900, truncated on the x87;
-  5 minutes (4500 frames) if it's 0. `[recomp 0x006CED6E, 0x006CE5E9]`
+- **Charge time:** `RechargeTime=` (minutes, read as a float: see
+  rules.md) × 900, truncated on the x87; 5 minutes (4500 frames) if it's 0.
+  `.3` gives 270. `[recomp 0x006CED6E, 0x006CE5E9]`
 - **Granting:** a building's `SuperWeapon=` (and `SuperWeapon2=`) comes to
   its house the frame after the building is placed, its charge timed from
   the frame it was placed. `[observed]`
@@ -60,6 +62,26 @@ type's index, `+0x98`), and the target cell. `[recomp 0x004C6B60,
 A charged superweapon fired then starts charging again from the frame
 before. `[observed]`
 
+### Iron Curtain (`Type=IronCurtain`)
+
+- Within `Range=` (1.4) cells of the target, infantry die at once, and are
+  taken away 15 frames later. A GI on the target died; one two cells off
+  didn't. `[observed]`
+- Everything else there is invulnerable for `[CombatDamage]
+  IronCurtainDuration=` (750) frames. `[hypothesis]` (not yet attacked)
+
+### Nuke (`Type=MultiMissile`)
+
+- The missile lands 419 frames after it's fired. `[observed]` (ten cells
+  from its silo; the flight isn't traced, so other distances may differ)
+- It hits with the weapon the game finds by name, `[NukePayload]` (600,
+  warhead `NUKE`). Everything within the warhead's `CellSpread=` (10 cells)
+  takes the damage after `Verses=` × (1 − (1 − `PercentAtMax=`) × distance
+  ÷ spread), truncated. Grizzlies 6 and 9 cells off kept 53 and 230 of 300;
+  those nearer, and a GI, died at once. `[observed]`
+- It leaves radiation, which goes on hurting what's near. `[observed]` Not
+  modelled yet, so the scenario's checks stop at the blast.
+
 ### Force Shield (`Type=ForceShield`)
 
 - The house makes no power from the frame after it's fired until
@@ -72,13 +94,20 @@ before. `[observed]`
 
 ## Open questions
 
-- The other superweapons' effects: Nuke, Weather Storm, Chronosphere, Iron
-  Curtain, Genetic Mutator, Psychic Dominator, Paratroopers, Spy Plane;
-  and the Force Shield's protection, under fire.
+- The other superweapons' effects: Weather Storm, Chronosphere, Genetic
+  Mutator, Psychic Dominator, Paratroopers, Spy Plane.
+- The Force Shield's and Iron Curtain's protection, under fire; the Nuke's
+  flight time at other distances, and its radiation.
 - What happens to the charge when a superweapon's building is lost and
   rebuilt; `UseChargeDrain=` (the Force Shield drains).
 
 ## Parity
+
+`parity/scenarios/soviet-curtain-nuke.toml`: 11 checks at zero tolerance
+(the two superweapons' charge and firing, the Iron Curtain's victims, and
+the Nuke's damage at four distances). Everything matches the original on
+every frame up to the blast. After it, radiation and the survivors
+striking back differ.
 
 `parity/scenarios/allied-force-shield.toml`: 15 checks at zero tolerance
 (the superweapon through granting, the hold, the recharge and firing;

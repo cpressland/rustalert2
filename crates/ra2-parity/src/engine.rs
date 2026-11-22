@@ -86,7 +86,7 @@ pub fn setup(scenario: &Scenario, rules: &Rules, map: &Ini) -> World {
         .find(|s| *s != human)
         .unwrap_or(human);
     let human_country = scenario.human_country.as_deref().unwrap_or(HUMAN.0);
-    for (country, start) in [(human_country, human), (AI.0, ai)] {
+    for (index, (country, start)) in [(human_country, human), (AI.0, ai)].into_iter().enumerate() {
         // The base unit by side: the first for the Allies, the second for
         // the Soviets.
         let side = rules
@@ -98,7 +98,9 @@ pub fn setup(scenario: &Scenario, rules: &Rules, map: &Ini) -> World {
             continue;
         };
         let cell = |v: i32| i16::try_from(v).unwrap_or(0);
-        world.place(
+        // Placed for its house by index: the human and the AI may share a
+        // country.
+        let placed = world.place(
             rules,
             &Placement {
                 kind: ra2_rules::Kind::Vehicle,
@@ -112,6 +114,11 @@ pub fn setup(scenario: &Scenario, rules: &Rules, map: &Ini) -> World {
             },
             0,
         );
+        if placed.is_some()
+            && let Some(o) = world.objects.last_mut()
+        {
+            o.owner = u32::try_from(index).unwrap_or(0);
+        }
     }
     // The map's cells, for route planning.
     if let Ok(m) = ra2_formats::map::Map::from_ini(map) {

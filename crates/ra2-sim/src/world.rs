@@ -82,8 +82,19 @@ pub struct Object {
     pub placed: u32,
     /// The frame it was sold on, while it's being sold.
     pub sold_at: Option<u32>,
-    /// Shielded (the Force Shield) until this frame: it takes no damage.
+    /// Shielded (the Force Shield) or iron-curtained until this frame: it
+    /// takes no damage.
     pub shielded_until: u32,
+    /// Killed, and taken away on this frame (infantry linger as they die).
+    pub dies_at: Option<u32>,
+}
+
+/// Something on its way down: a superweapon's missile.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Strike {
+    pub lands: u32,
+    pub cell: (i16, i16),
+    pub weapon: ra2_rules::WeaponId,
 }
 
 /// Ore or gems on a cell.
@@ -149,6 +160,8 @@ pub struct World {
     pub deploying: Vec<(u32, u32)>,
     /// Every house's superweapons.
     pub supers: Vec<crate::superweapon::Super>,
+    /// Superweapon strikes on their way.
+    pub strikes: Vec<Strike>,
     next_id: u32,
 }
 
@@ -227,6 +240,7 @@ impl World {
             placed: 0,
             sold_at: None,
             shielded_until: 0,
+            dies_at: None,
         });
         Some(id)
     }
@@ -254,6 +268,7 @@ impl World {
             placed: 0,
             sold_at: None,
             shielded_until: 0,
+            dies_at: None,
         });
         id
     }

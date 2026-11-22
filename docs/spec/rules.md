@@ -57,12 +57,18 @@ value does in play belongs to the notes of the system that uses it.
 | `Speed=` (technos) | as written, and as the game keeps it: clamped 0–100, × 256 / 100, capped at 255 `[recomp 0x0071465A]` |
 | `Sight=` | cells |
 
+- The game reads such numbers (`INIClass::Get_Double`) with `sscanf` into
+  a single-precision float, widens it to a double, and multiplies by 0.01
+  if the value has a `%`. So `.3` is 0.300000012 and `.7` is 0.699999988,
+  which shows: a superweapon with `RechargeTime=.3` charges in 270 frames
+  (0.300000012 × 900), not 269. `[recomp 0x00528558]` (`[observed]` in
+  `soviet-curtain-nuke`)
 - Factors the game keeps as doubles are applied by multiplying in double
   precision and truncating toward zero. The simulation does this with
   integers on the double's exact bits, so results match bit for bit,
-  including the game's own rounding: `29%` of 100 is 28. `[recomp]` (the
-  game's damage maths runs on the x87 at 53-bit precision; to confirm per
-  call site)
+  including the game's own rounding: `29%` of 100 is 28. `[recomp]` Some
+  call sites keep several steps on the x87 in extended precision instead;
+  build times do (see production.md and `ra2-rules::x87`).
 
 ### Defaults
 
