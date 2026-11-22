@@ -72,6 +72,8 @@ pub enum OrderKind {
     Abandon,
     /// Hold building the type; producing it again resumes.
     Hold,
+    /// Fire the superweapon `type` (a `[SuperWeaponTypes]` ID) at `x`, `y`.
+    Fire,
 }
 
 /// What objects a check looks at.

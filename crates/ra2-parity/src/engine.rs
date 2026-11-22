@@ -187,6 +187,13 @@ pub fn observer_orders(scenario: &Scenario, rules: &Rules) -> String {
                     let (kind, index) = type_index(rules, &o.type_id)?;
                     format!("{} H {} {index} 0", o.frame, type_rtti(kind))
                 }
+                OrderKind::Fire => {
+                    let sw = rules
+                        .super_weapons
+                        .iter()
+                        .position(|s| s.id.eq_ignore_ascii_case(&o.type_id))?;
+                    format!("{} F {sw} {} {}", o.frame, o.x, o.y)
+                }
                 OrderKind::Produce => {
                     let (kind, index) = type_index(rules, &o.type_id)?;
                     format!("{} P {} {index} 0", o.frame, type_rtti(kind))
@@ -304,12 +311,19 @@ pub fn sim_orders(scenario: &Scenario, rules: &Rules) -> Vec<(u32, Order)> {
         .orders
         .iter()
         .filter_map(|o| {
+            let house = 0;
+            let cell = (i16::try_from(o.x).ok()?, i16::try_from(o.y).ok()?);
+            if o.what == OrderKind::Fire {
+                let kind = rules
+                    .super_weapons
+                    .iter()
+                    .position(|s| s.id.eq_ignore_ascii_case(&o.type_id))?;
+                return Some((o.frame, Order::Fire { house, kind, cell }));
+            }
             let techno = rules
                 .technos
                 .iter()
                 .position(|t| t.id.eq_ignore_ascii_case(&o.type_id))?;
-            let house = 0;
-            let cell = (i16::try_from(o.x).ok()?, i16::try_from(o.y).ok()?);
             let b = match o.what {
                 OrderKind::Deploy => Build::Deploy { house, techno },
                 OrderKind::Produce => Build::Produce { house, techno },
@@ -321,6 +335,7 @@ pub fn sim_orders(scenario: &Scenario, rules: &Rules) -> Vec<(u32, Order)> {
                 OrderKind::Sell => Build::Sell { house, techno },
                 OrderKind::Abandon => Build::Abandon { house, techno },
                 OrderKind::Hold => Build::Hold { house, techno },
+                OrderKind::Fire => return None,
             };
             Some((o.frame, Order::Build(b)))
         })

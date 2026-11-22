@@ -1,7 +1,7 @@
 # Superweapons
 
-**Status:** Charging parity-checked (granting, recharge, holding on low
-power). Firing, and each superweapon's effect, still to come.
+**Status:** Charging and firing parity-checked; of the effects, the Force
+Shield's blackout. The other superweapons' effects are still to come.
 **Crate:** `ra2-rules` (`production::recharge_frames`), `ra2-sim`
 (`superweapon`)
 **Issue:** #45
@@ -52,17 +52,35 @@ The recorder turns superweapons on for a scenario that asks
   before. `[observed]`
 - **Charged:** the frame after its time runs out. `[observed]`
 
+### Firing
+
+The player's click sends `SPECIAL_PLACE` (event 18): the superweapon (its
+type's index, `+0x98`), and the target cell. `[recomp 0x004C6B60,
+0x004AC230]` It takes effect the frame after it's sent, like other orders.
+A charged superweapon fired then starts charging again from the frame
+before. `[observed]`
+
+### Force Shield (`Type=ForceShield`)
+
+- The house makes no power from the frame after it's fired until
+  `ForceShieldBlackoutDuration=` (1000) frames after its charge restarted.
+  Its powered superweapons hold meanwhile, the Force Shield included.
+  `[observed]`
+- The house's buildings within `ForceShieldRadius=` (4) cells of the target
+  take no damage for `ForceShieldDuration=` (500) frames. `[hypothesis]`
+  (nothing attacks them in the scenario yet)
+
 ## Open questions
 
-- Firing (the `SPECIAL` event), and each superweapon's effect: Nuke,
-  Weather Storm, Chronosphere, Iron Curtain, Force Shield, Genetic Mutator,
-  Psychic Dominator, Paratroopers, Spy Plane.
+- The other superweapons' effects: Nuke, Weather Storm, Chronosphere, Iron
+  Curtain, Genetic Mutator, Psychic Dominator, Paratroopers, Spy Plane;
+  and the Force Shield's protection, under fire.
 - What happens to the charge when a superweapon's building is lost and
   rebuilt; `UseChargeDrain=` (the Force Shield drains).
 
 ## Parity
 
-`parity/scenarios/allied-force-shield.toml`: 8 checks at zero tolerance
-(the superweapon at seven frames through granting, the hold and the
-recharge, and power). Credits, power, superweapons and buildings match the
-original on all 2600 frames.
+`parity/scenarios/allied-force-shield.toml`: 15 checks at zero tolerance
+(the superweapon through granting, the hold, the recharge and firing;
+power through the blackout). Credits, power, superweapons and buildings
+match the original on all 3600 frames.
