@@ -195,6 +195,40 @@ pub fn compare(s: &Scenario, reference: &Log, candidate: Option<&Log>) -> Vec<Ou
                     pass: within(r, k, *tolerance),
                 }
             }
+            Check::Cargo {
+                filter,
+                at,
+                tolerance,
+            } => {
+                let cargo = |l: &Log| {
+                    l.at(*at).map(|f| {
+                        selected(Some(f), filter)
+                            .iter()
+                            .map(|o| i64::from(o.cargo))
+                            .sum()
+                    })
+                };
+                let (r, k) = (cargo(reference), candidate.and_then(|_| cargo(cand)));
+                Outcome {
+                    check: format!("cargo of {} at {at} (±{tolerance})", label(filter)),
+                    reference: show(r),
+                    candidate: show(k),
+                    pass: within(r, k, *tolerance),
+                }
+            }
+            Check::Ore { at, tolerance } => {
+                let ore = |l: &Log| {
+                    l.at(*at)
+                        .map(|f| f.ore.iter().map(|c| i64::from(c[3])).sum())
+                };
+                let (r, k) = (ore(reference), candidate.and_then(|_| ore(cand)));
+                Outcome {
+                    check: format!("ore left at {at} (±{tolerance})"),
+                    reference: show(r),
+                    candidate: show(k),
+                    pass: within(r, k, *tolerance),
+                }
+            }
             Check::Position {
                 filter,
                 at,

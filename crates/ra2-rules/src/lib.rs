@@ -212,6 +212,15 @@ pub struct TechnoType {
     pub power: i32,
     /// Buildings: the art's `Foundation=`, in cells.
     pub foundation: (i32, i32),
+    /// Gathers ore (`Harvester=`).
+    pub harvester: bool,
+    /// Bails a harvester holds, or a refinery stores (`Storage=`).
+    pub storage: i32,
+    /// The buildings it docks with (`Dock=`).
+    pub dock: Vec<String>,
+    /// Refineries: where a harvester waits to dock, from the foundation's
+    /// top-left (the art's `QueueingCell=`).
+    pub queueing_cell: Option<(i32, i32)>,
 }
 
 /// A `[WeaponType]`: what a techno fires.
@@ -326,6 +335,11 @@ pub struct General {
     /// (`[Cruentus] Value=`).
     pub ore_value: i32,
     pub gem_value: i32,
+    /// How far a harvester looks for ore, in cells: near where it is
+    /// working (`TiberiumShortScan=`), and when it starts out
+    /// (`TiberiumLongScan=`).
+    pub tiberium_short_scan: i32,
+    pub tiberium_long_scan: i32,
     /// `[General] BaseUnit=`: the unit each side starts a skirmish with,
     /// by side (Allied, Soviet, Yuri).
     pub base_units: Vec<String>,
@@ -484,6 +498,11 @@ impl Rules {
                     locomotor: text(s, "Locomotor"),
                     power: int(s, "Power", 0),
                     foundation,
+                    harvester: flag(s, "Harvester", false),
+                    storage: int(s, "Storage", 0),
+                    dock: list(s, "Dock"),
+                    queueing_cell: text(a, "QueueingCell")
+                        .and_then(|q| q.split_once(',').map(|(x, y)| (atoi(x), atoi(y)))),
                     image,
                     id,
                 });
@@ -646,6 +665,9 @@ impl Rules {
             general: General {
                 ore_value: int(rules.section("Riparius"), "Value", 25),
                 gem_value: int(rules.section("Cruentus"), "Value", 50),
+                // The game's defaults are 6 and 32 cells. `[recomp 0x00667638]`
+                tiberium_short_scan: int(rules.section("General"), "TiberiumShortScan", 6),
+                tiberium_long_scan: int(rules.section("General"), "TiberiumLongScan", 32),
                 base_units: list(rules.section("General"), "BaseUnit"),
             },
             combat_damage: CombatDamage {

@@ -12,12 +12,12 @@ use crate::world::{Mission, Object, Shot, World};
 
 /// Leptons a frame, in 1/256ths, per point of a type's stored speed:
 /// vehicles about 1.56, infantry about 1.05. `[observed]`
-const DRIVE_SPEED: i32 = 406;
+pub(crate) const DRIVE_SPEED: i32 = 406;
 const WALK_SPEED: i32 = 277;
 /// Leptons of distance per frame of an arcing shell's flight. `[observed]`
 const ARC_LEPTONS_PER_FRAME: i32 = 128;
 /// A full turn in the 16-bit facing the game keeps.
-const FULL_TURN: i32 = 65_536;
+pub(crate) const FULL_TURN: i32 = 65_536;
 
 /// Spots infantry stop on, as offsets in a cell (see `world::SUB_CELLS`).
 const SPOTS: [(i32, i32); 5] = [(128, 128), (64, 64), (192, 64), (64, 192), (192, 192)];
@@ -43,6 +43,9 @@ pub struct Motion {
     pub arrived_at: u32,
     /// Frames until its weapon is ready.
     pub reload: i32,
+    /// Its speed, in 1/256 leptons a frame, for drivers that speed up and
+    /// slow down (see `harvest::drive`).
+    pub speed: i32,
 }
 
 fn isqrt(v: i64) -> i32 {
@@ -56,7 +59,7 @@ pub fn distance(a: Coord, b: Coord) -> i32 {
 }
 
 /// The facing (16-bit, 0 is north, i.e. −y, clockwise) of a one-cell step.
-fn step_facing(dx: i32, dy: i32) -> i32 {
+pub(crate) fn step_facing(dx: i32, dy: i32) -> i32 {
     match (dx.signum(), dy.signum()) {
         (0, -1) => 0,
         (1, -1) => 8192,
@@ -70,7 +73,7 @@ fn step_facing(dx: i32, dy: i32) -> i32 {
 }
 
 /// Turn `from` toward `to` by at most `rate`, the short way round.
-fn turn(from: i32, to: i32, rate: i32) -> i32 {
+pub(crate) fn turn(from: i32, to: i32, rate: i32) -> i32 {
     let diff = (to - from).rem_euclid(FULL_TURN);
     let diff = if diff > FULL_TURN / 2 {
         diff - FULL_TURN
@@ -84,14 +87,14 @@ fn turn(from: i32, to: i32, rate: i32) -> i32 {
     }
 }
 
-fn to_cell(c: Coord) -> (i16, i16) {
+pub(crate) fn to_cell(c: Coord) -> (i16, i16) {
     (
         i16::try_from(c.x.div_euclid(LEPTONS_PER_CELL)).unwrap_or(0),
         i16::try_from(c.y.div_euclid(LEPTONS_PER_CELL)).unwrap_or(0),
     )
 }
 
-fn cell_centre(c: Coord) -> Coord {
+pub(crate) fn cell_centre(c: Coord) -> Coord {
     Coord {
         x: c.x.div_euclid(LEPTONS_PER_CELL) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
         y: c.y.div_euclid(LEPTONS_PER_CELL) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
@@ -100,7 +103,7 @@ fn cell_centre(c: Coord) -> Coord {
 }
 
 /// Advance along the current leg; returns whether the leg finished.
-fn travel(o: &mut Object, speed_256: i32) -> bool {
+pub(crate) fn travel(o: &mut Object, speed_256: i32) -> bool {
     let Some((from, to, done)) = o.motion.leg else {
         return true;
     };

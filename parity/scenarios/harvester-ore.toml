@@ -1,0 +1,123 @@
+name = "harvester-ore"
+description = """
+A War Miner on Harvest, owned by Neutral, beside a Neutral Soviet refinery
+and a 5×5 field of full ore. It drives to the ore, fills up, drives back,
+unloads, and goes again. Covers harvesting rate, the miner's capacity,
+docking and unloading, and the credits each load is worth.
+
+Neutral owns everything so the players (far away at the start points) stay
+out of it; Neutral's credits are what the refinery pays into."""
+map = "parity_harvester_ore.yrm"
+end_frame = 3000
+human_start = [35, 35]
+
+[generate]
+name = "Parity: harvester and ore"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.structure]]
+owner = "Neutral"
+type = "NAREFN"
+x = 45
+y = 45
+
+[[generate.unit]]
+owner = "Neutral"
+type = "HARV"
+x = 44
+y = 49
+facing = 64
+mission = "Harvest"
+
+[[generate.ore]]
+x = 52
+y = 44
+width = 5
+height = 5
+
+# The first load: four cells, eleven bails each until it's full.
+[[check]]
+what = "position"
+type = "HARV"
+owner = 2
+at = 400
+tolerance = 32
+
+[[check]]
+what = "cargo"
+type = "HARV"
+owner = 2
+at = 700
+tolerance = 1
+
+[[check]]
+what = "cargo"
+type = "HARV"
+owner = 2
+at = 1100
+tolerance = 1
+
+[[check]]
+what = "ore"
+at = 1200
+tolerance = 1
+
+[[check]]
+what = "cargo"
+type = "HARV"
+owner = 2
+at = 1300
+tolerance = 0
+
+# Docking: backing onto the pad, and paying for the load all at once.
+[[check]]
+what = "position"
+type = "HARV"
+owner = 2
+at = 1500
+tolerance = 32
+
+[[check]]
+what = "credits"
+house = 2
+at = 1500
+tolerance = 0
+
+[[check]]
+what = "credits"
+house = 2
+at = 1600
+tolerance = 0
+
+# The second load: back to the cell it left, then the next by the game's
+# search order.
+[[check]]
+what = "position"
+type = "HARV"
+owner = 2
+at = 1900
+tolerance = 32
+
+[[check]]
+what = "cargo"
+type = "HARV"
+owner = 2
+at = 2000
+tolerance = 1
+
+[[check]]
+what = "position"
+type = "HARV"
+owner = 2
+at = 2300
+tolerance = 32
+
+[[check]]
+what = "ore"
+at = 2200
+tolerance = 1

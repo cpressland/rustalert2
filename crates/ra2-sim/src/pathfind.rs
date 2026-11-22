@@ -364,8 +364,12 @@ fn corridor(
             inside_parent && (0..size).any(|y| (0..size).any(|x| valid((x0 + x, y0 + y))))
         };
         let (from, to) = (block(start), block(goal));
-        let mut route: std::collections::BTreeSet<(i16, i16)> =
-            search(from, to, &ok, false)?.into_iter().collect();
+        // Within one block the corridor is that block.
+        let mut route: std::collections::BTreeSet<(i16, i16)> = if from == to {
+            std::collections::BTreeSet::new()
+        } else {
+            search(from, to, &ok, false)?.into_iter().collect()
+        };
         route.insert(from);
         parent = Some((size, route));
     }

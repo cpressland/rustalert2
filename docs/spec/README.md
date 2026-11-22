@@ -58,7 +58,7 @@ their art ships in); those are reported, not drawn.
 | Pathfinding and occupancy | [pathfinding.md](pathfinding.md) | Implemented (open ground) |
 | Locomotors | [locomotors.md](locomotors.md) | Started |
 | Combat | [combat.md](combat.md) | Started |
-| Economy | | Not started |
+| Economy (harvesting, docking, credits) | [economy.md](economy.md) | Parity-checked (one harvester; growth, gems and slaves to come) |
 | Power and production | | Not started |
 | Special abilities | | Not started |
 | Superweapons | | Not started |

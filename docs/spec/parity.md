@@ -41,6 +41,9 @@ the community's YRpp headers. `[observed]`
 | Hit points | `ObjectClass +0x6C` | every infantryman 125, the MCV 1,000, cars 300 and 400, buildings 750 to 6,000 |
 | Type | `BuildingClass +0x520`, `UnitClass +0x6C4`, `InfantryClass +0x6C0` | shared by objects of one type; the rules ID is at `+0x24` of the type |
 | House index, country, credits | `HouseClass +0x30`, `+0x34` (type), `+0x30C` | indices 0 to 7; the human's 10,000 untouched while the AIs' change |
+| Cargo | `TechnoClass +0x33C`: four `float`s, bails of each ore kind | counts 1 to 40 a bail at a time as a War Miner harvests, back to 0 as the refinery pays |
+| Cells | `MapClass` (`0x0087F7E8`) `+0x13C`: `CellClass*` per cell, index `y × 512 + x` | the lookup `0x005657A0` |
+| Overlay, its data | `CellClass +0x44` (`int`, −1 for none), `+0x11E` (byte) | the overlay goes from 102 (`TIB01`) to −1 when its data has counted down from 11 to 0 |
 
 ### Log format
 
@@ -48,8 +51,13 @@ JSON lines, one per observed frame:
 
 ```json
 {"frame":170,"houses":[{"index":0,"country":"British","credits":10000}],
- "objects":[{"id":376832016,"kind":"Unit","type":"AMCV","owner":0,"x":9088,"y":9088,"z":0,"hp":935}]}
+ "objects":[{"id":376832016,"kind":"Unit","type":"AMCV","owner":0,"x":9088,"y":9088,"z":0,"hp":935}],
+ "ore":[[52,44,102,11]]}
 ```
+
+- `cargo` appears on objects carrying ore or gems: their bails, in total.
+- `ore` lists every cell holding ore or gems: x, y, the overlay's index in
+  `[OverlayTypes]`, and its data.
 
 - `id` is the object's address. It's stable for the object's life within one
   log, but not comparable across logs or engines.
@@ -67,7 +75,8 @@ end frame, observing every frame from 1. Then
 `parity diff <scenario> <reference> <candidate>` reports each check.
 
 With the Hunt mission (#38, #40, #41) and the game's route planner (#39),
-all 20 checks of the four `*-hunts-mcv*` scenarios pass. The reference logs stay on the developer's
+all 20 checks of the four `*-hunts-mcv*` scenarios pass, and with the
+Harvest mission (#42) all 12 of `harvester-ore`. The reference logs stay on the developer's
 machine; CI runs `engine::hunt_tests`, which replays the Grizzly scenario
 from rules values written into the test.
 
@@ -84,6 +93,8 @@ A scenario is TOML in `parity/scenarios/`:
   - `count` of matching objects at a frame;
   - `credits` of a house at a frame;
   - `hp`: total hit points of matching objects at a frame;
+  - `cargo`: total bails carried by matching objects at a frame;
+  - `ore`: bails left on the map (every ore cell's data, summed) at a frame;
   - `position`: each object paired with its nearest counterpart; the worst
     distance must be within the tolerance, in leptons;
   - `first_damage`: the first frame matching objects lose hit points;

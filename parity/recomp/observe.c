@@ -68,6 +68,10 @@ static void dump_vector(FILE *f, const char *what, uint32_t vec, uint32_t bytes)
 #define OBJ_HEALTH     0x6Cu        /* int */
 #define OBJ_LOCATION   0x9Cu        /* CoordStruct: three ints, leptons */
 #define TECHNO_OWNER   0x21Cu       /* HouseClass* */
+#define TECHNO_STORAGE 0x33Cu       /* float[4], bails of each ore kind */
+#define MAP_CELLS      (0x87F7E8u + 0x13Cu) /* CellClass*[512 * 512] */
+#define CELL_OVERLAY   0x44u        /* int, -1 for none */
+#define CELL_OVERLAY_DATA 0x11Eu    /* byte: ore stage */
 #define TYPE_ID        0x24u        /* AbstractTypeClass: char[25] rules ID */
 
 static void json_id(FILE *f, uint32_t type) {
@@ -107,11 +111,36 @@ static void write_frame(uint32_t frame) {
         uint32_t owner = rd32(o + TECHNO_OWNER);
         fprintf(g_out, "%s{\"id\":%u,\"kind\":\"%s\",\"type\":", first ? "" : ",", o, kind);
         json_id(g_out, rd32(o + type_off));
-        fprintf(g_out, ",\"owner\":%u,\"x\":%d,\"y\":%d,\"z\":%d,\"hp\":%d}",
+        fprintf(g_out, ",\"owner\":%u,\"x\":%d,\"y\":%d,\"z\":%d,\"hp\":%d",
                 owner ? rd32(owner + HOUSE_INDEX) : 0xFFFFFFFFu,
                 (int32_t)rd32(o + OBJ_LOCATION), (int32_t)rd32(o + OBJ_LOCATION + 4),
                 (int32_t)rd32(o + OBJ_LOCATION + 8), (int32_t)rd32(o + OBJ_HEALTH));
+        {
+            /* Cargo: the four ore kinds a techno carries, floats in bails. */
+            float sum = 0;
+            for (int k = 0; k < 4; k++) {
+                uint32_t bits = rd32(o + TECHNO_STORAGE + 4u * (uint32_t)k);
+                float v; memcpy(&v, &bits, 4); sum += v;
+            }
+            if (sum != 0) fprintf(g_out, ",\"cargo\":%d", (int)sum);
+        }
+        fputs("}", g_out);
         first = 0;
+    }
+    fputs("],\"ore\":[", g_out);
+    {
+        /* Every cell holding ore or gems: x, y, overlay, its data. */
+        uint32_t arr = rd32(MAP_CELLS);
+        int any = 0;
+        for (uint32_t idx = 0; arr && idx < 0x40000u; idx++) {
+            uint32_t c = rd32(arr + 4u * idx);
+            if (!c) continue;
+            int32_t ov = (int32_t)rd32(c + CELL_OVERLAY);
+            if (!((ov >= 27 && ov <= 38) || (ov >= 102 && ov <= 121) || (ov >= 127 && ov <= 166))) continue;
+            fprintf(g_out, "%s[%u,%u,%d,%u]", any ? "," : "", idx % 512, idx / 512, ov,
+                    *(const uint8_t *)GUEST_PTR(c + CELL_OVERLAY_DATA));
+            any = 1;
+        }
     }
     fputs("]}\n", g_out);
 }
@@ -181,6 +210,23 @@ void ra2_observe_tick(void) {
                     int16_t z[5]; memcpy(z, r, 10);
                     if (z[0] || z[1] || z[2] || z[3] || z[4])
                         fprintf(f, "zone %u %d %d %d %d %d\n", i, z[0], z[1], z[2], z[3], z[4]);
+                }
+            }
+            {
+                /* RA2_OBSERVE_CELLS=x0,y0,x1,y1: raw CellClass bytes. */
+                const char *cs = getenv("RA2_OBSERVE_CELLS");
+                int x0, y0, x1, y1;
+                if (cs && sscanf(cs, "%d,%d,%d,%d", &x0, &y0, &x1, &y1) == 4) {
+                    uint32_t arr = rd32(MAP_CELLS);
+                    for (int y = y0; y <= y1; y++)
+                        for (int x = x0; x <= x1; x++) {
+                            uint32_t c = rd32(arr + 4u * (uint32_t)(y * 512 + x));
+                            if (!c) continue;
+                            fprintf(f, "cell %d %d", x, y);
+                            const uint8_t *b = GUEST_PTR(c);
+                            for (int k = 0; k < 0x180; k++) fprintf(f, " %02X", b[k]);
+                            fprintf(f, "\n");
+                        }
                 }
             }
             fclose(f);

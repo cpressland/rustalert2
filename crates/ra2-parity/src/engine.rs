@@ -5,7 +5,7 @@ use ra2_formats::ini::Ini;
 use ra2_rules::Rules;
 use ra2_rules::scenario::{Placement, placements};
 use ra2_sim::tick::Sim;
-use ra2_sim::world::World;
+use ra2_sim::world::{Ore, World};
 
 use crate::log::{Frame, House, Log, Object};
 use crate::scenario::Scenario;
@@ -111,6 +111,23 @@ pub fn setup(scenario: &Scenario, rules: &Rules, map: &Ini) -> World {
     // The map's cells, for route planning.
     if let Ok(m) = ra2_formats::map::Map::from_ini(map) {
         world.cells = m.tiles.iter().map(|t| (t.x, t.y)).collect();
+        // Ore and gems, from the overlay packs (`y * 512 + x`).
+        if let (Some(overlay), Some(data)) = (&m.overlay, &m.overlay_data) {
+            for (idx, (&o, &d)) in overlay.iter().zip(data).enumerate() {
+                if o != 0xFF && Ore::is_ore(o) {
+                    let (x, y) = (idx % 512, idx / 512);
+                    if let (Ok(x), Ok(y)) = (i16::try_from(x), i16::try_from(y)) {
+                        world.ore.insert(
+                            (x, y),
+                            Ore {
+                                overlay: o,
+                                data: d,
+                            },
+                        );
+                    }
+                }
+            }
+        }
     }
     // Generated maps are flat, so everything stands at level 0.
     for p in placements(map) {
@@ -154,6 +171,19 @@ pub fn observe(sim: &Sim, rules: &Rules) -> Frame {
                 y: o.coord.y,
                 z: o.coord.z,
                 hp: o.health,
+                cargo: o.cargo,
+            })
+            .collect(),
+        ore: world
+            .ore
+            .iter()
+            .map(|(&(x, y), o)| {
+                [
+                    i32::from(x),
+                    i32::from(y),
+                    i32::from(o.overlay),
+                    i32::from(o.data),
+                ]
             })
             .collect(),
     }
