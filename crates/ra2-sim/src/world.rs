@@ -162,6 +162,9 @@ pub struct World {
     pub supers: Vec<crate::superweapon::Super>,
     /// Superweapon strikes on their way.
     pub strikes: Vec<Strike>,
+    /// Units on their way through the Chronosphere: the unit, the frame it
+    /// arrives, and where.
+    pub warps: Vec<(u32, u32, Coord)>,
     next_id: u32,
 }
 

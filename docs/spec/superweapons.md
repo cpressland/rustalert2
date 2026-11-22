@@ -1,8 +1,8 @@
 # Superweapons
 
 **Status:** Charging and firing parity-checked. Effects so far: the Force
-Shield's blackout, the Iron Curtain on infantry, and the Nuke's blast.
-The rest are still to come.
+Shield's blackout, the Iron Curtain on infantry, the Nuke's blast, and the
+Chronosphere. The rest are still to come.
 **Crate:** `ra2-rules` (`production::recharge_frames`), `ra2-sim`
 (`superweapon`)
 **Issue:** #45
@@ -82,6 +82,22 @@ before. `[observed]`
 - It leaves radiation, which goes on hurting what's near. `[observed]` Not
   modelled yet, so the scenario's checks stop at the blast.
 
+### Chronosphere (`Type=ChronoSphere`, then `ChronoWarp`)
+
+Two clicks, each a `SPECIAL_PLACE`: the Chronosphere's on what to send,
+then the Chrono Warp's on where to. `[observed]`
+
+- The first click aims it. It shows as uncharged for that frame, then as
+  charged again until the second click.
+- The second click starts its charge again, from the frame before.
+- Within its `Range=` (1.4 cells) of where it was aimed:
+  - infantry die, and are taken away 15 frames later;
+  - other units arrive 62 frames later in the same places relative to the
+    target. The delay was the same over 5 cells and 28; likely
+    `ChronoDelay=` (60) and two frames, since `ChronoTrigger=yes` and
+    `ChronoDistanceFactor=` would make it vary;
+  - buildings stay.
+
 ### Force Shield (`Type=ForceShield`)
 
 - The house makes no power from the frame after it's fired until
@@ -94,14 +110,20 @@ before. `[observed]`
 
 ## Open questions
 
-- The other superweapons' effects: Weather Storm, Chronosphere, Genetic
-  Mutator, Psychic Dominator, Paratroopers, Spy Plane.
+- The other superweapons' effects: Weather Storm, Genetic Mutator, Psychic
+  Dominator, Paratroopers, Spy Plane.
+- What a warped unit does on arrival (`ChronoDelay=` likely freezes it).
 - The Force Shield's and Iron Curtain's protection, under fire; the Nuke's
   flight time at other distances, and its radiation.
 - What happens to the charge when a superweapon's building is lost and
   rebuilt; `UseChargeDrain=` (the Force Shield drains).
 
 ## Parity
+
+`parity/scenarios/allied-chronosphere.toml` and
+`allied-chronosphere-near.toml`: 8 checks each, at zero tolerance (the
+Chronosphere's charge through aiming and warping, the GI it kills, and the
+Grizzlies before and on arrival). Every frame matches the original.
 
 `parity/scenarios/soviet-curtain-nuke.toml`: 11 checks at zero tolerance
 (the two superweapons' charge and firing, the Iron Curtain's victims, and
