@@ -156,6 +156,24 @@ impl Recorder {
             ini = set_ini(&ini, "Skirmish", &format!("Slot{slot:02}"), "1,-2,-2");
         }
         ini = set_ini(&ini, "Intro", "Play", "no");
+        ini = set_ini(
+            &ini,
+            "MultiPlayer",
+            "Side",
+            scenario.human_country.as_deref().unwrap_or("British"),
+        );
+        ini = set_ini(
+            &ini,
+            "Skirmish",
+            "Credits",
+            &scenario.credits.unwrap_or(10_000).to_string(),
+        );
+        ini = set_ini(
+            &ini,
+            "Skirmish",
+            "SuperWeaponsAllowed",
+            if scenario.super_weapons { "yes" } else { "no" },
+        );
         fs::write(game.join("RA2MD.INI"), ini)?;
         if let Some(spec) = &scenario.generate {
             fs::write(game.join(&self.map_as), mapgen::write(spec))?;

@@ -24,6 +24,10 @@ pub struct House {
     pub power_drain: i32,
     #[serde(default)]
     pub defeated: bool,
+    /// Superweapons it has: type index, charged (0/1), on hold (0/1),
+    /// frames left to charge.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub supers: Vec<[i32; 4]>,
 }
 
 /// One unit, infantry, aircraft or building at one frame.

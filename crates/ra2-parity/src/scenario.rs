@@ -21,6 +21,15 @@ pub struct Scenario {
     /// start points at random, so the recorder retries until it matches.
     #[serde(default)]
     pub human_start: Option<[i32; 2]>,
+    /// The human player's country (`British` unless set) and starting
+    /// credits (10,000 unless set).
+    #[serde(default)]
+    pub human_country: Option<String>,
+    #[serde(default)]
+    pub credits: Option<i32>,
+    /// Whether the skirmish allows superweapons (off unless set).
+    #[serde(default)]
+    pub super_weapons: bool,
     #[serde(default, rename = "check")]
     pub checks: Vec<Check>,
     /// The human player's orders, in frame order: what its clicks would
@@ -100,6 +109,14 @@ pub enum Check {
     Hp {
         #[serde(flatten)]
         filter: Filter,
+        at: u32,
+        #[serde(default)]
+        tolerance: u32,
+    },
+    /// A house's superweapons at a frame: which, charged, on hold, and
+    /// frames left to charge (within the tolerance).
+    Supers {
+        house: u32,
         at: u32,
         #[serde(default)]
         tolerance: u32,

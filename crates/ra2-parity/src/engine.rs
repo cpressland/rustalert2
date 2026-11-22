@@ -63,7 +63,11 @@ const AI: (&str, i32) = ("Russians", 50_000);
 /// start, then the map's objects. `map` is the scenario's map text.
 pub fn setup(scenario: &Scenario, rules: &Rules, map: &Ini) -> World {
     let mut world = World::default();
-    world.add_house(HUMAN.0, HUMAN.1);
+    let human = (
+        scenario.human_country.as_deref().unwrap_or(HUMAN.0),
+        scenario.credits.unwrap_or(HUMAN.1),
+    );
+    world.add_house(human.0, human.1);
     world.add_house(AI.0, AI.1);
     world.add_house("Neutral", 0);
     world.add_house("Special", 0);
@@ -81,7 +85,8 @@ pub fn setup(scenario: &Scenario, rules: &Rules, map: &Ini) -> World {
         .copied()
         .find(|s| *s != human)
         .unwrap_or(human);
-    for ((country, _), start) in [(HUMAN, human), (AI, ai)] {
+    let human_country = scenario.human_country.as_deref().unwrap_or(HUMAN.0);
+    for (country, start) in [(human_country, human), (AI.0, ai)] {
         // The base unit by side: the first for the Allies, the second for
         // the Soviets.
         let side = rules
@@ -227,6 +232,23 @@ pub fn observe(sim: &Sim, rules: &Rules) -> Frame {
                 power_output: h.power_output,
                 power_drain: h.power_drain,
                 defeated: false,
+                supers: {
+                    let mut v: Vec<[i32; 4]> = world
+                        .supers
+                        .iter()
+                        .filter(|s| s.house == h.index)
+                        .map(|s| {
+                            [
+                                i32::try_from(s.kind).unwrap_or(-1),
+                                i32::from(s.charged),
+                                i32::from(s.on_hold),
+                                s.left(sim.frame()),
+                            ]
+                        })
+                        .collect();
+                    v.sort_unstable();
+                    v
+                },
             })
             .collect(),
         objects: world

@@ -1,0 +1,128 @@
+name = "allied-force-shield"
+description = """
+The British player builds a power plant and a Battle Lab, which brings the
+Force Shield. The map's rules make the Battle Lab cheap and buildable from
+the Construction Yard alone, and the Force Shield recharge in half a
+minute, so the scenario records quickly. The power plant is sold while
+the Force Shield charges, and another built: covers granting a
+superweapon, its recharge, and what low power does to it."""
+map = "parity_allied_force_shield.yrm"
+end_frame = 2600
+human_start = [35, 35]
+super_weapons = true
+
+[generate]
+name = "allied-force-shield"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[GATECH]
+Prerequisite=GACNST
+Cost=500
+
+[ForceShieldSpecial]
+RechargeTime=.5
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GATECH"
+
+[[order]]
+frame = 900
+what = "place"
+type = "GATECH"
+x = 38
+y = 37
+
+[[order]]
+frame = 1000
+what = "sell"
+type = "GAPOWR"
+
+[[order]]
+frame = 1060
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 2040
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+# The Battle Lab gives the Force Shield the frame after it's placed, timed
+# from the frame it was placed (450 frames here).
+[[check]]
+what = "supers"
+house = 0
+at = 901
+tolerance = 0
+
+[[check]]
+what = "supers"
+house = 0
+at = 1000
+tolerance = 0
+
+# The power plant goes (1051): the Force Shield holds with 301 frames left.
+[[check]]
+what = "supers"
+house = 0
+at = 1051
+tolerance = 0
+
+[[check]]
+what = "supers"
+house = 0
+at = 1500
+tolerance = 0
+
+# A new plant, built at half speed, is placed at 2041 and makes power from
+# 2042: charging carries on, and it's ready at 2343.
+[[check]]
+what = "supers"
+house = 0
+at = 2100
+tolerance = 0
+
+[[check]]
+what = "supers"
+house = 0
+at = 2342
+tolerance = 0
+
+[[check]]
+what = "supers"
+house = 0
+at = 2343
+tolerance = 0
+
+[[check]]
+what = "power"
+house = 0
+at = 2042
+tolerance = 0

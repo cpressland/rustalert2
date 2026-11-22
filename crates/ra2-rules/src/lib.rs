@@ -263,6 +263,9 @@ pub struct TechnoType {
     /// Buildings: a defence (`BuildCat=Combat`), built at the country's
     /// defence rate.
     pub combat: bool,
+    /// Buildings: the superweapons it gives its house (`SuperWeapon=`,
+    /// `SuperWeapon2=`).
+    pub super_weapons: Vec<String>,
     /// Bails a harvester holds, or a refinery stores (`Storage=`).
     pub storage: i32,
     /// The buildings it docks with (`Dock=`).
@@ -619,6 +622,11 @@ impl Rules {
                             let at = |i: usize| p.get(i).map_or(0, |s| atoi(s));
                             (at(0), at(1))
                         })
+                        .collect(),
+                    super_weapons: ["SuperWeapon", "SuperWeapon2"]
+                        .iter()
+                        .filter_map(|k| text(s, k))
+                        .filter(|v| !v.eq_ignore_ascii_case("none"))
                         .collect(),
                     combat: text(s, "BuildCat")
                         .is_some_and(|c| c.trim().eq_ignore_ascii_case("Combat")),

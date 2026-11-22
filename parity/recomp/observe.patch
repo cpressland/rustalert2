@@ -27,10 +27,10 @@ index 870464e..6910a8b 100644
          static long long last, sum;
 diff --git a/src/runtime/observe.c b/src/runtime/observe.c
 new file mode 100644
-index 0000000..1f5faa6
+index 0000000..4f7caa9
 --- /dev/null
 +++ b/src/runtime/observe.c
-@@ -0,0 +1,318 @@
+@@ -0,0 +1,370 @@
 +/* rustalert2 parity observer: per game frame, what the simulation holds.
 + * Written for github.com/cpressland/rustalert2's parity lab (M2); this file
 + * and the two-line hook in hdvox.c are its whole footprint here.
@@ -98,6 +98,11 @@ index 0000000..1f5faa6
 +#define HOUSE_INDEX    0x30u        /* int */
 +#define HOUSE_POWER_OUT   0x53A4u   /* int: power produced (0x004FCE30) */
 +#define HOUSE_POWER_DRAIN 0x53A8u   /* int: power drawn */
++#define HOUSE_SUPERS   0x254u       /* DynamicVectorClass<SuperClass*>, one per type */
++#define SUPER_TIMER    0x30u        /* CDTimer: start (-1 when stopped), ?, frames */
++#define SUPER_PRESENT  0x6Du        /* byte: the house has it */
++#define SUPER_CHARGED  0x6Fu        /* byte: ready to fire */
++#define SUPER_ON_HOLD  0x70u        /* byte: charging held (low power) */
 +#define HOUSE_TYPE     0x34u        /* HouseTypeClass* */
 +#define HOUSE_BALANCE  0x30Cu       /* int: credits */
 +#define OBJ_HEALTH     0x6Cu        /* int */
@@ -135,9 +140,28 @@ index 0000000..1f5faa6
 +        uint32_t h = rd32(hv + 4 * i);
 +        fprintf(g_out, "%s{\"index\":%u,\"country\":", i ? "," : "", rd32(h + HOUSE_INDEX));
 +        json_id(g_out, rd32(h + HOUSE_TYPE));
-+        fprintf(g_out, ",\"credits\":%d,\"power_output\":%d,\"power_drain\":%d}",
++        fprintf(g_out, ",\"credits\":%d,\"power_output\":%d,\"power_drain\":%d",
 +                (int32_t)rd32(h + HOUSE_BALANCE), (int32_t)rd32(h + HOUSE_POWER_OUT),
 +                (int32_t)rd32(h + HOUSE_POWER_DRAIN));
++        {
++            /* Superweapons the house has: type index, charged, on hold,
++               frames left to charge. */
++            uint32_t items = rd32(h + HOUSE_SUPERS + DVC_ITEMS), n = rd32(h + HOUSE_SUPERS + DVC_COUNT);
++            int any = 0;
++            for (uint32_t k = 0; items && k < n && k < 64; k++) {
++                uint32_t sw = rd32(items + 4 * k);
++                if (!*(const uint8_t *)GUEST_PTR(sw + SUPER_PRESENT)) continue;
++                int32_t start = (int32_t)rd32(sw + SUPER_TIMER), dur = (int32_t)rd32(sw + SUPER_TIMER + 8);
++                int32_t left = start == -1 ? dur : dur - ((int32_t)frame - start);
++                if (left < 0) left = 0;
++                fprintf(g_out, "%s[%u,%u,%u,%d]", any ? "," : ",\"supers\":[", k,
++                        *(const uint8_t *)GUEST_PTR(sw + SUPER_CHARGED),
++                        *(const uint8_t *)GUEST_PTR(sw + SUPER_ON_HOLD), left);
++                any = 1;
++            }
++            if (any) fputs("]", g_out);
++        }
++        fputs("}", g_out);
 +    }
 +    fputs("],\"objects\":[", g_out);
 +    int first = 1;
@@ -281,6 +305,34 @@ index 0000000..1f5faa6
 +        if (f) {
 +            fprintf(f, "# frame %u\n", frame);
 +            dump_vector(f, "house", HOUSES_VA, 0x1000);
++            {
++                /* Where a house keeps its superweapons: a vector whose
++                   items are SuperClass (vtable 0x7F3FE8). */
++                uint32_t hv = rd32(HOUSES_VA + DVC_ITEMS), hn = rd32(HOUSES_VA + DVC_COUNT);
++                for (uint32_t i = 0; i < hn && i < 8; i++) {
++                    uint32_t h = rd32(hv + 4 * i);
++                    for (uint32_t off = 0; off + 0x14 < 0x5800; off += 4) {
++                        /* DynamicVectorClass: vtable, items, capacity,
++                           flag, count. Only follow heap pointers. */
++                        uint32_t vt = rd32(h + off), items = rd32(h + off + 4);
++                        uint32_t cnt = rd32(h + off + 0x10);
++                        if (vt < 0x7E0000u || vt > 0x800000u) continue;
++                        if (items < 0x10000000u || items > 0x30000000u) continue;
++                        if (cnt == 0 || cnt > 64) continue;
++                        uint32_t first = rd32(items);
++                        if (first < 0x10000000u || first > 0x30000000u) continue;
++                        if (rd32(first) != 0x7F3FE8u) continue;
++                        uint32_t count = cnt;
++                        fprintf(f, "supers house %u at +%X count %u\n", i, off, count);
++                        for (uint32_t k = 0; k < count && k < 16; k++) {
++                            uint32_t sw = rd32(items + 4 * k);
++                            fprintf(f, "super %u %u", i, k);
++                            for (uint32_t w = 0; w < 0x80; w += 4) fprintf(f, " %08X", rd32(sw + w));
++                            fprintf(f, "\n");
++                        }
++                    }
++                }
++            }
 +            dump_vector(f, "techno", TECHNOS_VA, 0x800);
 +            {
 +                /* The map's per-cell records (10 bytes: zone ids by level,

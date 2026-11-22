@@ -149,6 +149,7 @@ impl Sim {
             crate::hunt::update(&mut self.world, rules, &mut self.rng, self.frame + 1);
             crate::harvest::update(&mut self.world, rules, &mut self.rng, self.frame + 1);
             crate::production::update(&mut self.world, rules, self.frame + 1);
+            crate::superweapon::update(&mut self.world, rules, self.frame + 1);
         }
         self.frame += 1;
         events

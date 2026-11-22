@@ -18,5 +18,6 @@ pub mod hunt;
 pub mod pathfind;
 pub mod production;
 pub mod rng;
+pub mod superweapon;
 pub mod tick;
 pub mod world;

@@ -34,6 +34,11 @@ pub struct MapSpec {
     /// Ore and gem fields.
     #[serde(default)]
     pub ore: Vec<OreSpec>,
+    /// INI text added to the map as written: rules sections the game (and
+    /// our engine) loads over `rulesmd.ini`, e.g. shorter recharge times so
+    /// a scenario records quickly.
+    #[serde(default)]
+    pub rules: Option<String>,
 }
 
 /// A rectangle of ore (or gems) on the map.
@@ -263,6 +268,11 @@ pub fn write(spec: &MapSpec) -> String {
     });
 
     write_terrain(&mut ini, w, h, &spec.ore);
+    if let Some(rules) = &spec.rules {
+        ini.push('\n');
+        ini.push_str(rules.trim());
+        ini.push('\n');
+    }
     ini
 }
 
