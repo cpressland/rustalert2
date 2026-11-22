@@ -157,6 +157,7 @@ static void write_frame(uint32_t frame) {
      S <type>                     sell it
      P <rtti> <index> <naval>     produce
      A <rtti> <index> <naval>     abandon (cancel) that production
+     H <rtti> <index> <naval>     hold (suspend) it; produce again resumes
      L <rtti> <index> <naval> <x> <y>   place at a cell
    Layout from the constructors at 0x004C65E0, 0x004C6970, 0x004C6AE0. */
 #define OUTLIST        0xA802C8u
@@ -198,11 +199,11 @@ static void run_orders(uint32_t frame) {
                 fprintf(g_out, "# order %u %s %s id %u\n", frame, kind == 'D' ? "deploy" : "sell", arg, id);
                 break;
             }
-        } else if (kind == 'P' || kind == 'L' || kind == 'A') {
+        } else if (kind == 'P' || kind == 'L' || kind == 'A' || kind == 'H') {
             int rtti, index, naval, x = 0, y = 0;
             int n = sscanf(o, "%u %c %d %d %d %d %d", &at, &kind, &rtti, &index, &naval, &x, &y);
             if (n < 5) continue;
-            ev[0] = kind == 'P' ? 14 : kind == 'A' ? 16 : 11; /* PRODUCE, ABANDON, PLACE */
+            ev[0] = kind == 'P' ? 14 : kind == 'A' ? 16 : kind == 'H' ? 15 : 11; /* PRODUCE, ABANDON, SUSPEND, PLACE */
             memcpy(ev + 7, &rtti, 4);
             memcpy(ev + 0xB, &index, 4);
             memcpy(ev + 0xF, &naval, 4);
@@ -212,7 +213,7 @@ static void run_orders(uint32_t frame) {
                 memcpy(ev + 0x15, &cy, 2);
             }
             queue_event(ev);
-            fprintf(g_out, "# order %u %s %d %d\n", frame, kind == 'P' ? "produce" : kind == 'A' ? "abandon" : "place", rtti, index);
+            fprintf(g_out, "# order %u %s %d %d\n", frame, kind == 'P' ? "produce" : kind == 'A' ? "abandon" : kind == 'H' ? "hold" : "place", rtti, index);
         }
     }
 }
