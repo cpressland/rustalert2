@@ -30,6 +30,15 @@ const SELL_FRAMES: u32 = 50;
 const CREW_FRAMES: u32 = 2;
 const CREW_EXIT: (i32, i32) = (455, 313);
 const CREW_SPOT: (i32, i32) = (192, 64);
+/// A building's `FreeUnit=` appears this many frames after it's placed, in
+/// the cell up and left of its top-left. `[observed]` (a refinery's Chrono
+/// Miner; likely the end of the build-up)
+const FREE_UNIT_FRAMES: u32 = 50;
+/// A vehicle appears at its war factory's centre, waits this many frames
+/// (the door), then drives out to the cell beside the factory's middle
+/// row. `[observed]` (a Grizzly from `GAWEAP`; it drives a little slower
+/// than on open ground, so it arrives a few frames late in ours)
+const VEHICLE_DOOR_FRAMES: u32 = 48;
 
 /// One house's production of one thing, or a thing queued behind it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -48,6 +57,8 @@ pub struct Factory {
     pub owed: i32,
     /// A finished unit leaves on this frame.
     pub exit_at: Option<u32>,
+    /// Held since this frame.
+    pub held: Option<u32>,
 }
 
 /// An order to build something, as a player gives it.
@@ -71,6 +82,10 @@ pub enum Build {
         techno: usize,
     },
     Abandon {
+        house: u32,
+        techno: usize,
+    },
+    Hold {
         house: u32,
         techno: usize,
     },
@@ -139,9 +154,11 @@ fn rate_for(world: &World, rules: &Rules, house: u32, techno: usize) -> i32 {
     let t = &rules.technos[techno];
     let count = factories_of(world, rules, house, t.kind).len().max(1);
     let h = &world.houses[usize::try_from(house).unwrap_or(0)];
+    let country = rules.countries.iter().find(|c| c.id == h.country);
     let time = build_time(
         rules,
         t,
+        country,
         h.power_output,
         h.power_drain,
         i32::try_from(count).unwrap_or(1),
@@ -196,7 +213,55 @@ fn abandon(world: &mut World, rules: &Rules, frame: u32, k: usize) {
     }
 }
 
+/// Whether the house may put `techno` with its top-left at `cell`: some
+/// cell within `Adjacent=` + 1 cells round its foundation holds one of the
+/// house's `BaseNormal=` buildings (`[recomp 0x004A8EB0]`), and no
+/// building or vehicle stands on the foundation (`[hypothesis]`; the
+/// game's terrain checks aren't traced).
+fn can_place(world: &World, rules: &Rules, house: u32, techno: usize, cell: (i32, i32)) -> bool {
+    let t = &rules.technos[techno];
+    let (w, h) = t.foundation;
+    let reach = t.adjacent + 1;
+    let covers = |o: &crate::world::Object, x: i32, y: i32| {
+        let (bx, by) = top_left(rules, o);
+        let (bw, bh) = rules.technos[o.techno].foundation;
+        (bx..bx + bw).contains(&x) && (by..by + bh).contains(&y)
+    };
+    let mut near = false;
+    for o in &world.objects {
+        if o.limbo {
+            continue;
+        }
+        if o.kind == Kind::Building {
+            for y in cell.1..cell.1 + h {
+                for x in cell.0..cell.0 + w {
+                    if covers(o, x, y) {
+                        return false;
+                    }
+                }
+            }
+            if o.owner == house && rules.technos[o.techno].base_normal {
+                let (bx, by) = top_left(rules, o);
+                let (bw, bh) = rules.technos[o.techno].foundation;
+                near |= bx < cell.0 + w + reach
+                    && cell.0 - reach < bx + bw
+                    && by < cell.1 + h + reach
+                    && cell.1 - reach < by + bh;
+            }
+        } else if o.kind == Kind::Vehicle {
+            let (x, y) = to_cell(o.coord);
+            if (cell.0..cell.0 + w).contains(&i32::from(x))
+                && (cell.1..cell.1 + h).contains(&i32::from(y))
+            {
+                return false;
+            }
+        }
+    }
+    near
+}
+
 /// Apply an order, on the frame it takes effect.
+#[allow(clippy::too_many_lines)] // one arm per order, as the game's event switch
 pub fn order(world: &mut World, rules: &Rules, frame: u32, build: Build) {
     match build {
         Build::Deploy { house, techno } => {
@@ -214,6 +279,17 @@ pub fn order(world: &mut World, rules: &Rules, frame: u32, build: Build) {
             }
         }
         Build::Produce { house, techno } => {
+            // Producing something held resumes it: its next step is a rate
+            // from now. `[observed]`
+            if let Some(f) = world
+                .factories
+                .iter_mut()
+                .find(|f| f.house == house && f.techno == techno && f.held.is_some())
+            {
+                f.held = None;
+                f.next = frame + u32::try_from(f.rate).unwrap_or(1);
+                return;
+            }
             let t = &rules.technos[techno];
             if factories_of(world, rules, house, t.kind).is_empty()
                 || !has_prerequisites(world, rules, house, techno)
@@ -238,6 +314,7 @@ pub fn order(world: &mut World, rules: &Rules, frame: u32, build: Build) {
                 stage: 0,
                 owed: t.cost,
                 exit_at: None,
+                held: None,
             });
             start_next(world, rules, frame, house, t.kind);
         }
@@ -255,6 +332,16 @@ pub fn order(world: &mut World, rules: &Rules, frame: u32, build: Build) {
                 .position(|f| f.house == house && f.techno == techno)
             {
                 abandon(world, rules, frame, k);
+            }
+        }
+        Build::Hold { house, techno } => {
+            // It stops after this frame's step. `[observed]`
+            if let Some(f) = world
+                .factories
+                .iter_mut()
+                .find(|f| f.house == house && f.techno == techno && f.object.is_some())
+            {
+                f.held = Some(frame);
             }
         }
         Build::Sell { house, techno } => {
@@ -281,8 +368,12 @@ pub fn order(world: &mut World, rules: &Rules, frame: u32, build: Build) {
             }) else {
                 return;
             };
+            let cell = (i32::from(cell.0), i32::from(cell.1));
+            if !can_place(world, rules, house, techno, cell) {
+                return;
+            }
             let f = world.factories.remove(k);
-            let c = centre(rules, techno, (i32::from(cell.0), i32::from(cell.1)), 0);
+            let c = centre(rules, techno, cell, 0);
             if let Some(o) = world.objects.iter_mut().find(|o| Some(o.id) == f.object) {
                 o.limbo = false;
                 o.coord = c;
@@ -299,7 +390,11 @@ pub fn update(world: &mut World, rules: &Rules, frame: u32) {
     deploy(world, rules, frame);
     for k in 0..world.factories.len() {
         let f = &mut world.factories[k];
-        if f.object.is_none() || f.stage >= STEPS || frame != f.next {
+        if f.object.is_none()
+            || f.stage >= STEPS
+            || frame != f.next
+            || f.held.is_some_and(|h| h < frame)
+        {
             continue;
         }
         f.stage += 1;
@@ -329,6 +424,7 @@ pub fn update(world: &mut World, rules: &Rules, frame: u32) {
         start_next(world, rules, frame, f.house, f.kind);
     }
     sell(world, rules, frame);
+    free_units(world, rules, frame);
     // Production whose prerequisites have gone is cancelled. `[observed]`
     // (a refinery, when its power plant was sold)
     while let Some(k) = (0..world.factories.len()).find(|&k| {
@@ -443,6 +539,41 @@ fn sell(world: &mut World, rules: &Rules, frame: u32) {
     }
 }
 
+/// Units that come free with buildings placed `FREE_UNIT_FRAMES` ago.
+fn free_units(world: &mut World, rules: &Rules, frame: u32) {
+    let due: Vec<(usize, u32, (i32, i32))> = world
+        .objects
+        .iter()
+        .filter(|o| {
+            o.kind == Kind::Building
+                && !o.limbo
+                && o.placed > 0
+                && o.placed + FREE_UNIT_FRAMES == frame
+        })
+        .filter_map(|o| {
+            let free = rules.technos[o.techno].free_unit.as_ref()?;
+            let t = rules
+                .technos
+                .iter()
+                .position(|t| t.id.eq_ignore_ascii_case(free))?;
+            Some((t, o.owner, top_left(rules, o)))
+        })
+        .collect();
+    for (t, owner, (x0, y0)) in due {
+        let at = Coord {
+            x: (x0 - 1) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
+            y: (y0 - 1) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
+            z: 0,
+        };
+        let id = world.spawn(rules, t, owner, at);
+        if rules.technos[t].harvester
+            && let Some(o) = world.objects.iter_mut().find(|o| o.id == id)
+        {
+            o.mission = Mission::Harvest;
+        }
+    }
+}
+
 /// A finished unit comes out of its house's oldest factory of its kind.
 fn leave(world: &mut World, rules: &Rules, frame: u32, f: &Factory) {
     let Some(&fi) = factories_of(world, rules, f.house, f.kind).first() else {
@@ -450,6 +581,23 @@ fn leave(world: &mut World, rules: &Rules, frame: u32, f: &Factory) {
     };
     let (x0, y0) = top_left(rules, &world.objects[fi]);
     let (w, h) = rules.technos[world.objects[fi].techno].foundation;
+    if f.kind != Kind::Infantry {
+        let at = world.objects[fi].coord;
+        let goal = Coord {
+            x: (x0 + w) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
+            y: (y0 + h / 2) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
+            z: 0,
+        };
+        if let Some(o) = world.objects.iter_mut().find(|o| Some(o.id) == f.object) {
+            o.limbo = false;
+            o.coord = Coord { z: 0, ..at };
+            o.placed = frame;
+            o.motion.goal = Some(goal);
+            // Facing east, out of the door.
+            o.dir = 16_384;
+        }
+        return;
+    }
     let at = Coord {
         x: x0 * LEPTONS_PER_CELL + INFANTRY_EXIT.0,
         y: y0 * LEPTONS_PER_CELL + INFANTRY_EXIT.1,
@@ -486,17 +634,23 @@ fn cell_i16(v: i32) -> i16 {
     i16::try_from(v).unwrap_or(0)
 }
 
-/// Infantry that just came out walk to their spot, setting off the frame
-/// after next. `[observed]`
+/// Units that just came out go to their spot: infantry walk, setting off
+/// the frame after next; vehicles drive once the door is open.
+/// `[observed]`
 fn walk_out(world: &mut World, rules: &Rules, frame: u32) {
     for o in &mut world.objects {
-        if o.limbo || o.kind != Kind::Infantry || o.mission != Mission::Guard {
+        let wait = match o.kind {
+            Kind::Infantry => 2,
+            Kind::Vehicle => VEHICLE_DOOR_FRAMES,
+            _ => continue,
+        };
+        if o.limbo || o.mission != Mission::Guard {
             continue;
         }
         let Some(goal) = o.motion.goal else {
             continue;
         };
-        if frame < o.placed + 2 {
+        if frame < o.placed + wait {
             continue;
         }
         if o.motion.leg.is_none() {
@@ -506,7 +660,13 @@ fn walk_out(world: &mut World, rules: &Rules, frame: u32) {
             }
             o.motion.leg = Some((o.coord, goal, 0));
         }
-        let speed = rules.technos[o.techno].speed_fraction * WALK_SPEED;
+        let t = &rules.technos[o.techno];
+        let speed = if o.kind == Kind::Infantry {
+            t.speed_fraction * WALK_SPEED
+        } else {
+            let left = crate::hunt::distance(goal, o.coord);
+            crate::hunt::throttle(o, t, left)
+        };
         if travel(o, speed) {
             o.motion.goal = None;
         }

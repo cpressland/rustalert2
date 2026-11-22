@@ -249,6 +249,16 @@ pub struct TechnoType {
     /// What selling it pays, if set (`Soylent=`) instead of a share of
     /// its cost.
     pub soylent: i32,
+    /// Buildings: how far from the house's other buildings it may be
+    /// placed (`Adjacent=`, default 3), and whether others may be placed
+    /// near it (`BaseNormal=`, default yes). `[recomp 0x0045DEAC]`
+    pub adjacent: i32,
+    pub base_normal: bool,
+    /// Buildings: a unit that comes with it (`FreeUnit=`).
+    pub free_unit: Option<String>,
+    /// Buildings: a defence (`BuildCat=Combat`), built at the country's
+    /// defence rate.
+    pub combat: bool,
     /// Bails a harvester holds, or a refinery stores (`Storage=`).
     pub storage: i32,
     /// The buildings it docks with (`Dock=`).
@@ -314,6 +324,10 @@ pub struct Country {
     pub prefix: String,
     pub suffix: String,
     pub multiplay: bool,
+    /// Build-time multipliers (floats) for infantry, units, aircraft,
+    /// buildings and defences (`BuildTimeInfantryMult=` and so on).
+    /// `[recomp 0x0050C0A0]`
+    pub build_time_mults: [Ratio; 5],
 }
 
 /// An animation (`[Animations]`; its keys live in the art file).
@@ -589,6 +603,11 @@ impl Rules {
                         .map_or(Ratio::ONE, Ratio::from_value_f32),
                     wall: flag(s, "Wall", false),
                     soylent: int(s, "Soylent", 0),
+                    adjacent: int(s, "Adjacent", 3),
+                    base_normal: flag(s, "BaseNormal", true),
+                    free_unit: text(s, "FreeUnit"),
+                    combat: text(s, "BuildCat")
+                        .is_some_and(|c| c.trim().eq_ignore_ascii_case("Combat")),
                     storage: int(s, "Storage", 0),
                     dock: list(s, "Dock"),
                     queueing_cell: text(a, "QueueingCell")
@@ -715,6 +734,14 @@ impl Rules {
                     prefix: text(s, "Prefix").unwrap_or_default(),
                     suffix: text(s, "Suffix").unwrap_or_default(),
                     multiplay: flag(s, "Multiplay", false),
+                    build_time_mults: [
+                        "BuildTimeInfantryMult",
+                        "BuildTimeUnitsMult",
+                        "BuildTimeAircraftMult",
+                        "BuildTimeBuildingsMult",
+                        "BuildTimeDefensesMult",
+                    ]
+                    .map(|k| f32_ratio(s, k, "1")),
                     id,
                 }
             })

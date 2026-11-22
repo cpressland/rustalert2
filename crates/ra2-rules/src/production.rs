@@ -40,7 +40,8 @@ fn ftol(v: f64) -> i32 {
 /// `factories` factories of its kind. `[recomp 0x006F47A0, 0x00711EE0]`
 ///
 /// 1. `Cost × BuildSpeed × 0.9`, truncated;
-/// 2. × the country's multiplier for the kind (1 so far), truncated;
+/// 2. × the country's multiplier for the kind (`BuildTimeInfantryMult=`
+///    and so on; defences are buildings with `BuildCat=Combat`), truncated;
 /// 3. × `BuildTimeMultiplier=`, truncated;
 /// 4. ÷ the production speed: with power short, `1 − (1 − ratio) ×
 ///    LowPowerPenaltyModifier`, at least `MinLowPowerProductionSpeed` and
@@ -48,9 +49,27 @@ fn ftol(v: f64) -> i32 {
 /// 5. × `MultipleFactory=` once per factory beyond the first, truncating
 ///    each time;
 /// 6. walls × `WallBuildSpeedCoefficient=`.
-pub fn build_time(rules: &Rules, t: &TechnoType, output: i32, drain: i32, factories: i32) -> i32 {
+pub fn build_time(
+    rules: &Rules,
+    t: &TechnoType,
+    country: Option<&crate::Country>,
+    output: i32,
+    drain: i32,
+    factories: i32,
+) -> i32 {
     let g = &rules.general;
     let base = ftol(f64::from(t.cost) * g.build_speed.value() * 0.9);
+    let mult = country.map_or(1.0, |c| {
+        let i = match t.kind {
+            crate::Kind::Infantry => 0,
+            crate::Kind::Vehicle => 1,
+            crate::Kind::Aircraft => 2,
+            crate::Kind::Building if t.combat => 4,
+            crate::Kind::Building => 3,
+        };
+        c.build_time_mults[i].value()
+    });
+    let base = ftol(f64::from(base) * mult);
     let time = ftol(f64::from(base) * t.build_time_multiplier.value());
     let ratio = power_ratio(output, drain);
     let mut speed = 1.0 - (1.0 - f64::from(ratio)) * g.low_power_penalty.value();
@@ -115,7 +134,7 @@ mod tests {
     #[test]
     fn build_times_give_the_recorded_step_lengths() {
         let r = rules();
-        let time = |i: usize, f| build_time(&r, &r.technos[i], 200, 10, f);
+        let time = |i: usize, f| build_time(&r, &r.technos[i], None, 200, 10, f);
         // Steps of 9, 5 and 2 frames, as recorded in allied-base.
         assert_eq!([time(0, 1), time(1, 1), time(2, 1)], [504, 315, 126]);
         assert_eq!(
@@ -129,16 +148,41 @@ mod tests {
     fn low_power_slows_production_between_the_limits() {
         let r = rules();
         let e1 = &r.technos[2];
-        assert_eq!(build_time(&r, e1, 0, 100, 1), 252, "no power: half speed");
         assert_eq!(
-            build_time(&r, e1, 99, 100, 1),
+            build_time(&r, e1, None, 0, 100, 1),
+            252,
+            "no power: half speed"
+        );
+        assert_eq!(
+            build_time(&r, e1, None, 99, 100, 1),
             157,
             "any shortfall: at most 0.8"
         );
         assert_eq!(
-            build_time(&r, e1, 60, 100, 1),
+            build_time(&r, e1, None, 60, 100, 1),
             209,
             "60%: the ratio is a float a hair over 0.6"
         );
+    }
+
+    #[test]
+    fn a_country_multiplier_scales_its_kind_only() {
+        let r = Rules::from_ini(
+            &Ini::parse(
+                b"[General]\nBuildSpeed=.7\n[Countries]\n1=British\n\
+                  [British]\nBuildTimeInfantryMult=.75\n\
+                  [InfantryTypes]\n1=E1\n[BuildingTypes]\n1=GAPOWR\n\
+                  [E1]\nCost=200\n[GAPOWR]\nCost=800\n",
+            ),
+            &Ini::parse(b""),
+        );
+        let gb = r.countries.first();
+        let id = |n: &str| r.technos.iter().position(|t| t.id == n).expect("type");
+        assert_eq!(
+            build_time(&r, &r.technos[id("E1")], gb, 0, 0, 1),
+            94,
+            "126 x 0.75"
+        );
+        assert_eq!(build_time(&r, &r.technos[id("GAPOWR")], gb, 0, 0, 1), 504);
     }
 }

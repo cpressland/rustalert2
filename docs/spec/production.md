@@ -1,9 +1,9 @@
 # Power and production
 
-**Status:** Parity-checked for a deploy, buildings and infantry from
-one or two factories, queues, cancelling, selling, low power and lost
-prerequisites. Holding, placement rules, build-up, and vehicles and
-aircraft leaving their factories are still to come.
+**Status:** Parity-checked for a deploy, buildings, infantry and
+vehicles from one or two factories, queues, holding, cancelling, selling,
+low power, lost prerequisites, free units and refused placements. Aircraft
+and naval yards, and damaged-plant power (traced), aren't recorded yet.
 **Crate:** `ra2-rules` (`production`), `ra2-sim` (`production`)
 **Issue:** #43
 
@@ -28,6 +28,11 @@ elsewhere; here an order arrives as the event a click would send.
   (`0x004C9EA0`), the house re-timing its factories (`0x004CA6E0`) when
   it recalculates power (`0x00508C30`), a building's power (`0x0044E7B0`,
   `0x0044E880`), and the refund (`0x00711F60`).
+- The recomp: the placement proximity check (`0x004A8EB0`) and the
+  country multipliers' keys (`HouseTypeClass +0x134`…`+0x144`).
+- Scenario `allied-war-factory`: a refinery and its free Chrono Miner, a
+  refused then valid placement, a GI held and resumed, a war factory and
+  a Grizzly.
 - Scenario `allied-queue-sell`: a queue of GIs, a refinery started, the
   power plant sold, a GI at low power, a GI cancelled.
 - Scenario `allied-base`: the British player's orders, queued by the
@@ -54,6 +59,17 @@ executes its events. `[observed]` (every object below appears on `f + 1`)
 - **Produce while busy:** infantry, vehicles and aircraft queue; the next
   starts the frame the one before leaves its factory. A building can't be
   ordered while another is building. `[observed]` (three GIs)
+- **Hold:** the item stops after that frame's step; producing it again
+  resumes it, its next step a rate after. Other factories keep going.
+  `[observed]`
+- **Placing** is refused (the order does nothing) unless some cell within
+  `Adjacent=` (default 3) + 1 cells round the new foundation holds one of
+  the house's buildings with `BaseNormal=` (default yes). `[recomp
+  0x004A8EB0]` We also refuse a foundation over a building or a vehicle
+  `[hypothesis]`; the game's terrain checks aren't traced.
+- **Free units:** a building's `FreeUnit=` (a refinery's harvester)
+  appears 50 frames after it's placed, likely the end of its build-up, in
+  the cell up and left of its top-left. `[observed]`
 - **Abandon:** the last queued one of that type goes; failing that, the
   one building stops and everything paid for it comes back. `[observed]`
 - **Sell:** two frames in, a crew soldier (`AlliedCrew=` or
@@ -75,8 +91,11 @@ executes its events. `[observed]` (every object below appears on `f + 1`)
 
 1. `Cost × BuildSpeed × 0.9`, truncated (`BuildSpeed=` 0.7: a power plant
    at 800 takes 504 frames);
-2. × the country's multiplier for that kind, truncated (1 for every
-   country so far);
+2. × the country's multiplier for that kind, truncated:
+   `BuildTimeInfantryMult=`, `BuildTimeUnitsMult=`, `BuildTimeAircraftMult=`,
+   `BuildTimeBuildingsMult=` or `BuildTimeDefensesMult=` (a building with
+   `BuildCat=Combat`); no country sets them in the shipped rules
+   `[recomp 0x0050C0A0]`;
 3. × `BuildTimeMultiplier=` (a float), truncated;
 4. ÷ the production speed, truncated. The speed is 1 unless power is
    short: then 1 − (1 − output ÷ drain) × `LowPowerPenaltyModifier=`, at
@@ -107,6 +126,12 @@ done. Recorded for three costs and step lengths of 9, 5, 2 and 1 frames.
 
 ### Leaving the factory `[observed]`
 
+A finished vehicle appears at its war factory's centre the frame after the
+54th step. 48 frames later (the door), it drives out to the cell beside the
+factory's middle row: a Grizzly from a war factory at (41,36) stops at
+(46,37). It drives a little slower than on open ground there, so ours keeps
+pace to within a few frames on the way and arrives on the same frame.
+
 A finished GI appears the frame after the 54th step. It comes out of the
 house's first barracks at its top-left + (320, 448) leptons, and stands a
 frame. Then it walks to sub-spot (64, 192) of the first cell along the row
@@ -127,20 +152,25 @@ the house's output and drain when an order starts.
 
 ## Open questions
 
-- Holding production (`SUSPEND`), and what happens when credits run out.
-- Placement rules (adjacency, `Adjacent=`, clear ground) and the build-up
-  animation; selling.
-- Vehicles and aircraft leaving their factories; which factory is primary.
+- What happens when credits run out part way.
+- The rest of placement (terrain, other houses' units) and the build-up
+  animation itself.
+- Aircraft and ships leaving their factories; which factory is primary
+  when there are several (we use the oldest).
 - Power output from damaged buildings, recorded.
 - How many crew a sold building lets out, and where; which cell a unit
   leaving a factory walks to (the game's pick varies between recordings,
   likely from its random numbers).
-- The country multipliers (`HouseTypeClass +0x134`…`+0x144`) and the keys
-  that set them.
 - The GI's exact walking path out (we're within a few leptons on the way,
   exact on arrival).
 
 ## Parity
+
+`parity/scenarios/allied-war-factory.toml`: 11 checks at zero tolerance
+(credits through the refinery, the hold and the Grizzly; the free miner's
+creation and spot; the placed barracks; power; the GI out of the door; the
+Grizzly at its spot). Everything but the Grizzly's 37 frames driving out
+matches the original on all 4300 frames.
 
 `parity/scenarios/allied-queue-sell.toml`: 12 checks at zero tolerance
 (credits through the queue, the sale, low power and the cancel; power;

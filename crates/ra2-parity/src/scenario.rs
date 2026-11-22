@@ -61,6 +61,8 @@ pub enum OrderKind {
     Sell,
     /// Cancel building the type: what's been paid comes back.
     Abandon,
+    /// Hold building the type; producing it again resumes.
+    Hold,
 }
 
 /// What objects a check looks at.

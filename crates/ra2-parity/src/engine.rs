@@ -138,14 +138,15 @@ pub fn setup(scenario: &Scenario, rules: &Rules, map: &Ini) -> World {
 
 /// The game's `AbstractType` of a type list, as production and placing
 /// events name what they build. `[recomp 0x006AB4FF]` (the sidebar's
-/// cameo; values per the community's `YRpp` headers; placing names the
+/// cameo; the four values are those the per-kind multiplier switches on,
+/// `0x0050C0A0`; placing names the
 /// object's kind, one less)
 fn type_rtti(kind: ra2_rules::Kind) -> i32 {
     match kind {
         ra2_rules::Kind::Aircraft => 3,
         ra2_rules::Kind::Building => 7,
         ra2_rules::Kind::Infantry => 16,
-        ra2_rules::Kind::Vehicle => 41,
+        ra2_rules::Kind::Vehicle => 40,
     }
 }
 
@@ -176,6 +177,10 @@ pub fn observer_orders(scenario: &Scenario, rules: &Rules) -> String {
                 OrderKind::Abandon => {
                     let (kind, index) = type_index(rules, &o.type_id)?;
                     format!("{} A {} {index} 0", o.frame, type_rtti(kind))
+                }
+                OrderKind::Hold => {
+                    let (kind, index) = type_index(rules, &o.type_id)?;
+                    format!("{} H {} {index} 0", o.frame, type_rtti(kind))
                 }
                 OrderKind::Produce => {
                     let (kind, index) = type_index(rules, &o.type_id)?;
@@ -288,6 +293,7 @@ pub fn sim_orders(scenario: &Scenario, rules: &Rules) -> Vec<(u32, Order)> {
                 },
                 OrderKind::Sell => Build::Sell { house, techno },
                 OrderKind::Abandon => Build::Abandon { house, techno },
+                OrderKind::Hold => Build::Hold { house, techno },
             };
             Some((o.frame, Order::Build(b)))
         })
