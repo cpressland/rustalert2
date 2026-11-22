@@ -58,11 +58,46 @@ fn within(a: Option<i64>, b: Option<i64>, tol: u32) -> bool {
     matches!((a, b), (Some(a), Some(b)) if a.abs_diff(b) <= u64::from(tol))
 }
 
-/// Pair each object with its nearest unpaired counterpart; return the worst
-/// distance in leptons, or `None` if the counts differ.
+/// Pair the objects of one log with the other's so the worst pair is as
+/// close as can be; return that worst distance in leptons, or `None` if
+/// the counts differ. Small groups (up to 8) are paired exactly; larger
+/// ones each with its nearest unpaired counterpart.
 fn worst_pairing(a: &[&Object], b: &[&Object]) -> Option<u64> {
     if a.len() != b.len() {
         return None;
+    }
+    let dist = |o: &Object, p: &Object| {
+        let (dx, dy, dz) = (
+            i64::from(o.x - p.x),
+            i64::from(o.y - p.y),
+            i64::from(o.z - p.z),
+        );
+        (dx * dx + dy * dy + dz * dz).unsigned_abs().isqrt()
+    };
+    if a.len() <= 8 {
+        // Best of every pairing: try each counterpart for each object in
+        // turn, keeping the smallest worst distance.
+        fn best(
+            a: &[&Object],
+            free: &mut Vec<&Object>,
+            dist: &dyn Fn(&Object, &Object) -> u64,
+        ) -> u64 {
+            let Some((o, rest)) = a.split_first() else {
+                return 0;
+            };
+            let mut out = u64::MAX;
+            for i in 0..free.len() {
+                let p = free.remove(i);
+                let d = dist(o, p);
+                if d < out {
+                    out = out.min(d.max(best(rest, free, dist)));
+                }
+                free.insert(i, p);
+            }
+            out
+        }
+        let mut free = b.to_vec();
+        return Some(best(a, &mut free, &dist));
     }
     let mut free: Vec<&Object> = b.to_vec();
     let mut worst = 0u64;
@@ -70,14 +105,7 @@ fn worst_pairing(a: &[&Object], b: &[&Object]) -> Option<u64> {
         let (i, d) = free
             .iter()
             .enumerate()
-            .map(|(i, p)| {
-                let (dx, dy, dz) = (
-                    i64::from(o.x - p.x),
-                    i64::from(o.y - p.y),
-                    i64::from(o.z - p.z),
-                );
-                (i, (dx * dx + dy * dy + dz * dz).unsigned_abs().isqrt())
-            })
+            .map(|(i, p)| (i, dist(o, p)))
             .min_by_key(|&(_, d)| d)?;
         worst = worst.max(d);
         free.swap_remove(i);

@@ -115,8 +115,9 @@ A scenario is TOML in `parity/scenarios/`:
     on hold, and frames left within the tolerance);
   - `cargo`: total bails carried by matching objects at a frame;
   - `ore`: bails left on the map (every ore cell's data, summed) at a frame;
-  - `position`: each object paired with its nearest counterpart; the worst
-    distance must be within the tolerance, in leptons;
+  - `position`: the objects paired with their counterparts so the worst
+    pair is as close as can be (exactly, for up to eight; nearest-first for
+    more); the worst distance must be within the tolerance, in leptons;
   - `first_damage`: the first frame matching objects lose hit points;
   - `event`: the first creation or removal of a matching object.
 

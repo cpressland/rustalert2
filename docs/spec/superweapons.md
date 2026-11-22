@@ -2,8 +2,9 @@
 
 **Status:** Charging and firing parity-checked. Effects so far: the Force
 Shield's blackout, the Iron Curtain on infantry, the Nuke's blast, the
-Chronosphere, the Genetic Mutator and the Psychic Dominator. The Weather
-Storm, Paratroopers and Spy Plane are still to come.
+Chronosphere, the Genetic Mutator, the Psychic Dominator, the Weather
+Storm's strikes on its target, and Paratroopers. The Spy Plane charges and
+fires, but what it reveals waits for the shroud in the simulation.
 **Crate:** `ra2-rules` (`production::recharge_frames`), `ra2-sim`
 (`superweapon`)
 **Issue:** #45
@@ -120,6 +121,37 @@ then the Chrono Warp's on where to. `[observed]`
   `Verses=` hit only buildings) falls off over the warhead's spread as the
   Nuke's does. `[hypothesis]` (no buildings in range in the scenario)
 
+### Weather Storm (`Type=LightningStorm`)
+
+- Its target is struck every `LightningHitDelay=` (10) frames, from 323
+  frames after it's fired until `LightningDeferment=` (250) +
+  `LightningStormDuration=` (180) frames after. Each strike does
+  `LightningDamage=` (250) with `LightningWarhead=` (`IonWH`), spread as
+  the Nuke's is. A Grizzly on the target took 250, then died at the next.
+  `[observed]`
+- Random bolts fall round it (within `LightningCellSpread=`, at least
+  `LightningSeparation=` apart). They use the game's random numbers and
+  aren't modelled; the scenario keeps everything else out of their reach.
+
+### Paratroopers (`Type=AmerParaDrop`, `ParaDrop`)
+
+- The side's paratroopers (`AmerParaDropInf=`/`Num=` for the American
+  Air Force Command's, else `Ally…`, `Sov…`, `Yuri…`) come aboard the
+  plane at once, in limbo at the flight level. `[observed]`
+- The plane flies south over the target (37 leptons a frame). The first
+  jumps 179 frames after firing, 940 leptons short of the target (inside
+  `ParadropRadius=`, 1024), and one every 5 frames after. Each falls 3
+  leptons a frame from the frame after next. `[observed]` (eight GIs)
+- In the game each lands on a spot of the cell under the plane, which
+  looks random. We put each under the plane, within about a cell of the
+  game's.
+- The plane itself (`PDPLANE`) isn't simulated yet.
+
+### Spy Plane (`Type=SpyPlane`)
+
+- Charges and fires as the others. Its plane and what it reveals wait for
+  aircraft and the shroud in the simulation.
+
 ### Force Shield (`Type=ForceShield`)
 
 - The house makes no power from the frame after it's fired until
@@ -132,7 +164,8 @@ then the Chrono Warp's on where to. `[observed]`
 
 ## Open questions
 
-- The other superweapons' effects: Weather Storm, Paratroopers, Spy Plane.
+- The Weather Storm's random bolts; the paratroop and spy planes' flight;
+  the Spy Plane's reveal.
 - What captured units and new Brutes do next: they fight nearby enemies on
   their own, which isn't modelled yet (the Guard mission).
 - What a warped unit does on arrival (`ChronoDelay=` likely freezes it).
@@ -142,6 +175,11 @@ then the Chrono Warp's on where to. `[observed]`
   rebuilt; `UseChargeDrain=` (the Force Shield drains).
 
 ## Parity
+
+`parity/scenarios/american-storm-paradrop.toml` (the human as the
+Americans): 8 checks. All are at zero tolerance but the paratroopers'
+landing spots, which are within a cell (256 leptons; the worst is 219).
+Apart from the paratroopers and their plane, every frame matches.
 
 `parity/scenarios/yuri-mutator-dominator.toml` (the human as Yuri): 9
 checks at zero tolerance. They cover both superweapons' charge and firing,

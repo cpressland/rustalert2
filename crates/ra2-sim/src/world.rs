@@ -94,7 +94,9 @@ pub struct Object {
 pub struct Strike {
     pub lands: u32,
     pub cell: (i16, i16),
-    pub weapon: ra2_rules::WeaponId,
+    /// Its damage and warhead.
+    pub damage: i32,
+    pub warhead: ra2_rules::WarheadId,
 }
 
 /// Ore or gems on a cell.

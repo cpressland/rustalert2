@@ -61,7 +61,7 @@ their art ships in); those are reported, not drawn.
 | Economy (harvesting, docking, credits) | [economy.md](economy.md) | Parity-checked (one harvester; growth, gems and slaves to come) |
 | Power and production | [production.md](production.md) | Parity-checked (deploy, queues, hold, selling, placing, vehicles, low power) |
 | Special abilities | | Not started |
-| Superweapons | [superweapons.md](superweapons.md) | Started (charging parity-checked) |
+| Superweapons | [superweapons.md](superweapons.md) | Parity-checked (all nine; random storm bolts, planes and the spy reveal open) |
 | Crates and veterancy | | Not started |
 
 ## AI, campaigns and multiplayer (M5 onwards)

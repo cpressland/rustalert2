@@ -17,6 +17,12 @@ pub enum Later {
         coord: crate::coords::Coord,
     },
 
+    /// A paratrooper jumping: out of limbo at the flight level, to fall.
+    Jump {
+        at: u32,
+        id: u32,
+        coord: crate::coords::Coord,
+    },
     /// The Psychic Dominator's effect, round a cell.
     Dominate {
         at: u32,
@@ -81,6 +87,68 @@ const MUTATE_FRAMES: u32 = 61;
 /// Frames from the Psychic Dominator firing to its effect
 /// (`DominatorFireAtPercentage=` 20% into its animation). `[observed]`
 const DOMINATE_FRAMES: u32 = 37;
+/// Frames from the Weather Storm firing to its first strike on its target.
+/// `[observed]` (the cloud forms after `LightningDeferment=` 250)
+const STORM_FIRST_HIT: u32 = 323;
+/// Paratroopers: frames from firing to the first jump, between jumps, and
+/// how far a paratrooper falls a frame. Each lands under the plane (in the
+/// game, on a spot of the cell under it), which flies south over the target at 37 leptons a frame; the
+/// first jumps 940 leptons short of it (inside `ParadropRadius=`).
+/// `[observed]` (eight GIs; which spot of its cell each takes looks random)
+const PARA_FIRST: u32 = 179;
+const PARA_EVERY: u32 = 5;
+const PARA_FALL: i32 = 3;
+const PARA_PLANE_SPEED: i32 = 37;
+const PARA_FIRST_SHORT: i32 = 940;
+
+/// Superweapon effects due this frame: paratroopers falling and jumping,
+/// Brutes standing up, the Dominator, and units arriving through the
+/// Chronosphere.
+fn effects(world: &mut World, rules: &Rules, frame: u32) {
+    // Paratroopers fall. `[observed]`
+    for o in &mut world.objects {
+        if o.kind == Kind::Infantry && !o.limbo && o.coord.z > 0 && frame > o.placed + 1 {
+            o.coord.z = (o.coord.z - PARA_FALL).max(0);
+        }
+    }
+    let due: Vec<Later> = {
+        let (now, rest): (Vec<_>, Vec<_>) = world.later.drain(..).partition(|l| match l {
+            Later::Spawn { at, .. } | Later::Dominate { at, .. } | Later::Jump { at, .. } => {
+                *at <= frame
+            }
+        });
+        world.later = rest;
+        now
+    };
+    for l in due {
+        match l {
+            Later::Spawn {
+                techno,
+                owner,
+                coord,
+                ..
+            } => {
+                world.spawn(rules, techno, owner, coord);
+            }
+            Later::Dominate { house, cell, .. } => dominate(world, rules, frame, house, cell),
+            Later::Jump { id, coord, .. } => {
+                if let Some(o) = world.objects.iter_mut().find(|o| o.id == id) {
+                    o.limbo = false;
+                    o.coord = coord;
+                    // It starts falling the frame after next. `[observed]`
+                    o.placed = frame;
+                }
+            }
+        }
+    }
+    let (now, later): (Vec<_>, Vec<_>) = world.warps.drain(..).partition(|w| w.1 <= frame);
+    world.warps = later;
+    for (id, _, to) in now {
+        if let Some(o) = world.objects.iter_mut().find(|o| o.id == id) {
+            o.coord = to;
+        }
+    }
+}
 
 /// One frame of every house's superweapons, after power is worked out.
 ///
@@ -99,33 +167,7 @@ pub fn update(world: &mut World, rules: &Rules, frame: u32) {
     world
         .objects
         .retain(|o| o.dies_at.is_none_or(|d| d > frame));
-    let due: Vec<Later> = {
-        let (now, rest): (Vec<_>, Vec<_>) = world.later.drain(..).partition(|l| match l {
-            Later::Spawn { at, .. } | Later::Dominate { at, .. } => *at <= frame,
-        });
-        world.later = rest;
-        now
-    };
-    for l in due {
-        match l {
-            Later::Spawn {
-                techno,
-                owner,
-                coord,
-                ..
-            } => {
-                world.spawn(rules, techno, owner, coord);
-            }
-            Later::Dominate { house, cell, .. } => dominate(world, rules, frame, house, cell),
-        }
-    }
-    let (now, later): (Vec<_>, Vec<_>) = world.warps.drain(..).partition(|w| w.1 <= frame);
-    world.warps = later;
-    for (id, _, to) in now {
-        if let Some(o) = world.objects.iter_mut().find(|o| o.id == id) {
-            o.coord = to;
-        }
-    }
+    effects(world, rules, frame);
     // What each house's buildings give it, and since when.
     let mut given: Vec<(u32, usize, u32)> = Vec::new();
     for o in &world.objects {
@@ -200,10 +242,7 @@ fn land(world: &mut World, rules: &Rules, frame: u32) {
     let (now, later): (Vec<_>, Vec<_>) = world.strikes.drain(..).partition(|s| s.lands <= frame);
     world.strikes = later;
     for s in now {
-        let weapon = rules.weapon(s.weapon);
-        let Some(wh) = weapon.warhead.map(|w| rules.warhead(w)) else {
-            continue;
-        };
+        let wh = rules.warhead(s.warhead);
         let at = crate::coords::Coord {
             x: i32::from(s.cell.0) * crate::coords::LEPTONS_PER_CELL
                 + crate::coords::LEPTONS_PER_CELL / 2,
@@ -215,7 +254,7 @@ fn land(world: &mut World, rules: &Rules, frame: u32) {
             if o.limbo || o.shielded_until > frame {
                 continue;
             }
-            let full = wh.verses[rules.technos[o.techno].armor.index()].of(weapon.damage);
+            let full = wh.verses[rules.technos[o.techno].armor.index()].of(s.damage);
             let d = crate::hunt::distance(o.coord, at);
             o.health -= ra2_rules::production::splash(full, d, wh.cell_spread, wh.percent_at_max);
         }
@@ -266,6 +305,30 @@ fn warp(world: &mut World, rules: &Rules, frame: u32, house: u32, to: (i16, i16)
     }
 }
 
+/// The Iron Curtain: within `Range=` cells of the target, infantry die
+/// (taken away 15 frames later), everything else is invulnerable for
+/// `IronCurtainDuration=`. `[observed]` (a GI on the target died, one two
+/// cells off didn't; the invulnerability isn't observed yet)
+fn iron_curtain(world: &mut World, rules: &Rules, frame: u32, kind: usize, cell: (i16, i16)) {
+    let g = &rules.general;
+    let sw = &rules.super_weapons[kind];
+
+    let reach = sw.range.of(crate::coords::LEPTONS_PER_CELL);
+    let at = cell_centre(cell);
+    let until = frame + u32::try_from(g.iron_curtain_duration).unwrap_or(0);
+    for o in &mut world.objects {
+        if o.limbo || crate::hunt::distance(o.coord, at) > reach {
+            continue;
+        }
+        if o.kind == Kind::Infantry {
+            o.health = 0;
+            o.dies_at = Some(frame + INFANTRY_DEATH_FRAMES);
+        } else {
+            o.shielded_until = until;
+        }
+    }
+}
+
 /// The Genetic Mutator: infantry its warhead reaches (`CellSpread=`, and
 /// `Verses=` above nothing for their armour) die at once and stand up as
 /// the firing house's Brutes. `[observed]`
@@ -300,6 +363,92 @@ fn mutate(world: &mut World, rules: &Rules, frame: u32, house: u32, cell: (i16, 
                     coord,
                 });
             }
+        }
+    }
+}
+
+/// The Weather Storm: its target is struck every `LightningHitDelay=`
+/// frames from `STORM_FIRST_HIT` until the storm ends, `LightningDeferment=`
+/// and `LightningStormDuration=` after firing. `[observed]` (the random
+/// bolts round it use the game's random numbers and aren't modelled)
+fn storm(world: &mut World, rules: &Rules, frame: u32, cell: (i16, i16)) {
+    let g = &rules.general;
+    let Some(warhead) = g.lightning_warhead else {
+        return;
+    };
+
+    let end = frame + u32::try_from(g.lightning_deferment + g.lightning_duration).unwrap_or(0);
+    let step = u32::try_from(g.lightning_hit_delay.max(1)).unwrap_or(1);
+    let mut at = frame + STORM_FIRST_HIT;
+    while at < end {
+        world.strikes.push(crate::world::Strike {
+            lands: at,
+            cell,
+            damage: g.lightning_damage,
+            warhead,
+        });
+        at += step;
+    }
+}
+
+/// Paratroopers: the side's `…ParaDropInf=` come aboard at once (in limbo),
+/// then jump one at a time and fall to the ground. `[observed]`
+fn para_drop(
+    world: &mut World,
+    rules: &Rules,
+    frame: u32,
+    house: u32,
+    american: bool,
+    cell: (i16, i16),
+) {
+    let side = world
+        .houses
+        .get(usize::try_from(house).unwrap_or(usize::MAX))
+        .and_then(|h| rules.countries.iter().find(|c| c.id == h.country))
+        .map_or("GDI", |c| c.side.as_str())
+        .to_ascii_lowercase();
+    let key = if american {
+        "Amer"
+    } else {
+        match side.as_str() {
+            "nod" => "Sov",
+            "thirdside" => "Yuri",
+            _ => "Ally",
+        }
+    };
+    let Some((_, each)) = rules.general.para_drops.iter().find(|(k, _)| k == key) else {
+        return;
+    };
+    let target = cell_centre(cell);
+    let mut k = 0u32;
+    for (id, count) in each {
+        let Some(techno) = rules
+            .technos
+            .iter()
+            .position(|t| t.id.eq_ignore_ascii_case(id))
+        else {
+            continue;
+        };
+        for _ in 0..*count {
+            let o = world.spawn(rules, techno, house, crate::coords::Coord::default());
+            if let Some(obj) = world.objects.iter_mut().find(|x| x.id == o) {
+                obj.limbo = true;
+            }
+            let y = target.y - PARA_FIRST_SHORT
+                + PARA_PLANE_SPEED * i32::try_from(PARA_EVERY * k).unwrap_or(0);
+            // Where the plane is: we put each under it, not on the spot of
+            // its cell the game picks.
+            let ground = crate::coords::Coord {
+                x: target.x,
+                y,
+                z: rules.general.flight_level,
+            };
+            world.later.push(Later::Jump {
+                at: frame + PARA_FIRST + PARA_EVERY * k,
+                id: o,
+                coord: ground,
+            });
+            k += 1;
         }
     }
 }
@@ -379,24 +528,7 @@ pub fn fire(
     let g = &rules.general;
     let sw = &rules.super_weapons[kind];
     if sw.kind.eq_ignore_ascii_case("IronCurtain") {
-        // Within `Range=` cells of the target: infantry die (taken away 15
-        // frames later), everything else is invulnerable for
-        // `IronCurtainDuration=`. `[observed]` (a GI on the target died, one
-        // two cells off didn't; the invulnerability isn't observed yet)
-        let reach = sw.range.of(crate::coords::LEPTONS_PER_CELL);
-        let at = cell_centre(cell);
-        let until = frame + u32::try_from(g.iron_curtain_duration).unwrap_or(0);
-        for o in &mut world.objects {
-            if o.limbo || crate::hunt::distance(o.coord, at) > reach {
-                continue;
-            }
-            if o.kind == Kind::Infantry {
-                o.health = 0;
-                o.dies_at = Some(frame + INFANTRY_DEATH_FRAMES);
-            } else {
-                o.shielded_until = until;
-            }
-        }
+        iron_curtain(world, rules, frame, kind, cell);
     } else if sw.kind.eq_ignore_ascii_case("GeneticConverter") {
         mutate(world, rules, frame, house, cell);
     } else if sw.kind.eq_ignore_ascii_case("PsychicDominator") {
@@ -408,11 +540,28 @@ pub fn fire(
     } else if sw.kind.eq_ignore_ascii_case("MultiMissile")
         && let Some(weapon) = g.nuke_payload
     {
-        world.strikes.push(crate::world::Strike {
-            lands: frame + NUKE_FLIGHT_FRAMES,
+        let w = rules.weapon(weapon);
+        if let Some(warhead) = w.warhead {
+            world.strikes.push(crate::world::Strike {
+                lands: frame + NUKE_FLIGHT_FRAMES,
+                cell,
+                damage: w.damage,
+                warhead,
+            });
+        }
+    } else if sw.kind.eq_ignore_ascii_case("LightningStorm") {
+        storm(world, rules, frame, cell);
+    } else if sw.kind.eq_ignore_ascii_case("AmerParaDrop")
+        || sw.kind.eq_ignore_ascii_case("ParaDrop")
+    {
+        para_drop(
+            world,
+            rules,
+            frame,
+            house,
+            sw.kind.eq_ignore_ascii_case("AmerParaDrop"),
             cell,
-            weapon,
-        });
+        );
     }
     if sw.kind.eq_ignore_ascii_case("ForceShield") {
         let reach = g.force_shield_radius * crate::coords::LEPTONS_PER_CELL;
