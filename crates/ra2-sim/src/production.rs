@@ -397,21 +397,32 @@ pub fn update(world: &mut World, rules: &Rules, frame: u32) {
         {
             continue;
         }
-        f.stage += 1;
         // The next step is timed at the rate as it stands now; a change of
         // rate waits for it. `[recomp 0x004CA6E0]`
         f.next = frame + u32::try_from(f.rate).unwrap_or(1);
-        if f.stage < STEPS {
-            // What's still owed over the payments left. `[observed]`
-            let pay = f.owed / (STEPS - f.stage);
-            f.owed -= pay;
-            if let Some(h) = world
-                .houses
-                .get_mut(usize::try_from(f.house).unwrap_or(usize::MAX))
-            {
-                h.credits -= pay;
-            }
-        } else if f.kind != Kind::Building {
+        // Each step pays what's still owed over the payments left (the
+        // last, all that's left). A house that can't afford it doesn't take
+        // the step, and tries again a rate later. `[recomp 0x004C9B20]`
+        let stage = f.stage + 1;
+        let pay = if stage < STEPS {
+            f.owed / (STEPS - stage)
+        } else {
+            f.owed
+        }
+        .min(f.owed);
+        let Some(h) = world
+            .houses
+            .get_mut(usize::try_from(f.house).unwrap_or(usize::MAX))
+        else {
+            continue;
+        };
+        if pay > h.credits {
+            continue;
+        }
+        h.credits -= pay;
+        f.owed -= pay;
+        f.stage = stage;
+        if f.stage >= STEPS && f.kind != Kind::Building {
             f.exit_at = Some(frame + 1);
         }
     }
@@ -820,5 +831,60 @@ mod tests {
             (w.houses[0].power_output, w.houses[0].power_drain),
             (200, 0)
         );
+    }
+
+    #[test]
+    fn a_house_that_cannot_pay_waits_a_step_and_tries_again() {
+        let rules = Rules::from_ini(
+            &Ini::parse(
+                b"[General]\nBuildSpeed=.7\n[BuildingTypes]\n1=GACNST\n2=GAPOWR\n\
+                  [GACNST]\nStrength=1000\nFactory=BuildingType\n[GAPOWR]\nStrength=750\nCost=800\n",
+            ),
+            &Ini::parse(b"[GACNST]\nFoundation=4x4\n[GAPOWR]\nFoundation=2x2\n"),
+        );
+        let mut world = World::default();
+        world.add_house("British", 30);
+        let yard = rules
+            .technos
+            .iter()
+            .position(|t| t.id == "GACNST")
+            .expect("yard");
+        let plant = rules
+            .technos
+            .iter()
+            .position(|t| t.id == "GAPOWR")
+            .expect("plant");
+        world.spawn(
+            &rules,
+            yard,
+            0,
+            Coord {
+                x: 9216,
+                y: 9216,
+                z: 0,
+            },
+        );
+        order(
+            &mut world,
+            &rules,
+            1,
+            Build::Produce {
+                house: 0,
+                techno: plant,
+            },
+        );
+        for frame in 2..=40 {
+            update(&mut world, &rules, frame);
+        }
+        // Two payments of 15 (frames 10 and 19), then nothing left.
+        assert_eq!(world.houses[0].credits, 0);
+        assert_eq!(world.factories[0].stage, 2);
+        world.houses[0].credits = 100;
+        for frame in 41..=46 {
+            update(&mut world, &rules, frame);
+        }
+        // Retried every 9 frames (28, 37, 46): the third step on 46.
+        assert_eq!(world.factories[0].stage, 3);
+        assert_eq!(world.houses[0].credits, 85);
     }
 }
