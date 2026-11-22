@@ -87,13 +87,16 @@ pub fn setup(scenario: &Scenario, rules: &Rules, map: &Ini) -> World {
         .unwrap_or(human);
     let human_country = scenario.human_country.as_deref().unwrap_or(HUMAN.0);
     for (index, (country, start)) in [(human_country, human), (AI.0, ai)].into_iter().enumerate() {
-        // The base unit by side: the first for the Allies, the second for
-        // the Soviets.
+        // The base unit by side: Allies, Soviets, Yuri.
         let side = rules
             .countries
             .iter()
             .find(|c| c.id == country)
-            .map_or(0, |c| usize::from(c.side.eq_ignore_ascii_case("Nod")));
+            .map_or(0, |c| match c.side.to_ascii_lowercase().as_str() {
+                "nod" => 1,
+                "thirdside" => 2,
+                _ => 0,
+            });
         let Some(unit) = rules.general.base_units.get(side) else {
             continue;
         };

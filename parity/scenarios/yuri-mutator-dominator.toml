@@ -1,0 +1,220 @@
+name = "yuri-mutator-dominator"
+description = """
+The human plays Yuri: deploys, builds a Bio Reactor, a Genetic Mutator and
+a Psychic Dominator, and fires each at Neutral units well away from the
+base. The map's rules make both superweapon buildings cheap, powerless
+and buildable from the Construction Yard alone, recharging in 18
+seconds."""
+map = "parity_yuri_mutator_dominator.yrm"
+end_frame = 1900
+human_start = [35, 35]
+human_country = "YuriCountry"
+super_weapons = true
+
+[generate]
+name = "yuri-mutator-dominator"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[YAGNTC]
+Prerequisite=YACNST
+Cost=500
+Power=0
+
+[YAPPET]
+Prerequisite=YACNST
+Cost=500
+Power=0
+
+[GeneticConverterSpecial]
+RechargeTime=.3
+
+[PsychicDominatorSpecial]
+RechargeTime=.3
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+# The Genetic Mutator's targets: GIs on and beside the target and three
+# cells off, and a Grizzly.
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 45
+y = 25
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 46
+y = 25
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 45
+y = 28
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 44
+y = 25
+
+# The Psychic Dominator's: Grizzlies on the target and one, two and four
+# cells off, and a GI.
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 25
+y = 45
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 24
+y = 45
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 23
+y = 45
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 21
+y = 45
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 25
+y = 46
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "PCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "YAPOWR"
+
+[[order]]
+frame = 430
+what = "place"
+type = "YAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 440
+what = "produce"
+type = "YAGNTC"
+
+[[order]]
+frame = 720
+what = "place"
+type = "YAGNTC"
+x = 38
+y = 36
+
+[[order]]
+frame = 730
+what = "produce"
+type = "YAPPET"
+
+[[order]]
+frame = 1010
+what = "place"
+type = "YAPPET"
+x = 34
+y = 38
+
+[[order]]
+frame = 1100
+what = "fire"
+type = "GeneticConverterSpecial"
+x = 45
+y = 25
+
+[[order]]
+frame = 1400
+what = "fire"
+type = "PsychicDominatorSpecial"
+x = 25
+y = 45
+
+# Both superweapons granted and charged as the others.
+[[check]]
+what = "supers"
+house = 0
+at = 1012
+tolerance = 0
+
+# The Genetic Mutator at 1101: every GI within its warhead's 5 cells goes
+# at once (the one three cells off too); they stand up as Yuri's Brutes 61
+# or 62 frames later. The Neutral Grizzly isn't touched. (After that the
+# Brutes and the Grizzly fight, which isn't modelled yet.)
+[[check]]
+what = "supers"
+house = 0
+at = 1101
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "E1"
+owner = 2
+at = 1101
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "BRUTE"
+owner = 0
+at = 1163
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "MTNK"
+owner = 2
+at = 1163
+tolerance = 0
+
+# The Psychic Dominator at 1401: 37 frames on, the units within one cell of
+# the target (two Grizzlies and a GI) become Yuri's; the Grizzlies two and
+# four cells off stay Neutral. (By then the Brutes have destroyed the
+# Grizzly by the Mutator's target, so Neutral Grizzlies aren't counted.)
+[[check]]
+what = "supers"
+house = 0
+at = 1401
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "MTNK"
+owner = 0
+at = 1437
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "MTNK"
+owner = 0
+at = 1438
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "E1"
+owner = 0
+at = 1438
+tolerance = 0
