@@ -62,7 +62,7 @@ their art ships in); those are reported, not drawn.
 | Power and production | [production.md](production.md) | Parity-checked (deploy, queues, hold, selling, placing, vehicles, low power) |
 | Special abilities | | Not started |
 | Superweapons | [superweapons.md](superweapons.md) | Parity-checked (all nine; random storm bolts, planes and the spy reveal open) |
-| Repair, veterancy and crates | [repair.md](repair.md) | Parity-checked (self-healing, building repair); veterancy and crates to come |
+| Repair, veterancy and crates | [repair.md](repair.md) | Parity-checked (self-healing, building repair, experience); veterancy effects and crates to come |
 
 ## AI, campaigns and multiplayer (M5 onwards)
 

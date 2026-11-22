@@ -52,6 +52,36 @@ pub struct Object {
     /// Bails of ore or gems carried, when any.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub cargo: i32,
+    /// Experience (1 a veteran, 2 elite), in millionths: the game keeps a
+    /// float, logged as a number.
+    #[serde(
+        default,
+        rename = "vet",
+        skip_serializing_if = "is_zero_i64",
+        serialize_with = "micro::ser",
+        deserialize_with = "micro::de"
+    )]
+    pub vet_micros: i64,
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_zero_i64(v: &i64) -> bool {
+    *v == 0
+}
+
+/// Millionths, read and written as a plain number.
+mod micro {
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    #[allow(clippy::trivially_copy_pass_by_ref, clippy::cast_precision_loss)]
+    pub(super) fn ser<S: Serializer>(v: &i64, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_f64(*v as f64 / 1e6)
+    }
+
+    #[allow(clippy::cast_possible_truncation)]
+    pub(super) fn de<'d, D: Deserializer<'d>>(d: D) -> Result<i64, D::Error> {
+        Ok((f64::deserialize(d)? * 1e6).round() as i64)
+    }
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)]

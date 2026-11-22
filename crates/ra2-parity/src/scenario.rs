@@ -117,6 +117,15 @@ pub enum Check {
         #[serde(default)]
         tolerance: u32,
     },
+    /// Total experience of the matching objects at a frame, in
+    /// millionths (1 000 000 a veteran).
+    Experience {
+        #[serde(flatten)]
+        filter: Filter,
+        at: u32,
+        #[serde(default)]
+        tolerance: u32,
+    },
     /// A house's superweapons at a frame: which, charged, on hold, and
     /// frames left to charge (within the tolerance).
     Supers {

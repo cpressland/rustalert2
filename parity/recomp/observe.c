@@ -73,6 +73,7 @@ static void dump_vector(FILE *f, const char *what, uint32_t vec, uint32_t bytes)
 #define HOUSE_TYPE     0x34u        /* HouseTypeClass* */
 #define HOUSE_BALANCE  0x30Cu       /* int: credits */
 #define OBJ_HEALTH     0x6Cu        /* int */
+#define TECHNO_VETERANCY 0x150u     /* float */
 #define OBJ_LOCATION   0x9Cu        /* CoordStruct: three ints, leptons */
 #define TECHNO_OWNER   0x21Cu       /* HouseClass* */
 #define TECHNO_STORAGE 0x33Cu       /* float[4], bails of each ore kind */
@@ -151,6 +152,12 @@ static void write_frame(uint32_t frame) {
                 float v; memcpy(&v, &bits, 4); sum += v;
             }
             if (sum != 0) fprintf(g_out, ",\"cargo\":%d", (int)sum);
+        }
+        {
+            /* Experience: a float, 1 a veteran and 2 elite. */
+            uint32_t bits = rd32(o + TECHNO_VETERANCY);
+            float v; memcpy(&v, &bits, 4);
+            if (v != 0) fprintf(g_out, ",\"vet\":%.9g", (double)v);
         }
         fputs("}", g_out);
         first = 0;
