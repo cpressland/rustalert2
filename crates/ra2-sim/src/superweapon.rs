@@ -168,6 +168,9 @@ pub fn update(world: &mut World, rules: &Rules, frame: u32) {
         .objects
         .retain(|o| o.dies_at.is_none_or(|d| d > frame));
     effects(world, rules, frame);
+    // Damage re-counts its owner's power at once. `[observed]` (a Bio
+    // Reactor hit by a Dominator: its output fell the same frame)
+    crate::production::power(world, rules, frame);
     // What each house's buildings give it, and since when.
     let mut given: Vec<(u32, usize, u32)> = Vec::new();
     for o in &world.objects {
@@ -242,21 +245,58 @@ fn land(world: &mut World, rules: &Rules, frame: u32) {
     let (now, later): (Vec<_>, Vec<_>) = world.strikes.drain(..).partition(|s| s.lands <= frame);
     world.strikes = later;
     for s in now {
-        let wh = rules.warhead(s.warhead);
-        let at = crate::coords::Coord {
-            x: i32::from(s.cell.0) * crate::coords::LEPTONS_PER_CELL
-                + crate::coords::LEPTONS_PER_CELL / 2,
-            y: i32::from(s.cell.1) * crate::coords::LEPTONS_PER_CELL
-                + crate::coords::LEPTONS_PER_CELL / 2,
-            z: 0,
-        };
-        for o in &mut world.objects {
-            if o.limbo || o.shielded_until > frame {
-                continue;
+        area_damage(world, rules, frame, s.cell, s.damage, s.warhead);
+    }
+    world
+        .objects
+        .retain(|o| o.health > 0 || o.dies_at.is_some());
+}
+
+/// A blast round `cell`: `damage` after the warhead's `Verses=` for each
+/// object's armour, falling off over its `CellSpread=` (see
+/// `production::splash`). A unit takes it by its distance from the cell's
+/// centre; a building takes it once for each cell of its foundation within
+/// the spread, by that cell's distance, each share truncated. `[observed]`
+/// (a Dominator blast took 82 from a Construction Yard: five cells at 6%)
+fn area_damage(
+    world: &mut World,
+    rules: &Rules,
+    frame: u32,
+    cell: (i16, i16),
+    damage: i32,
+    warhead: ra2_rules::WarheadId,
+) {
+    let wh = rules.warhead(warhead);
+    let at = cell_centre(cell);
+    let splash = |full: i32, d: i32| {
+        ra2_rules::production::splash(full, d, wh.cell_spread, wh.percent_at_max)
+    };
+    for o in &mut world.objects {
+        if o.limbo || o.shielded_until > frame {
+            continue;
+        }
+        let t = &rules.technos[o.techno];
+        let full = wh.verses[t.armor.index()].of(damage);
+        if o.kind == Kind::Building {
+            let (w, h) = t.foundation;
+            let x0 = (o.coord.x - w * crate::coords::LEPTONS_PER_CELL / 2)
+                .div_euclid(crate::coords::LEPTONS_PER_CELL);
+            let y0 = (o.coord.y - h * crate::coords::LEPTONS_PER_CELL / 2)
+                .div_euclid(crate::coords::LEPTONS_PER_CELL);
+            for y in y0..y0 + h {
+                for x in x0..x0 + w {
+                    let c = crate::coords::Coord {
+                        x: x * crate::coords::LEPTONS_PER_CELL
+                            + crate::coords::LEPTONS_PER_CELL / 2,
+                        y: y * crate::coords::LEPTONS_PER_CELL
+                            + crate::coords::LEPTONS_PER_CELL / 2,
+                        z: 0,
+                    };
+                    o.health -= splash(full, crate::hunt::distance(c, at));
+                }
             }
-            let full = wh.verses[rules.technos[o.techno].armor.index()].of(s.damage);
-            let d = crate::hunt::distance(o.coord, at);
-            o.health -= ra2_rules::production::splash(full, d, wh.cell_spread, wh.percent_at_max);
+        } else {
+            o.health -= splash(full, crate::hunt::distance(o.coord, at));
         }
     }
     world
@@ -461,7 +501,6 @@ fn dominate(world: &mut World, rules: &Rules, frame: u32, house: u32, cell: (i16
     let g = &rules.general;
     let at = cell_centre(cell);
     let reach = g.dominator_capture_range * crate::coords::LEPTONS_PER_CELL;
-    let wh = g.dominator_warhead.map(|w| rules.warhead(w));
     for o in &mut world.objects {
         if o.limbo {
             continue;
@@ -470,12 +509,9 @@ fn dominate(world: &mut World, rules: &Rules, frame: u32, house: u32, cell: (i16
         if o.kind != Kind::Building && d <= reach {
             o.owner = house;
         }
-        if let Some(wh) = wh
-            && o.shielded_until <= frame
-        {
-            let full = wh.verses[rules.technos[o.techno].armor.index()].of(g.dominator_damage);
-            o.health -= ra2_rules::production::splash(full, d, wh.cell_spread, wh.percent_at_max);
-        }
+    }
+    if let Some(warhead) = g.dominator_warhead {
+        area_damage(world, rules, frame, cell, g.dominator_damage, warhead);
     }
     world
         .objects
@@ -605,7 +641,8 @@ mod tests {
         let rules = Rules::from_ini(
             &Ini::parse(
                 b"[SuperWeaponTypes]\n1=ForceShieldSpecial\n[ForceShieldSpecial]\nRechargeTime=.5\nIsPowered=yes\n\
-                  [BuildingTypes]\n1=GATECH\n[GATECH]\nStrength=500\nSuperWeapon=ForceShieldSpecial\n",
+                  [BuildingTypes]\n1=GATECH\n2=DRAIN\n[GATECH]\nStrength=500\nSuperWeapon=ForceShieldSpecial\n\
+                  [DRAIN]\nStrength=500\nPower=-100\n",
             ),
             &Ini::parse(b""),
         );
@@ -618,11 +655,12 @@ mod tests {
         assert!(world.supers.is_empty(), "not until the frame after");
         update(&mut world, &rules, 902);
         assert_eq!(world.supers[0].left(902), 449);
-        world.houses[0].power_drain = 100;
+        // Something that draws power, and nothing to make it.
+        world.spawn(&rules, 1, 0, Coord::default());
         update(&mut world, &rules, 1051);
         assert!(world.supers[0].on_hold);
         assert_eq!(world.supers[0].left(1500), 301);
-        world.houses[0].power_drain = 0;
+        world.objects.truncate(1);
         update(&mut world, &rules, 2042);
         assert_eq!(world.supers[0].left(2042), 300);
         update(&mut world, &rules, 2342);

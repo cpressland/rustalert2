@@ -1,0 +1,176 @@
+name = "yuri-heal-repair"
+description = """
+Self-healing and repair. Neutral units start half-damaged far from
+everything: a War Miner (SelfHealing=yes), a Rhino and a Conscript
+(neither heals). The human plays Yuri: builds a Bio Reactor and a (cheap)
+Psychic Dominator, fires it seven cells from the reactor (its warhead hits
+only buildings, and leaves no radiation), then orders the damaged reactor
+repaired. Covers self-healing, the Dominator's damage to buildings, and
+building repair and its cost."""
+map = "parity_yuri_heal_repair.yrm"
+end_frame = 2600
+human_start = [35, 35]
+human_country = "YuriCountry"
+super_weapons = true
+
+[generate]
+name = "yuri-heal-repair"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[YAPPET]
+Prerequisite=YACNST
+Cost=500
+Power=0
+
+[PsychicDominatorSpecial]
+RechargeTime=.3
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "HARV"
+x = 45
+y = 22
+health = 128
+
+[[generate.unit]]
+owner = "Neutral"
+type = "HTNK"
+x = 48
+y = 22
+health = 128
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E2"
+x = 46
+y = 25
+health = 128
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "PCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "YAPOWR"
+
+[[order]]
+frame = 430
+what = "place"
+type = "YAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 440
+what = "produce"
+type = "YAPPET"
+
+[[order]]
+frame = 720
+what = "place"
+type = "YAPPET"
+x = 34
+y = 38
+
+[[order]]
+frame = 1100
+what = "fire"
+type = "PsychicDominatorSpecial"
+x = 46
+y = 35
+
+[[order]]
+frame = 1300
+what = "repair"
+type = "YAPOWR"
+
+# Self-healing: the War Miner gains 1 hit point on each frame of the repair
+# clock (1 + every 14), and the Rhino and Conscript don't.
+[[check]]
+what = "hp"
+type = "HARV"
+owner = 2
+at = 1000
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "HARV"
+owner = 2
+at = 2600
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "HTNK"
+owner = 2
+at = 2600
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "E2"
+owner = 2
+at = 2600
+tolerance = 0
+
+# The Dominator's blast at 1138: the reactor takes it once for each of its
+# cells within the spread.
+[[check]]
+what = "hp"
+type = "YAPOWR"
+at = 1138
+tolerance = 0
+
+[[check]]
+what = "power"
+house = 0
+at = 1138
+tolerance = 0
+
+# Repair: 8 hit points for a credit on each frame of the clock from 1303,
+# and the output follows a frame later.
+[[check]]
+what = "hp"
+type = "YAPOWR"
+at = 1303
+tolerance = 0
+
+[[check]]
+what = "power"
+house = 0
+at = 1303
+tolerance = 0
+
+[[check]]
+what = "credits"
+house = 0
+at = 1303
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "YAPOWR"
+at = 1639
+tolerance = 0
+
+[[check]]
+what = "credits"
+house = 0
+at = 2600
+tolerance = 0
+
+[[check]]
+what = "power"
+house = 0
+at = 2600
+tolerance = 0

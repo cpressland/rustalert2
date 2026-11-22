@@ -254,6 +254,8 @@ pub struct TechnoType {
     pub build_time_multiplier: Ratio,
     /// Buildings: a wall (`Wall=`), built slower.
     pub wall: bool,
+    /// Heals itself (`SelfHealing=`).
+    pub self_healing: bool,
     /// What selling it pays, if set (`Soylent=`) instead of a share of
     /// its cost.
     pub soylent: i32,
@@ -421,6 +423,12 @@ pub struct General {
     pub wall_build_speed: Ratio,
     /// Aircraft's height in flight, in leptons (`FlightLevel=`).
     pub flight_level: i32,
+    /// Repair: minutes between steps (`RepairRate=`), hit points a step
+    /// (`RepairStep=`), and the share of a building's cost a full repair
+    /// costs (`RepairPercent=`).
+    pub repair_rate: Ratio,
+    pub repair_step: i32,
+    pub repair_percent: Ratio,
     /// The Nuke's blast (`[NukePayload]`).
     pub nuke_payload: Option<WeaponId>,
     /// The Genetic Mutator's warhead (`[SpecialWeapons]
@@ -656,6 +664,7 @@ impl Rules {
                         .and_then(|s| s.get("BuildTimeMultiplier"))
                         .map_or(Ratio::ONE, Ratio::from_value_f32),
                     wall: flag(s, "Wall", false),
+                    self_healing: flag(s, "SelfHealing", false),
                     soylent: int(s, "Soylent", 0),
                     adjacent: int(s, "Adjacent", 3),
                     base_normal: flag(s, "BaseNormal", true),
@@ -885,6 +894,17 @@ impl Rules {
                     "1",
                 ),
                 flight_level: int(rules.section("General"), "FlightLevel", 1500),
+                repair_rate: ratio(
+                    rules.section("General"),
+                    "RepairRate",
+                    Ratio::from_value(".016"),
+                ),
+                repair_step: int(rules.section("General"), "RepairStep", 8),
+                repair_percent: ratio(
+                    rules.section("General"),
+                    "RepairPercent",
+                    Ratio::from_value("15%"),
+                ),
                 nuke_payload: Some(nuke_payload),
                 mutate_warhead,
                 dominator_warhead,

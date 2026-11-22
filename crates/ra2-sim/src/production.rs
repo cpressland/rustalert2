@@ -89,6 +89,10 @@ pub enum Build {
         house: u32,
         techno: usize,
     },
+    Repair {
+        house: u32,
+        techno: usize,
+    },
 }
 
 /// A building's top-left cell.
@@ -334,6 +338,14 @@ pub fn order(world: &mut World, rules: &Rules, frame: u32, build: Build) {
                 abandon(world, rules, frame, k);
             }
         }
+        Build::Repair { house, techno } => {
+            // Toggles repairing the house's first building of the type.
+            if let Some(b) = world.objects.iter_mut().find(|o| {
+                o.owner == house && o.techno == techno && o.kind == Kind::Building && !o.limbo
+            }) {
+                b.repairing = !b.repairing;
+            }
+        }
         Build::Hold { house, techno } => {
             // It stops after this frame's step. `[observed]`
             if let Some(f) = world
@@ -446,6 +458,48 @@ pub fn update(world: &mut World, rules: &Rules, frame: u32) {
     }
     walk_out(world, rules, frame);
     power(world, rules, frame);
+}
+
+/// Self-healing and repair, on the frames of the repair clock (1 + every
+/// `RepairRate=`): self-healing objects get 1 hit point; buildings being
+/// repaired get `RepairStep=` for what that costs (see
+/// `production::repair_step_cost`), and stop once whole. `[observed]`
+/// (`yuri-heal-repair`; what happens when the house can't pay isn't
+/// recorded: we stop)
+pub(crate) fn heal(world: &mut World, rules: &Rules, frame: u32) {
+    let every = u32::try_from(ra2_rules::production::repair_frames(rules)).unwrap_or(1);
+    if frame == 0 || !(frame - 1).is_multiple_of(every) {
+        return;
+    }
+    for i in 0..world.objects.len() {
+        let o = &world.objects[i];
+        if o.limbo || o.health <= 0 {
+            continue;
+        }
+        let t = &rules.technos[o.techno];
+        if o.health >= t.strength {
+            if o.repairing {
+                world.objects[i].repairing = false;
+            }
+            continue;
+        }
+        if o.repairing {
+            let cost = ra2_rules::production::repair_step_cost(rules, t);
+            let owner = usize::try_from(o.owner).unwrap_or(usize::MAX);
+            let Some(h) = world.houses.get_mut(owner) else {
+                continue;
+            };
+            if h.credits < cost {
+                world.objects[i].repairing = false;
+                continue;
+            }
+            h.credits -= cost;
+            let o = &mut world.objects[i];
+            o.health = (o.health + rules.general.repair_step).min(t.strength);
+        } else if t.self_healing {
+            world.objects[i].health += 1;
+        }
+    }
 }
 
 /// Deploys that are due: the unit goes and its building stands centred on
@@ -715,7 +769,7 @@ fn walk_out(world: &mut World, rules: &Rules, frame: u32) {
 /// frame after they're placed, and what they draw, from the frame they're
 /// placed. A change re-times the house's factories. `[recomp 0x00508C30]`
 /// (timing `[observed]`)
-fn power(world: &mut World, rules: &Rules, frame: u32) {
+pub(crate) fn power(world: &mut World, rules: &Rules, frame: u32) {
     let before: Vec<(i32, i32)> = world
         .houses
         .iter()

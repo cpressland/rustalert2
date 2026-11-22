@@ -129,6 +129,29 @@ pub fn splash(damage: i32, distance: i32, spread: i32, percent_at_max: crate::Ra
     (X80::int(damage) * X80::double(falloff)).trunc()
 }
 
+/// Frames between repair steps, and self-healing's: `RepairRate=`
+/// (minutes) × 900, truncated (0.016 gives 14). `[observed]` (both step on
+/// the same frames, 1 + 14k, as if on one game-wide clock)
+pub fn repair_frames(rules: &Rules) -> i32 {
+    (X80::double(rules.general.repair_rate.value()) * X80::double(900.0))
+        .trunc()
+        .max(1)
+}
+
+/// What one repair step of `t` costs: its cost × `RepairPercent=` ×
+/// `RepairStep=` ÷ `Strength=`, truncated. `[observed]` (a Bio Reactor,
+/// 600 credits and 700 hit points: 1 credit for each 8)
+pub fn repair_step_cost(rules: &Rules, t: &TechnoType) -> i32 {
+    if t.strength <= 0 {
+        return 0;
+    }
+    (X80::int(t.cost)
+        * X80::double(rules.general.repair_percent.value())
+        * X80::int(rules.general.repair_step)
+        / X80::int(t.strength))
+    .trunc()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

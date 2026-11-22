@@ -189,6 +189,7 @@ pub fn observer_orders(scenario: &Scenario, rules: &Rules) -> String {
             Some(match o.what {
                 OrderKind::Deploy => format!("{} D {}", o.frame, o.type_id),
                 OrderKind::Sell => format!("{} S {}", o.frame, o.type_id),
+                OrderKind::Repair => format!("{} R {}", o.frame, o.type_id),
                 OrderKind::Abandon => {
                     let (kind, index) = type_index(rules, &o.type_id)?;
                     format!("{} A {} {index} 0", o.frame, type_rtti(kind))
@@ -343,6 +344,7 @@ pub fn sim_orders(scenario: &Scenario, rules: &Rules) -> Vec<(u32, Order)> {
                     cell,
                 },
                 OrderKind::Sell => Build::Sell { house, techno },
+                OrderKind::Repair => Build::Repair { house, techno },
                 OrderKind::Abandon => Build::Abandon { house, techno },
                 OrderKind::Hold => Build::Hold { house, techno },
                 OrderKind::Fire => return None,

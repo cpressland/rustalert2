@@ -168,6 +168,10 @@ impl Sim {
             crate::harvest::update(&mut self.world, rules, &mut self.rng, self.frame + 1);
             crate::production::update(&mut self.world, rules, self.frame + 1);
             crate::superweapon::update(&mut self.world, rules, self.frame + 1);
+            // Repair lands after the frame's power count, so a repaired
+            // plant's output follows a frame later. `[observed]`
+            // (`yuri-heal-repair`)
+            crate::production::heal(&mut self.world, rules, self.frame + 1);
         }
         self.frame += 1;
         events
