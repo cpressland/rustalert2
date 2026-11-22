@@ -75,6 +75,26 @@ pub fn build_time(rules: &Rules, t: &TechnoType, output: i32, drain: i32, factor
     time
 }
 
+/// What a building adds to its house's power: its `Power=` × its health
+/// ratio, truncated. `[recomp 0x0044E7B0]` (drawing power isn't scaled:
+/// `0x0044E880`)
+pub fn power_output(power: i32, health: i32, strength: i32) -> i32 {
+    if power <= 0 || strength <= 0 {
+        return 0;
+    }
+    ftol(f64::from(health) / f64::from(strength) * f64::from(power))
+}
+
+/// What selling `t` pays a human player's house: `Soylent=` if set, else
+/// its cost × `RefundPercent=`, truncated (the country multipliers are 1
+/// so far). `[recomp 0x00711F60]`
+pub fn refund(rules: &Rules, t: &TechnoType) -> i32 {
+    if t.soylent != 0 {
+        return t.soylent;
+    }
+    ftol(f64::from(t.cost) * rules.general.refund_percent.value())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

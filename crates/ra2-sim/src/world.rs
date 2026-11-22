@@ -77,6 +77,8 @@ pub struct Object {
     /// The frame a building was placed on (power output counts from the
     /// next).
     pub placed: u32,
+    /// The frame it was sold on, while it's being sold.
+    pub sold_at: Option<u32>,
 }
 
 /// Ore or gems on a cell.
@@ -215,6 +217,7 @@ impl World {
             harvest: crate::harvest::Harvest::default(),
             limbo: false,
             placed: 0,
+            sold_at: None,
         });
         Some(id)
     }
@@ -240,6 +243,7 @@ impl World {
             harvest: crate::harvest::Harvest::default(),
             limbo: false,
             placed: 0,
+            sold_at: None,
         });
         id
     }

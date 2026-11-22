@@ -246,6 +246,9 @@ pub struct TechnoType {
     pub build_time_multiplier: Ratio,
     /// Buildings: a wall (`Wall=`), built slower.
     pub wall: bool,
+    /// What selling it pays, if set (`Soylent=`) instead of a share of
+    /// its cost.
+    pub soylent: i32,
     /// Bails a harvester holds, or a refinery stores (`Storage=`).
     pub storage: i32,
     /// The buildings it docks with (`Dock=`).
@@ -388,6 +391,17 @@ pub struct General {
     pub low_power_penalty: Ratio,
     /// How much slower walls build (`WallBuildSpeedCoefficient=`).
     pub wall_build_speed: Ratio,
+    /// The share of cost a sale pays back (`RefundPercent=`, a float when
+    /// applied).
+    pub refund_percent: Ratio,
+    /// The buildings that satisfy the generic prerequisites `POWER`,
+    /// `FACTORY`, `BARRACKS`, `RADAR`, `TECH` and `PROC`
+    /// (`Prerequisite<Name>=`).
+    pub prerequisite_groups: Vec<(String, Vec<String>)>,
+    /// The soldier that comes out of a sold or destroyed building, by side
+    /// (`AlliedCrew=`, `SovietCrew=`).
+    pub allied_crew: Option<String>,
+    pub soviet_crew: Option<String>,
 }
 
 /// `[CombatDamage]`.
@@ -574,6 +588,7 @@ impl Rules {
                         .and_then(|s| s.get("BuildTimeMultiplier"))
                         .map_or(Ratio::ONE, Ratio::from_value_f32),
                     wall: flag(s, "Wall", false),
+                    soylent: int(s, "Soylent", 0),
                     storage: int(s, "Storage", 0),
                     dock: list(s, "Dock"),
                     queueing_cell: text(a, "QueueingCell")
@@ -765,6 +780,16 @@ impl Rules {
                     "LowPowerPenaltyModifier",
                     "1",
                 ),
+                refund_percent: f32_ratio(rules.section("General"), "RefundPercent", "50%"),
+                prerequisite_groups: ["POWER", "FACTORY", "BARRACKS", "RADAR", "TECH", "PROC"]
+                    .iter()
+                    .map(|g| {
+                        let key = format!("Prerequisite{}{}", &g[..1], g[1..].to_ascii_lowercase());
+                        ((*g).to_string(), list(rules.section("General"), &key))
+                    })
+                    .collect(),
+                allied_crew: text(rules.section("General"), "AlliedCrew"),
+                soviet_crew: text(rules.section("General"), "SovietCrew"),
                 wall_build_speed: ratio(
                     rules.section("General"),
                     "WallBuildSpeedCoefficient",

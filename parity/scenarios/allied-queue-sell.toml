@@ -1,0 +1,183 @@
+name = "allied-queue-sell"
+description = """
+The British player builds a power plant and a barracks, queues three GIs,
+starts a refinery, then sells the power plant. Selling lets out a crew GI,
+pays half the plant's cost back 50 frames later, cuts the power, and
+cancels the refinery (its POWER prerequisite is gone), refunding what was
+paid. A GI part-built when the power goes slows to its low-power steps
+from its next step; another is built at low power and a third cancelled.
+The later order to place the refinery finds nothing to place.
+
+Which cell each GI walks to on leaving the barracks isn't modelled (the
+game's choice looks random), so GIs are counted, not placed."""
+map = "parity_allied_queue_sell.yrm"
+end_frame = 2500
+human_start = [35, 35]
+
+[generate]
+name = "allied-queue-sell"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+
+[[generate.house]]
+name = "Neutral"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAPILE"
+
+[[order]]
+frame = 900
+what = "place"
+type = "GAPILE"
+x = 38
+y = 37
+
+[[order]]
+frame = 910
+what = "produce"
+type = "E1"
+
+[[order]]
+frame = 911
+what = "produce"
+type = "E1"
+
+[[order]]
+frame = 912
+what = "produce"
+type = "E1"
+
+[[order]]
+frame = 915
+what = "produce"
+type = "GAREFN"
+
+[[order]]
+frame = 1300
+what = "sell"
+type = "GAPOWR"
+
+[[order]]
+frame = 1310
+what = "produce"
+type = "E1"
+
+[[order]]
+frame = 1600
+what = "produce"
+type = "E1"
+
+[[order]]
+frame = 1650
+what = "abandon"
+type = "E1"
+
+[[order]]
+frame = 2200
+what = "place"
+type = "GAREFN"
+x = 40
+y = 32
+
+# The queue: each GI starts the frame the one before walks out.
+[[check]]
+what = "credits"
+house = 0
+at = 1130
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "E1"
+owner = 0
+at = 1250
+tolerance = 0
+
+# Selling: the crew is out two frames in; the plant goes at 50 frames with
+# its refund, and the refinery's production is cancelled and refunded.
+[[check]]
+what = "count"
+type = "E1"
+owner = 0
+at = 1303
+tolerance = 0
+
+[[check]]
+what = "event"
+type = "GAPOWR"
+owner = 0
+event = "removed"
+window = 0
+
+[[check]]
+what = "event"
+type = "GAREFN"
+owner = 0
+event = "removed"
+window = 0
+
+[[check]]
+what = "credits"
+house = 0
+at = 1351
+tolerance = 0
+
+[[check]]
+what = "power"
+house = 0
+at = 1351
+tolerance = 0
+
+# Low power: 4-frame steps.
+[[check]]
+what = "credits"
+house = 0
+at = 1450
+tolerance = 0
+
+[[check]]
+what = "event"
+type = "E1"
+owner = 0
+event = "removed"
+window = 0
+
+[[check]]
+what = "credits"
+house = 0
+at = 1660
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "E1"
+owner = 0
+at = 2500
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "GAREFN"
+owner = 0
+at = 2500
+tolerance = 0
