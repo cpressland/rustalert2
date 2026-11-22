@@ -592,6 +592,33 @@ fn leave(world: &mut World, rules: &Rules, frame: u32, f: &Factory) {
     };
     let (x0, y0) = top_left(rules, &world.objects[fi]);
     let (w, h) = rules.technos[world.objects[fi].techno].foundation;
+    if f.kind == Kind::Aircraft {
+        // On the first free pad: the factory's centre plus its docking
+        // offset. `[observed]` (a Harrier on an Air Force Command's first)
+        let centre = world.objects[fi].coord;
+        let pads = &rules.technos[world.objects[fi].techno].docking_offsets;
+        let spot = |&(dx, dy): &(i32, i32)| Coord {
+            x: centre.x + dx,
+            y: centre.y + dy,
+            z: 0,
+        };
+        let free = pads
+            .iter()
+            .map(spot)
+            .find(|p| {
+                !world
+                    .objects
+                    .iter()
+                    .any(|o| o.kind == Kind::Aircraft && !o.limbo && o.coord == *p)
+            })
+            .unwrap_or(Coord { z: 0, ..centre });
+        if let Some(o) = world.objects.iter_mut().find(|o| Some(o.id) == f.object) {
+            o.limbo = false;
+            o.coord = free;
+            o.placed = frame;
+        }
+        return;
+    }
     if f.kind != Kind::Infantry {
         let at = world.objects[fi].coord;
         let goal = Coord {

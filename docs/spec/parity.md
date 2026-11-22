@@ -78,7 +78,7 @@ end frame, observing every frame from 1. Then
 With the Hunt mission (#38, #40, #41) and the game's route planner (#39),
 all 20 checks of the four `*-hunts-mcv*` scenarios pass, and with the
 Harvest mission (#42) all 12 of `harvester-ore`, and with production
-(#43) all 12 of `allied-base` and of `allied-queue-sell`, and the 11 of `allied-war-factory`. The reference logs stay on the developer's
+(#43) all 12 of `allied-base` and of `allied-queue-sell`, the 11 of `allied-war-factory` and the 6 of `allied-air`. The reference logs stay on the developer's
 machine; CI runs `engine::hunt_tests`, which replays the Grizzly scenario
 from rules values written into the test.
 

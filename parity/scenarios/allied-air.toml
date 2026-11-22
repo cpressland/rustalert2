@@ -1,0 +1,106 @@
+name = "allied-air"
+description = """
+The British player builds a power plant, a refinery and an Air Force
+Command, then a Harrier. Covers aircraft production: an aircraft factory's
+build time and where a finished aircraft appears (on its pad)."""
+map = "parity_allied_air.yrm"
+end_frame = 3400
+human_start = [35, 35]
+
+[generate]
+name = "allied-air"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+
+[[generate.house]]
+name = "Neutral"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAREFN"
+
+[[order]]
+frame = 1860
+what = "place"
+type = "GAREFN"
+x = 40
+y = 32
+
+[[order]]
+frame = 1870
+what = "produce"
+type = "GAAIRC"
+
+[[order]]
+frame = 2470
+what = "place"
+type = "GAAIRC"
+x = 38
+y = 37
+
+[[order]]
+frame = 2480
+what = "produce"
+type = "ORCA"
+
+# The Air Force Command: placed, drawing 50.
+[[check]]
+what = "power"
+house = 0
+at = 2471
+tolerance = 0
+
+# The Harrier: 13-frame steps (1200 × 0.7 × 0.9 is 755.99… on the x87,
+# truncated to 755), waiting in limbo at the flight level, then on the
+# first pad the frame after its 54th step.
+[[check]]
+what = "credits"
+house = 0
+at = 2500
+tolerance = 0
+
+[[check]]
+what = "credits"
+house = 0
+at = 3180
+tolerance = 0
+
+[[check]]
+what = "position"
+type = "ORCA"
+owner = 0
+at = 3183
+tolerance = 0
+
+[[check]]
+what = "position"
+type = "ORCA"
+owner = 0
+at = 3184
+tolerance = 0
+
+[[check]]
+what = "position"
+type = "GAAIRC"
+owner = 0
+at = 3400
+tolerance = 0
