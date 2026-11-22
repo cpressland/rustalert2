@@ -152,6 +152,23 @@ pub fn repair_step_cost(rules: &Rules, t: &TechnoType) -> i32 {
     .trunc()
 }
 
+/// Experience after a kill worth `worth` (the victim's cost; twice that
+/// for a veteran victim, three times for elite) by a unit costing `cost`,
+/// from `experience` (a float's bits) to the new float's bits: worth ÷
+/// (cost × `VeteranRatio=`) added on, capped at `VeteranCap=`, all on the
+/// x87. `[recomp 0x0074FF50]` (`grizzly-veteran`: 3000 ÷ 2100 gave
+/// 1.42857146)
+pub fn experience_after_kill(rules: &Rules, experience: u32, worth: i32, cost: i32) -> u32 {
+    let g = &rules.general;
+    if cost <= 0 {
+        return experience;
+    }
+    let total = X80::float(experience)
+        + X80::int(worth) / (X80::int(cost) * X80::double(g.veteran_ratio.value()));
+    let cap = X80::double(g.veteran_cap.value());
+    if cap <= total { cap } else { total }.to_float()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

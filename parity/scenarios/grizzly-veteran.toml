@@ -1,0 +1,63 @@
+name = "grizzly-veteran"
+description = """
+Veterancy. A Neutral Grizzly on Hunt drives to the idle human player's MCV
+(made weaker by the map's rules, so it falls to the seventh shell) and
+destroys it. The MCV's cost of 3000 earns the Grizzly (cost 700,
+VeteranRatio=3) 3000 ÷ 2100 of experience: a veteran. The human has lost
+then, so the recording ends soon after. The AI starts in the far corner and
+doesn't reach the area in time."""
+map = "parity_grizzly_veteran.yrm"
+end_frame = 620
+human_start = [35, 35]
+
+[generate]
+name = "grizzly-veteran"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[AMCV]
+Strength=400
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 47
+y = 50
+facing = 64
+mission = "Hunt"
+
+# Tolerances: shots land within a couple of frames of the original's (the
+# gap between them varies with the seed; see grizzly-hunts-mcv).
+
+# The seventh shell kills the MCV, and the kill makes the Grizzly a
+# veteran: 3000 ÷ (700 × 3), as the game's float. (A crew GI steps out of
+# the wreck and dies to the blast; neither is modelled yet.)
+[[check]]
+what = "hp"
+type = "AMCV"
+at = 500
+tolerance = 0
+
+[[check]]
+what = "event"
+type = "AMCV"
+owner = 0
+event = "removed"
+window = 2
+
+[[check]]
+what = "experience"
+type = "MTNK"
+at = 530
+tolerance = 0
+
+[[check]]
+what = "experience"
+type = "MTNK"
+at = 560
+tolerance = 0

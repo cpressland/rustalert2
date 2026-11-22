@@ -89,6 +89,25 @@ pub struct Object {
     pub dies_at: Option<u32>,
     /// A building its owner has ordered repaired.
     pub repairing: bool,
+    /// Experience, the bits of the float the game keeps (`TechnoClass
+    /// +0x150`): 1 makes a veteran, 2 elite. See `Object::experience`.
+    pub experience_bits: u32,
+}
+
+impl Object {
+    /// 0 a rookie, 1 a veteran, 2 elite: experience of 1 or more, and 2
+    /// or more. Positive floats order as their bits do. `[recomp
+    /// 0x0074FF90]`
+    pub fn rank(&self) -> u8 {
+        const ONE: u32 = 0x3F80_0000;
+        const TWO: u32 = 0x4000_0000;
+        match self.experience_bits {
+            b if b >> 31 == 1 => 0,
+            b if b >= TWO => 2,
+            b if b >= ONE => 1,
+            _ => 0,
+        }
+    }
 }
 
 /// Something on its way down: a superweapon's missile.
@@ -136,6 +155,8 @@ impl Ore {
 /// A shell or bullet on its way.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Shot {
+    /// Who fired it, to credit the kill.
+    pub shooter: u32,
     pub target: u32,
     pub weapon: ra2_rules::WeaponId,
     /// The frame it hits on.
@@ -251,6 +272,7 @@ impl World {
             shielded_until: 0,
             dies_at: None,
             repairing: false,
+            experience_bits: 0,
         });
         Some(id)
     }
@@ -280,6 +302,7 @@ impl World {
             shielded_until: 0,
             dies_at: None,
             repairing: false,
+            experience_bits: 0,
         });
         id
     }

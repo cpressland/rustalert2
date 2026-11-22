@@ -223,6 +223,26 @@ pub fn compare(s: &Scenario, reference: &Log, candidate: Option<&Log>) -> Vec<Ou
                     pass: within(r, k, *tolerance),
                 }
             }
+            Check::Experience {
+                filter,
+                at,
+                tolerance,
+            } => {
+                let vet = |l: &Log| {
+                    l.at(*at)
+                        .map(|f| selected(Some(f), filter).iter().map(|o| o.vet_micros).sum())
+                };
+                let (r, k) = (vet(reference), candidate.and_then(|_| vet(cand)));
+                Outcome {
+                    check: format!(
+                        "experience (millionths) of {} at {at} (±{tolerance})",
+                        label(filter)
+                    ),
+                    reference: show(r),
+                    candidate: show(k),
+                    pass: within(r, k, *tolerance),
+                }
+            }
             Check::Supers {
                 house,
                 at,

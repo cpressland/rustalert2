@@ -343,7 +343,9 @@ fn fire(
     } else {
         0
     };
+    let shooter = o.id;
     world.shots.push(Shot {
+        shooter,
         target,
         weapon: w,
         lands: frame + 1 + u32::try_from(flight).unwrap_or(0),
@@ -366,7 +368,7 @@ fn land(world: &mut World, rules: &Rules, frame: u32) {
             continue;
         };
         // A building under the Force Shield takes nothing. `[hypothesis]`
-        if o.shielded_until > frame {
+        if o.shielded_until > frame || o.health <= 0 {
             continue;
         }
         let armor = rules.technos[o.techno].armor;
@@ -374,10 +376,34 @@ fn land(world: &mut World, rules: &Rules, frame: u32) {
             rules.warhead(wh).verses[armor.index()].of(weapon.damage)
         });
         o.health -= damage;
+        if o.health <= 0 {
+            let (victim, rank, owner) = (o.techno, o.rank(), o.owner);
+            credit(world, rules, s.shooter, victim, rank, owner);
+        }
     }
     world
         .objects
         .retain(|o| o.health > 0 || o.dies_at.is_some());
+}
+
+/// A kill's experience for its shooter, if it's trainable and the victim
+/// isn't its own side's (see `production::experience_after_kill`).
+/// `[recomp 0x00702D50]`
+fn credit(world: &mut World, rules: &Rules, shooter: u32, victim: usize, rank: u8, owner: u32) {
+    let Some(k) = world.objects.iter().position(|x| x.id == shooter) else {
+        return;
+    };
+    let t = &rules.technos[world.objects[k].techno];
+    if !t.trainable || world.objects[k].owner == owner {
+        return;
+    }
+    let worth = rules.technos[victim].cost * (i32::from(rank) + 1);
+    world.objects[k].experience_bits = ra2_rules::production::experience_after_kill(
+        rules,
+        world.objects[k].experience_bits,
+        worth,
+        t.cost,
+    );
 }
 
 #[cfg(test)]

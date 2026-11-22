@@ -256,6 +256,13 @@ pub struct TechnoType {
     pub wall: bool,
     /// Heals itself (`SelfHealing=`).
     pub self_healing: bool,
+    /// Gains experience from its kills (`Trainable=`; buildings no by
+    /// default, others yes).
+    pub trainable: bool,
+    /// What being a veteran and elite give it (`VeteranAbilities=`,
+    /// `EliteAbilities=`; an elite has both).
+    pub veteran_abilities: Vec<String>,
+    pub elite_abilities: Vec<String>,
     /// What selling it pays, if set (`Soylent=`) instead of a share of
     /// its cost.
     pub soylent: i32,
@@ -429,6 +436,17 @@ pub struct General {
     pub repair_rate: Ratio,
     pub repair_step: i32,
     pub repair_percent: Ratio,
+    /// Veterancy: kills worth this many times a unit's cost make it a
+    /// veteran, and twice that elite (`VeteranRatio=`); experience stops at
+    /// `VeteranCap=`; and what being a veteran does to damage dealt
+    /// (`VeteranCombat=`), reload (`VeteranROF=`), damage taken
+    /// (`VeteranArmor=`) and speed (`VeteranSpeed=`).
+    pub veteran_ratio: Ratio,
+    pub veteran_cap: Ratio,
+    pub veteran_combat: Ratio,
+    pub veteran_rof: Ratio,
+    pub veteran_armor: Ratio,
+    pub veteran_speed: Ratio,
     /// The Nuke's blast (`[NukePayload]`).
     pub nuke_payload: Option<WeaponId>,
     /// The Genetic Mutator's warhead (`[SpecialWeapons]
@@ -665,6 +683,9 @@ impl Rules {
                         .map_or(Ratio::ONE, Ratio::from_value_f32),
                     wall: flag(s, "Wall", false),
                     self_healing: flag(s, "SelfHealing", false),
+                    trainable: flag(s, "Trainable", kind != Kind::Building),
+                    veteran_abilities: list(s, "VeteranAbilities"),
+                    elite_abilities: list(s, "EliteAbilities"),
                     soylent: int(s, "Soylent", 0),
                     adjacent: int(s, "Adjacent", 3),
                     base_normal: flag(s, "BaseNormal", true),
@@ -904,6 +925,36 @@ impl Rules {
                     rules.section("General"),
                     "RepairPercent",
                     Ratio::from_value("15%"),
+                ),
+                veteran_ratio: ratio(
+                    rules.section("General"),
+                    "VeteranRatio",
+                    Ratio::from_value("3.0"),
+                ),
+                veteran_cap: ratio(
+                    rules.section("General"),
+                    "VeteranCap",
+                    Ratio::from_value("2"),
+                ),
+                veteran_combat: ratio(
+                    rules.section("General"),
+                    "VeteranCombat",
+                    Ratio::from_value("1.1"),
+                ),
+                veteran_rof: ratio(
+                    rules.section("General"),
+                    "VeteranROF",
+                    Ratio::from_value("0.6"),
+                ),
+                veteran_armor: ratio(
+                    rules.section("General"),
+                    "VeteranArmor",
+                    Ratio::from_value("1.5"),
+                ),
+                veteran_speed: ratio(
+                    rules.section("General"),
+                    "VeteranSpeed",
+                    Ratio::from_value("1.2"),
                 ),
                 nuke_payload: Some(nuke_payload),
                 mutate_warhead,

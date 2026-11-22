@@ -110,6 +110,8 @@ A scenario is TOML in `parity/scenarios/`:
   - `count` of matching objects at a frame;
   - `credits` of a house at a frame;
   - `hp`: total hit points of matching objects at a frame;
+  - `experience`: total experience of matching objects at a frame, in
+    millionths (the observer logs it as `vet`; 1 000 000 a veteran);
   - `power`: a house's power produced and drawn at a frame;
   - `supers`: a house's superweapons at a frame (each one's type, charged,
     on hold, and frames left within the tolerance);

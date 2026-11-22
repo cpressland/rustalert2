@@ -4,8 +4,8 @@
 //! answers there: `1200 × 0.7 × 0.9` is 755.99… on the x87, so a Harrier
 //! takes 755 frames, but exactly 756 in doubles. `[observed]` (`allied-air`)
 //!
-//! Only multiply, divide and truncation are needed; values are positive or
-//! zero.
+//! Only multiply, divide, add, comparison, truncation and storing as a
+//! float are needed; values are positive or zero.
 
 /// `man × 2^exp`, with `man`'s top bit set, or zero.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -89,6 +89,95 @@ impl X80 {
     }
 }
 
+impl X80 {
+    /// `fld dword`: a float, exactly, from its bits.
+    pub fn float(bits: u32) -> X80 {
+        let e = i32::try_from((bits >> 23) & 0xFF).unwrap_or(0);
+        let frac = u64::from(bits & ((1 << 23) - 1));
+        if bits >> 31 == 1 || e == 0 && frac == 0 {
+            return X80::ZERO;
+        }
+        if e == 0 {
+            return X80::normal(frac, -149);
+        }
+        X80::normal(frac | (1 << 23), e - 150)
+    }
+
+    /// `fstp dword`: rounded to a float, nearest even, as its bits.
+    /// Values past a float's range aren't needed.
+    pub fn to_float(self) -> u32 {
+        if self.man == 0 {
+            return 0;
+        }
+        // man × 2^exp, man's top bit at 63: keep 24 bits.
+        let kept = self.man >> 40;
+        let rest = self.man & ((1 << 40) - 1);
+        let half = 1u64 << 39;
+        let up = rest > half || rest == half && kept & 1 == 1;
+        let (mut kept, mut exp) = (kept, self.exp + 40);
+        if up {
+            kept += 1;
+            if kept == 1 << 24 {
+                kept >>= 1;
+                exp += 1;
+            }
+        }
+        // kept × 2^exp, with kept's top bit at 23: biased exponent.
+        let biased = exp + 23 + 127;
+        if biased <= 0 {
+            return 0;
+        }
+        (u32::try_from(biased).unwrap_or(0xFE) << 23)
+            | u32::try_from(kept & ((1 << 23) - 1)).unwrap_or(0)
+    }
+}
+
+/// `fadd`.
+impl std::ops::Add for X80 {
+    type Output = X80;
+    fn add(self, o: X80) -> X80 {
+        if self.man == 0 {
+            return o;
+        }
+        if o.man == 0 {
+            return self;
+        }
+        let (big, small) = if self.exp >= o.exp {
+            (self, o)
+        } else {
+            (o, self)
+        };
+        let shift = u32::try_from(big.exp - small.exp).unwrap_or(u32::MAX);
+        // Both in a 128-bit field, the larger at the top less one bit.
+        let a = u128::from(big.man) << 63;
+        let (b, sticky) = if shift >= 126 {
+            (0, true)
+        } else {
+            let wide = u128::from(small.man) << 63;
+            (wide >> shift, wide & ((1u128 << shift) - 1) != 0)
+        };
+        X80::round(a + b, big.exp - 63, sticky)
+    }
+}
+
+/// Comparison, as `fcom` orders positive values.
+impl PartialOrd for X80 {
+    fn partial_cmp(&self, o: &X80) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(o))
+    }
+}
+
+impl Ord for X80 {
+    fn cmp(&self, o: &X80) -> std::cmp::Ordering {
+        match (self.man == 0, o.man == 0) {
+            (true, true) => std::cmp::Ordering::Equal,
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => self.exp.cmp(&o.exp).then(self.man.cmp(&o.man)),
+        }
+    }
+}
+
 /// `fmul`.
 impl std::ops::Mul for X80 {
     type Output = X80;
@@ -138,6 +227,19 @@ mod tests {
             503,
             "the power plant: 503, though its steps are 9 either way"
         );
+    }
+
+    #[test]
+    fn floats_load_add_and_store() {
+        let third = X80::int(3000) / (X80::int(700) * X80::double(3.0));
+        assert_eq!(f32::from_bits(third.to_float()), 1.428_571_5);
+        assert_eq!(third.to_float(), 0x3FB6_DB6E);
+        let more =
+            X80::float(third.to_float()) + X80::int(200) / (X80::int(700) * X80::double(3.0));
+        assert_eq!(f32::from_bits(more.to_float()), 1.523_809_5);
+        assert_eq!(X80::float(1.5f32.to_bits()).to_float(), 1.5f32.to_bits());
+        assert!(X80::double(2.0) <= X80::int(2));
+        assert!(X80::double(2.0) > X80::float(1.5f32.to_bits()));
     }
 
     #[test]

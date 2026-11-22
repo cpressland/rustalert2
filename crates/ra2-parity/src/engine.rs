@@ -295,6 +295,8 @@ pub fn observe(sim: &Sim, rules: &Rules) -> Frame {
                 },
                 hp: o.health,
                 cargo: o.cargo,
+                #[allow(clippy::cast_possible_truncation)]
+                vet_micros: (f64::from(f32::from_bits(o.experience_bits)) * 1e6).round() as i64,
             })
             .collect(),
         ore: world

@@ -1,10 +1,11 @@
 # Repair, self-healing, veterancy and crates
 
-**Status:** Parity-checked (self-healing, building repair). Veterancy is
-traced but not yet modelled; crates and repair by depots, IFVs and
-engineers are still to come.
+**Status:** Parity-checked (self-healing, building repair, experience
+from kills). Still to come: veterancy's effects, crates, and repair by
+depots, IFVs and engineers.
 **Crate:** `ra2-rules` (`production::repair_frames`,
-`production::repair_step_cost`), `ra2-sim` (`production::heal`)
+`production::repair_step_cost`, `production::experience_after_kill`),
+`ra2-sim` (`production::heal`, `hunt::credit`)
 **Issue:** #46
 
 ## Scope
@@ -28,6 +29,10 @@ here too, because the repair scenario damages its building that way.
     blast catches one reactor cell;
   - at 1300 the player orders the damaged reactor repaired (event 21,
     `REPAIR`).
+- Scenario `grizzly-veteran`:
+  - a Neutral Grizzly on Hunt destroys the human player's MCV, weakened by
+    the map's rules;
+  - the observer logs each techno's experience.
 
 ## Behaviour
 
@@ -77,19 +82,42 @@ here too, because the repair scenario damages its building that way.
   - It took 82 from a Construction Yard: five cells, 18 + 18 + 18 + 16 +
     12, at 6% against concrete.
 
-### Veterancy (traced, not yet modelled)
+### Veterancy
 
-- A unit's experience is a float at `TechnoClass +0x150`. `[recomp]`
-- A kill adds the victim's cost ÷ (the killer's cost × `VeteranRatio=`),
-  capped at `VeteranCap=`. `[recomp 0x0074FF50]`
-- It reaches veteran at 1 and elite at 2. `[community]`
+- A unit's experience is a float at `TechnoClass +0x150`. `[recomp]` It's
+  a veteran from 1 and elite from 2. `[recomp 0x0074FF90]`
+- When a kill is credited, the killer gains the victim's cost ÷ (its own
+  cost × `VeteranRatio=`). The game does this on the x87, adds it to the
+  float, caps it at `VeteranCap=` and stores it as a float.
+  `[recomp 0x0074FF50]`
+  - A Grizzly (700) that killed an MCV (3000) had 1.42857146.
+    `[observed]`
+  - It killed a GI (200) next, and had 1.52380955. `[observed]`
+- Some kills are worth more or nothing. `[recomp 0x00702D50]`
+  - A veteran victim is worth twice its cost, and an elite one three
+    times.
+  - A kill of the killer's ally is worth nothing. We count only a kill
+    of a house's own units as an ally's.
+  - Only a `Trainable=` killer gains. By default buildings aren't, and
+    everything else is.
+  - Both costs are worked out with the victim's house's cost multiplier.
+    We use the plain cost.
+- Veterancy's effects are still to come. A veteran Grizzly's
+  (`VeteranAbilities=STRONGER,FIREPOWER,SIGHT,FASTER`) shells hurt a GI
+  for 17, against 16 before. Its reload stayed at 60 to 62 frames, since
+  `ROF` is only among its elite abilities. `[observed]`
 
 ## Open questions
 
 - Repair by the Service Depot, the IFV and engineers needs move and enter
   orders, which the scripted orders can't give yet.
-- Veterancy needs kills credited to their shooter, and then a scenario
-  where a unit makes enough kills to be promoted.
+- Veterancy's effects, `VeteranCombat=` and the rest, still need
+  modelling. So does the crew that steps out of a destroyed vehicle or
+  building and the blast that can kill it. Neither has been checked
+  against the original yet.
+- When a unit attacks a building, the original fires while still driving
+  up, and stops elsewhere than our hunt does. A Grizzly shelling a
+  Construction Yard fired 5 frames sooner than ours.
 - Crates depend on the game's random numbers: what's in each one, and
   where new ones appear.
 
@@ -97,4 +125,5 @@ here too, because the repair scenario damages its building that way.
 
 | Scenario | Checks | Tolerance |
 |---|---|---|
+| `grizzly-veteran` | The MCV's health at 500, the frame it's destroyed, and the Grizzly's experience at 530 and 560 | exact; the kill ±2 frames |
 | `yuri-heal-repair` | The War Miner's health at 1000 and 2600, and the Rhino's and Conscript's at 2600. The reactor's health at 1138, 1303 and 1639. The house's power at 1138, 1303 and 2600. Its credits at 1303 and 2600. | exact |
