@@ -182,6 +182,9 @@ static void write_frame(uint32_t frame) {
      P <rtti> <index> <naval>     produce
      A <rtti> <index> <naval>     abandon (cancel) that production
      H <rtti> <index> <naval>     hold (suspend) it; produce again resumes
+     F <super> <x> <y>            fire superweapon <super> (its type's
+                                  index) at a cell: SPECIAL_PLACE, layout
+                                  from 0x004C6B60
      L <rtti> <index> <naval> <x> <y>   place at a cell
    Layout from the constructors at 0x004C65E0, 0x004C6970, 0x004C6AE0. */
 #define OUTLIST        0xA802C8u
@@ -223,6 +226,16 @@ static void run_orders(uint32_t frame) {
                 fprintf(g_out, "# order %u %s %s id %u\n", frame, kind == 'D' ? "deploy" : "sell", arg, id);
                 break;
             }
+        } else if (kind == 'F') {
+            int sw, x, y;
+            if (sscanf(o, "%u %c %d %d %d", &at, &kind, &sw, &x, &y) != 5) continue;
+            int16_t cx = (int16_t)x, cy = (int16_t)y;
+            ev[0] = 18;                         /* SPECIAL_PLACE */
+            memcpy(ev + 7, &sw, 4);
+            memcpy(ev + 0xB, &cx, 2);
+            memcpy(ev + 0xD, &cy, 2);
+            queue_event(ev);
+            fprintf(g_out, "# order %u fire %d at %d,%d\n", frame, sw, x, y);
         } else if (kind == 'P' || kind == 'L' || kind == 'A' || kind == 'H') {
             int rtti, index, naval, x = 0, y = 0;
             int n = sscanf(o, "%u %c %d %d %d %d %d", &at, &kind, &rtti, &index, &naval, &x, &y);

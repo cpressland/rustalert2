@@ -414,6 +414,13 @@ pub struct General {
     pub wall_build_speed: Ratio,
     /// Aircraft's height in flight, in leptons (`FlightLevel=`).
     pub flight_level: i32,
+    /// The Force Shield: how far round its target buildings are shielded
+    /// (cells), for how long, and how long its house's power is out
+    /// (frames). `ForceShieldRadius=`, `ForceShieldDuration=`,
+    /// `ForceShieldBlackoutDuration=`.
+    pub force_shield_radius: i32,
+    pub force_shield_duration: i32,
+    pub force_shield_blackout: i32,
     /// The share of cost a sale pays back (`RefundPercent=`, a float when
     /// applied).
     pub refund_percent: Ratio,
@@ -830,6 +837,13 @@ impl Rules {
                     "1",
                 ),
                 flight_level: int(rules.section("General"), "FlightLevel", 1500),
+                force_shield_radius: int(rules.section("General"), "ForceShieldRadius", 4),
+                force_shield_duration: int(rules.section("General"), "ForceShieldDuration", 500),
+                force_shield_blackout: int(
+                    rules.section("General"),
+                    "ForceShieldBlackoutDuration",
+                    1000,
+                ),
                 refund_percent: f32_ratio(rules.section("General"), "RefundPercent", "50%"),
                 prerequisite_groups: ["POWER", "FACTORY", "BARRACKS", "RADAR", "TECH", "PROC"]
                     .iter()

@@ -104,6 +104,69 @@ pub fn update(world: &mut World, rules: &Rules, frame: u32) {
     }
 }
 
+/// Fire a house's charged superweapon at `cell`, on the frame the order
+/// takes effect: its charge starts again from the frame before.
+/// `[observed]` Then its effect:
+///
+/// - **Force Shield** (`Type=ForceShield`): the house's buildings within
+///   `ForceShieldRadius` cells are shielded for `ForceShieldDuration`
+///   frames `[hypothesis]` (not observed: nothing attacks them yet), and
+///   the house makes no power from the next frame until
+///   `ForceShieldBlackoutDuration` frames after the charge restarted.
+///   `[observed]` (`allied-force-shield`: out from 2402 to 3399)
+pub fn fire(
+    world: &mut World,
+    rules: &Rules,
+    frame: u32,
+    house: u32,
+    kind: usize,
+    cell: (i16, i16),
+) {
+    let Some(s) = world
+        .supers
+        .iter_mut()
+        .find(|s| s.house == house && s.kind == kind && s.charged)
+    else {
+        return;
+    };
+    s.charged = false;
+    s.start = Some(frame - 1);
+    s.frames = recharge_frames(&rules.super_weapons[kind]);
+    let g = &rules.general;
+    if rules.super_weapons[kind]
+        .kind
+        .eq_ignore_ascii_case("ForceShield")
+    {
+        let reach = g.force_shield_radius * crate::coords::LEPTONS_PER_CELL;
+        let at = crate::coords::Coord {
+            x: i32::from(cell.0) * crate::coords::LEPTONS_PER_CELL
+                + crate::coords::LEPTONS_PER_CELL / 2,
+            y: i32::from(cell.1) * crate::coords::LEPTONS_PER_CELL
+                + crate::coords::LEPTONS_PER_CELL / 2,
+            z: 0,
+        };
+        let until = frame + u32::try_from(g.force_shield_duration).unwrap_or(0);
+        for o in &mut world.objects {
+            if o.owner == house
+                && o.kind == Kind::Building
+                && !o.limbo
+                && crate::hunt::distance(o.coord, at) <= reach
+            {
+                o.shielded_until = until;
+            }
+        }
+        if let Some(h) = world
+            .houses
+            .get_mut(usize::try_from(house).unwrap_or(usize::MAX))
+        {
+            h.blackout = Some((
+                frame + 1,
+                frame - 1 + u32::try_from(g.force_shield_blackout).unwrap_or(0),
+            ));
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

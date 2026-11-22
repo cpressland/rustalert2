@@ -19,6 +19,9 @@ pub struct House {
     /// Power produced and drawn by its buildings.
     pub power_output: i32,
     pub power_drain: i32,
+    /// A blackout (the Force Shield's): no power made from the first frame
+    /// to before the second.
+    pub blackout: Option<(u32, u32)>,
 }
 
 /// What an object is doing.
@@ -79,6 +82,8 @@ pub struct Object {
     pub placed: u32,
     /// The frame it was sold on, while it's being sold.
     pub sold_at: Option<u32>,
+    /// Shielded (the Force Shield) until this frame: it takes no damage.
+    pub shielded_until: u32,
 }
 
 /// Ore or gems on a cell.
@@ -157,6 +162,7 @@ impl World {
             credits,
             power_output: 0,
             power_drain: 0,
+            blackout: None,
         });
         index
     }
@@ -220,6 +226,7 @@ impl World {
             limbo: false,
             placed: 0,
             sold_at: None,
+            shielded_until: 0,
         });
         Some(id)
     }
@@ -246,6 +253,7 @@ impl World {
             limbo: false,
             placed: 0,
             sold_at: None,
+            shielded_until: 0,
         });
         id
     }

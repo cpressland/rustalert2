@@ -736,8 +736,13 @@ fn power(world: &mut World, rules: &Rules, frame: u32) {
         else {
             continue;
         };
+        let dark = h
+            .blackout
+            .is_some_and(|(from, to)| (from..to).contains(&frame));
         if t.power > 0 && frame > o.placed {
-            h.power_output += power_output(t.power, o.health, t.strength);
+            if !dark {
+                h.power_output += power_output(t.power, o.health, t.strength);
+            }
         } else if t.power < 0 {
             h.power_drain -= t.power;
         }

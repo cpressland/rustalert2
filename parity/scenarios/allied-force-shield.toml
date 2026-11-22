@@ -4,10 +4,11 @@ The British player builds a power plant and a Battle Lab, which brings the
 Force Shield. The map's rules make the Battle Lab cheap and buildable from
 the Construction Yard alone, and the Force Shield recharge in half a
 minute, so the scenario records quickly. The power plant is sold while
-the Force Shield charges, and another built: covers granting a
-superweapon, its recharge, and what low power does to it."""
+the Force Shield charges, and another built; then it's fired at the
+Battle Lab. Covers granting a superweapon, its recharge, what low power
+does to it, firing it, and the Force Shield's blackout."""
 map = "parity_allied_force_shield.yrm"
-end_frame = 2600
+end_frame = 3600
 human_start = [35, 35]
 super_weapons = true
 
@@ -74,6 +75,13 @@ type = "GAPOWR"
 x = 38
 y = 34
 
+[[order]]
+frame = 2400
+what = "fire"
+type = "ForceShieldSpecial"
+x = 39
+y = 38
+
 # The Battle Lab gives the Force Shield the frame after it's placed, timed
 # from the frame it was placed (450 frames here).
 [[check]]
@@ -125,4 +133,49 @@ tolerance = 0
 what = "power"
 house = 0
 at = 2042
+tolerance = 0
+
+# Fired at 2401: the charge restarts from 2400, and the house's power is
+# out from 2402 until 3400 (ForceShieldBlackoutDuration 1000), so the
+# charge holds until then.
+[[check]]
+what = "supers"
+house = 0
+at = 2401
+tolerance = 0
+
+[[check]]
+what = "power"
+house = 0
+at = 2401
+tolerance = 0
+
+[[check]]
+what = "power"
+house = 0
+at = 2402
+tolerance = 0
+
+[[check]]
+what = "supers"
+house = 0
+at = 3000
+tolerance = 0
+
+[[check]]
+what = "power"
+house = 0
+at = 3399
+tolerance = 0
+
+[[check]]
+what = "power"
+house = 0
+at = 3400
+tolerance = 0
+
+[[check]]
+what = "supers"
+house = 0
+at = 3600
 tolerance = 0

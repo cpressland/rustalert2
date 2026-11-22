@@ -365,6 +365,10 @@ fn land(world: &mut World, rules: &Rules, frame: u32) {
         let Some(o) = world.objects.iter_mut().find(|o| o.id == s.target) else {
             continue;
         };
+        // A building under the Force Shield takes nothing. `[hypothesis]`
+        if o.shielded_until > frame {
+            continue;
+        }
         let armor = rules.technos[o.techno].armor;
         let damage = weapon.warhead.map_or(weapon.damage, |wh| {
             rules.warhead(wh).verses[armor.index()].of(weapon.damage)

@@ -75,6 +75,12 @@ pub enum Order {
     Roll { min: i32, max: i32 },
     /// Deploy, produce or place (see `production`).
     Build(crate::production::Build),
+    /// Fire a house's superweapon (a `[SuperWeaponTypes]` index) at a cell.
+    Fire {
+        house: u32,
+        kind: usize,
+        cell: (i16, i16),
+    },
 }
 
 /// Something that happened in a frame, for the presentation and the logs.
@@ -141,6 +147,18 @@ impl Sim {
                 Order::Build(b) => {
                     if let Some(rules) = &self.rules {
                         crate::production::order(&mut self.world, rules, self.frame + 1, b);
+                    }
+                }
+                Order::Fire { house, kind, cell } => {
+                    if let Some(rules) = &self.rules {
+                        crate::superweapon::fire(
+                            &mut self.world,
+                            rules,
+                            self.frame + 1,
+                            house,
+                            kind,
+                            cell,
+                        );
                     }
                 }
             }
