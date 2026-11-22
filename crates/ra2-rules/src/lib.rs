@@ -11,6 +11,7 @@
 
 pub mod production;
 pub mod scenario;
+pub mod x87;
 
 use std::collections::BTreeMap;
 
@@ -256,6 +257,9 @@ pub struct TechnoType {
     pub base_normal: bool,
     /// Buildings: a unit that comes with it (`FreeUnit=`).
     pub free_unit: Option<String>,
+    /// Buildings: where aircraft land on it, from its centre in leptons
+    /// (the art's `DockingOffset0=` and on).
+    pub docking_offsets: Vec<(i32, i32)>,
     /// Buildings: a defence (`BuildCat=Combat`), built at the country's
     /// defence rate.
     pub combat: bool,
@@ -405,6 +409,8 @@ pub struct General {
     pub low_power_penalty: Ratio,
     /// How much slower walls build (`WallBuildSpeedCoefficient=`).
     pub wall_build_speed: Ratio,
+    /// Aircraft's height in flight, in leptons (`FlightLevel=`).
+    pub flight_level: i32,
     /// The share of cost a sale pays back (`RefundPercent=`, a float when
     /// applied).
     pub refund_percent: Ratio,
@@ -606,6 +612,14 @@ impl Rules {
                     adjacent: int(s, "Adjacent", 3),
                     base_normal: flag(s, "BaseNormal", true),
                     free_unit: text(s, "FreeUnit"),
+                    docking_offsets: (0..)
+                        .map_while(|n| text(a, &format!("DockingOffset{n}")))
+                        .map(|v| {
+                            let p = parse_list(&v);
+                            let at = |i: usize| p.get(i).map_or(0, |s| atoi(s));
+                            (at(0), at(1))
+                        })
+                        .collect(),
                     combat: text(s, "BuildCat")
                         .is_some_and(|c| c.trim().eq_ignore_ascii_case("Combat")),
                     storage: int(s, "Storage", 0),
@@ -807,6 +821,7 @@ impl Rules {
                     "LowPowerPenaltyModifier",
                     "1",
                 ),
+                flight_level: int(rules.section("General"), "FlightLevel", 1500),
                 refund_percent: f32_ratio(rules.section("General"), "RefundPercent", "50%"),
                 prerequisite_groups: ["POWER", "FACTORY", "BARRACKS", "RADAR", "TECH", "PROC"]
                     .iter()

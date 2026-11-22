@@ -1,11 +1,10 @@
 //! How long things take to build. See `docs/spec/production.md`.
 //!
-//! The game works this out in floating point (doubles, some values held as
-//! singles). IEEE arithmetic on doubles and singles is exact and the same on
-//! every platform, and the game runs the x87 at 53-bit precision, so doing
-//! the same operations here gives the game's results; only integers leave
-//! this module.
+//! The game works this out on the x87, in extended precision, from doubles
+//! and singles; [`crate::x87`] does the same multiplies and divides with
+//! integers, so only integers leave this module and every platform agrees.
 
+use crate::x87::X80;
 use crate::{Rules, TechnoType};
 
 /// Steps a factory counts through to finish anything. `[observed]` (53
@@ -26,20 +25,11 @@ fn power_ratio(output: i32, drain: i32) -> f32 {
     }
 }
 
-/// x86's truncating conversion.
-#[allow(clippy::cast_possible_truncation)]
-fn ftol(v: f64) -> i32 {
-    if v.is_finite() && v.abs() < 2_147_483_648.0 {
-        v.trunc() as i32
-    } else {
-        i32::MIN
-    }
-}
-
 /// Frames to build `t` for a house with `output`/`drain` power and
 /// `factories` factories of its kind. `[recomp 0x006F47A0, 0x00711EE0]`
 ///
-/// 1. `Cost × BuildSpeed × 0.9`, truncated;
+/// 1. `Cost × BuildSpeed × 0.9`, truncated (on the x87: a power plant at
+///    800 takes 503 frames, not 504);
 /// 2. × the country's multiplier for the kind (`BuildTimeInfantryMult=`
 ///    and so on; defences are buildings with `BuildCat=Combat`), truncated;
 /// 3. × `BuildTimeMultiplier=`, truncated;
@@ -58,8 +48,9 @@ pub fn build_time(
     factories: i32,
 ) -> i32 {
     let g = &rules.general;
-    let base = ftol(f64::from(t.cost) * g.build_speed.value() * 0.9);
-    let mult = country.map_or(1.0, |c| {
+    let x = |r: crate::Ratio| X80::double(r.value());
+    let base = (X80::int(t.cost) * x(g.build_speed) * X80::double(0.9)).trunc();
+    let mult = country.map_or(crate::Ratio::ONE, |c| {
         let i = match t.kind {
             crate::Kind::Infantry => 0,
             crate::Kind::Vehicle => 1,
@@ -67,10 +58,12 @@ pub fn build_time(
             crate::Kind::Building if t.combat => 4,
             crate::Kind::Building => 3,
         };
-        c.build_time_mults[i].value()
+        c.build_time_mults[i]
     });
-    let base = ftol(f64::from(base) * mult);
-    let time = ftol(f64::from(base) * t.build_time_multiplier.value());
+    let base = (X80::int(base) * x(mult)).trunc();
+    let time = (X80::int(base) * x(t.build_time_multiplier)).trunc();
+    // The speed's arithmetic is exact (singles and their products), so
+    // doubles give it as the x87 does.
     let ratio = power_ratio(output, drain);
     let mut speed = 1.0 - (1.0 - f64::from(ratio)) * g.low_power_penalty.value();
     if speed <= g.min_low_power_speed.value() {
@@ -80,16 +73,16 @@ pub fn build_time(
         speed = g.max_low_power_speed.value();
     }
     if speed == 0.0 {
-        speed = 0.01;
+        speed = f64::from(0.01_f32);
     }
-    let mut time = ftol(f64::from(time) / speed);
+    let mut time = (X80::int(time) / X80::double(speed)).trunc();
     if g.multiple_factory.value() > 0.0 {
         for _ in 1..factories {
-            time = ftol(f64::from(time) * g.multiple_factory.value());
+            time = (X80::int(time) * x(g.multiple_factory)).trunc();
         }
     }
     if t.wall && t.kind == crate::Kind::Building {
-        time = ftol(f64::from(time) * g.wall_build_speed.value());
+        time = (X80::int(time) * x(g.wall_build_speed)).trunc();
     }
     time
 }
@@ -101,7 +94,7 @@ pub fn power_output(power: i32, health: i32, strength: i32) -> i32 {
     if power <= 0 || strength <= 0 {
         return 0;
     }
-    ftol(f64::from(health) / f64::from(strength) * f64::from(power))
+    (X80::int(health) / X80::int(strength) * X80::int(power)).trunc()
 }
 
 /// What selling `t` pays a human player's house: `Soylent=` if set, else
@@ -111,7 +104,7 @@ pub fn refund(rules: &Rules, t: &TechnoType) -> i32 {
     if t.soylent != 0 {
         return t.soylent;
     }
-    ftol(f64::from(t.cost) * rules.general.refund_percent.value())
+    (X80::int(t.cost) * X80::double(rules.general.refund_percent.value())).trunc()
 }
 
 #[cfg(test)]
@@ -136,7 +129,7 @@ mod tests {
         let r = rules();
         let time = |i: usize, f| build_time(&r, &r.technos[i], None, 200, 10, f);
         // Steps of 9, 5 and 2 frames, as recorded in allied-base.
-        assert_eq!([time(0, 1), time(1, 1), time(2, 1)], [504, 315, 126]);
+        assert_eq!([time(0, 1), time(1, 1), time(2, 1)], [503, 314, 125]);
         assert_eq!(
             [time(0, 1) / STEPS, time(1, 1) / STEPS, time(2, 1) / STEPS],
             [9, 5, 2]
@@ -150,17 +143,17 @@ mod tests {
         let e1 = &r.technos[2];
         assert_eq!(
             build_time(&r, e1, None, 0, 100, 1),
-            252,
+            250,
             "no power: half speed"
         );
         assert_eq!(
             build_time(&r, e1, None, 99, 100, 1),
-            157,
+            156,
             "any shortfall: at most 0.8"
         );
         assert_eq!(
             build_time(&r, e1, None, 60, 100, 1),
-            209,
+            208,
             "60%: the ratio is a float a hair over 0.6"
         );
     }
@@ -180,9 +173,9 @@ mod tests {
         let id = |n: &str| r.technos.iter().position(|t| t.id == n).expect("type");
         assert_eq!(
             build_time(&r, &r.technos[id("E1")], gb, 0, 0, 1),
-            94,
-            "126 x 0.75"
+            93,
+            "125 x 0.75"
         );
-        assert_eq!(build_time(&r, &r.technos[id("GAPOWR")], gb, 0, 0, 1), 504);
+        assert_eq!(build_time(&r, &r.technos[id("GAPOWR")], gb, 0, 0, 1), 503);
     }
 }

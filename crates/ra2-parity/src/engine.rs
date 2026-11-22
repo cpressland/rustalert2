@@ -247,7 +247,12 @@ pub fn observe(sim: &Sim, rules: &Rules) -> Frame {
                 // anything in limbo at 0.
                 x: logged(o).0,
                 y: logged(o).1,
-                z: if o.limbo { 0 } else { o.coord.z },
+                // Aircraft in limbo sit at the flight level. `[observed]`
+                z: match (o.limbo, o.kind) {
+                    (true, ra2_rules::Kind::Aircraft) => rules.general.flight_level,
+                    (true, _) => 0,
+                    _ => o.coord.z,
+                },
                 hp: o.health,
                 cargo: o.cargo,
             })

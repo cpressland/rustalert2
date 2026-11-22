@@ -1,9 +1,10 @@
 # Power and production
 
-**Status:** Parity-checked for a deploy, buildings, infantry and
-vehicles from one or two factories, queues, holding, cancelling, selling,
-low power, lost prerequisites, free units and refused placements. Aircraft
-and naval yards, and damaged-plant power (traced), aren't recorded yet.
+**Status:** Parity-checked for a deploy, buildings, infantry, vehicles
+and aircraft from one or two factories, queues, holding, cancelling,
+selling, low power, lost prerequisites, free units and refused placements.
+Naval yards (our generated maps have no water) and damaged-plant power
+(traced) aren't recorded.
 **Crate:** `ra2-rules` (`production`), `ra2-sim` (`production`)
 **Issue:** #43
 
@@ -30,6 +31,7 @@ elsewhere; here an order arrives as the event a click would send.
   `0x0044E880`), and the refund (`0x00711F60`).
 - The recomp: the placement proximity check (`0x004A8EB0`) and the
   country multipliers' keys (`HouseTypeClass +0x134`…`+0x144`).
+- Scenario `allied-air`: an Air Force Command and a Harrier.
 - Scenario `allied-war-factory`: a refinery and its free Chrono Miner, a
   refused then valid placement, a GI held and resumed, a war factory and
   a Grizzly.
@@ -90,7 +92,7 @@ executes its events. `[observed]` (every object below appears on `f + 1`)
 ### Build time `[recomp 0x006F47A0]`
 
 1. `Cost × BuildSpeed × 0.9`, truncated (`BuildSpeed=` 0.7: a power plant
-   at 800 takes 504 frames);
+   at 800 takes 503 frames, a Harrier at 1200 takes 755);
 2. × the country's multiplier for that kind, truncated:
    `BuildTimeInfantryMult=`, `BuildTimeUnitsMult=`, `BuildTimeAircraftMult=`,
    `BuildTimeBuildingsMult=` or `BuildTimeDefensesMult=` (a building with
@@ -101,14 +103,19 @@ executes its events. `[observed]` (every object below appears on `f + 1`)
    short: then 1 − (1 − output ÷ drain) × `LowPowerPenaltyModifier=`, at
    least `MinLowPowerProductionSpeed=` and at most
    `MaxLowPowerProductionSpeed=`. The ratio is a single-precision float, so
-   60% power builds a 126-frame GI in 209 frames, not 210;
+   60% power builds a 125-frame GI in 208 frames;
 5. × `MultipleFactory=` (0.8) once for each factory of that kind beyond the
-   first, truncating each time: a GI from two barracks takes 100 frames;
+   first, truncating each time: a GI (125 frames) from two barracks takes
+   100;
 6. walls × `WallBuildSpeedCoefficient=`.
 
-The game does this in doubles and singles; so do we, in `ra2-rules`. IEEE
-arithmetic gives the same result on every platform, and the game runs the
-x87 at 53-bit precision. Only the integer result reaches the simulation.
+The game does this on the x87 in extended precision (64-bit mantissas),
+from doubles and singles. That matters: 1200 × 0.7 × 0.9 is 755.99… there
+but exactly 756 in doubles, so in doubles a Harrier would take 14-frame
+steps instead of 13. `ra2-rules` (`x87`) does the same multiplies and
+divides in integers. Only the integer result reaches the simulation.
+`[observed]` (`allied-air`) The refund and a building's power output are
+worked out the same way.
 
 ### Steps and payment `[observed]`
 
@@ -127,6 +134,11 @@ power plant pays 15 for 48 steps, then 16 for 5. On the 54th step it's
 done. Recorded for three costs and step lengths of 9, 5, 2 and 1 frames.
 
 ### Leaving the factory `[observed]`
+
+A finished aircraft appears the frame after the 54th step on its
+factory's first free pad: the factory's centre plus the art's
+`DockingOffsetN=`. While it's being built it's logged at the flight level
+(`FlightLevel=`, 1500).
 
 A finished vehicle appears at its war factory's centre the frame after the
 54th step. 48 frames later (the door), it drives out to the cell beside the
@@ -156,8 +168,8 @@ the house's output and drain when an order starts.
 
 - The rest of placement (terrain, other houses' units) and the build-up
   animation itself.
-- Aircraft and ships leaving their factories; which factory is primary
-  when there are several (we use the oldest).
+- Ships leaving a naval yard; which factory is primary when there are
+  several (we use the oldest).
 - Power output from damaged buildings, recorded.
 - How many crew a sold building lets out, and where; which cell a unit
   leaving a factory walks to (the game's pick varies between recordings,
@@ -166,6 +178,10 @@ the house's output and drain when an order starts.
   exact on arrival).
 
 ## Parity
+
+`parity/scenarios/allied-air.toml`: 6 checks at zero tolerance; credits,
+power and every object, height included, match the original on all 3400
+frames.
 
 `parity/scenarios/allied-war-factory.toml`: 11 checks at zero tolerance
 (credits through the refinery, the hold and the Grizzly; the free miner's
