@@ -57,6 +57,10 @@ pub enum OrderKind {
     Produce,
     /// Place the finished building.
     Place,
+    /// Sell the player's first building of the type.
+    Sell,
+    /// Cancel building the type: what's been paid comes back.
+    Abandon,
 }
 
 /// What objects a check looks at.

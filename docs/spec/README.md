@@ -59,7 +59,7 @@ their art ships in); those are reported, not drawn.
 | Locomotors | [locomotors.md](locomotors.md) | Started |
 | Combat | [combat.md](combat.md) | Started |
 | Economy (harvesting, docking, credits) | [economy.md](economy.md) | Parity-checked (one harvester; growth, gems and slaves to come) |
-| Power and production | [production.md](production.md) | Parity-checked (deploy, one item per kind, full power) |
+| Power and production | [production.md](production.md) | Parity-checked (deploy, queues, selling, cancelling, low power) |
 | Special abilities | | Not started |
 | Superweapons | | Not started |
 | Crates and veterancy | | Not started |

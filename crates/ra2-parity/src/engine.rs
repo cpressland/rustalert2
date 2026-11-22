@@ -172,6 +172,11 @@ pub fn observer_orders(scenario: &Scenario, rules: &Rules) -> String {
         .filter_map(|o| {
             Some(match o.what {
                 OrderKind::Deploy => format!("{} D {}", o.frame, o.type_id),
+                OrderKind::Sell => format!("{} S {}", o.frame, o.type_id),
+                OrderKind::Abandon => {
+                    let (kind, index) = type_index(rules, &o.type_id)?;
+                    format!("{} A {} {index} 0", o.frame, type_rtti(kind))
+                }
                 OrderKind::Produce => {
                     let (kind, index) = type_index(rules, &o.type_id)?;
                     format!("{} P {} {index} 0", o.frame, type_rtti(kind))
@@ -281,6 +286,8 @@ pub fn sim_orders(scenario: &Scenario, rules: &Rules) -> Vec<(u32, Order)> {
                     techno,
                     cell,
                 },
+                OrderKind::Sell => Build::Sell { house, techno },
+                OrderKind::Abandon => Build::Abandon { house, techno },
             };
             Some((o.frame, Order::Build(b)))
         })

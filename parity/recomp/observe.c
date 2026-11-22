@@ -154,7 +154,9 @@ static void write_frame(uint32_t frame) {
    (EventClass::OutList, 0xA802C8: count, head, tail, then 128 events of
    0x6F bytes; send times at 0xA83A54), for house 0:
      D <type>                     deploy house 0's first object of <type>
+     S <type>                     sell it
      P <rtti> <index> <naval>     produce
+     A <rtti> <index> <naval>     abandon (cancel) that production
      L <rtti> <index> <naval> <x> <y>   place at a cell
    Layout from the constructors at 0x004C65E0, 0x004C6970, 0x004C6AE0. */
 #define OUTLIST        0xA802C8u
@@ -180,7 +182,7 @@ static void run_orders(uint32_t frame) {
         ev[2] = 0; /* house 0 */
         uint32_t now = frame;
         memcpy(ev + 3, &now, 4);
-        if (kind == 'D') {
+        if (kind == 'D' || kind == 'S') {
             uint32_t tv = rd32(TECHNOS_VA + DVC_ITEMS), tn = rd32(TECHNOS_VA + DVC_COUNT);
             for (uint32_t i = 0; i < tn; i++) {
                 uint32_t t = rd32(tv + 4 * i), owner = rd32(t + TECHNO_OWNER);
@@ -189,18 +191,18 @@ static void run_orders(uint32_t frame) {
                 if (!kind_of(class_name(t), &kname, &type_off)) continue;
                 if (strcmp((const char *)GUEST_PTR(rd32(t + type_off) + 0x24), arg)) continue;
                 uint32_t id = rd32(t + 0x10);   /* AbstractClass::UniqueID */
-                ev[0] = 9;                      /* DEPLOY */
+                ev[0] = kind == 'D' ? 9 : 22;   /* DEPLOY, SELL */
                 memcpy(ev + 7, &id, 4);
                 ev[0xB] = 0x34;                 /* a target that is an object */
                 queue_event(ev);
-                fprintf(g_out, "# order %u deploy %s id %u\n", frame, arg, id);
+                fprintf(g_out, "# order %u %s %s id %u\n", frame, kind == 'D' ? "deploy" : "sell", arg, id);
                 break;
             }
-        } else if (kind == 'P' || kind == 'L') {
+        } else if (kind == 'P' || kind == 'L' || kind == 'A') {
             int rtti, index, naval, x = 0, y = 0;
             int n = sscanf(o, "%u %c %d %d %d %d %d", &at, &kind, &rtti, &index, &naval, &x, &y);
             if (n < 5) continue;
-            ev[0] = kind == 'P' ? 14 : 11;      /* PRODUCE, PLACE */
+            ev[0] = kind == 'P' ? 14 : kind == 'A' ? 16 : 11; /* PRODUCE, ABANDON, PLACE */
             memcpy(ev + 7, &rtti, 4);
             memcpy(ev + 0xB, &index, 4);
             memcpy(ev + 0xF, &naval, 4);
@@ -210,7 +212,7 @@ static void run_orders(uint32_t frame) {
                 memcpy(ev + 0x15, &cy, 2);
             }
             queue_event(ev);
-            fprintf(g_out, "# order %u %s %d %d\n", frame, kind == 'P' ? "produce" : "place", rtti, index);
+            fprintf(g_out, "# order %u %s %d %d\n", frame, kind == 'P' ? "produce" : kind == 'A' ? "abandon" : "place", rtti, index);
         }
     }
 }
