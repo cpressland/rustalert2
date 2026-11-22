@@ -6,6 +6,25 @@ use ra2_rules::{Kind, Rules};
 
 use crate::world::World;
 
+/// A superweapon effect that comes after it's fired.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Later {
+    /// A new object for a house (a mutated soldier).
+    Spawn {
+        at: u32,
+        techno: usize,
+        owner: u32,
+        coord: crate::coords::Coord,
+    },
+
+    /// The Psychic Dominator's effect, round a cell.
+    Dominate {
+        at: u32,
+        house: u32,
+        cell: (i16, i16),
+    },
+}
+
 /// One of a house's superweapons.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Super {
@@ -55,6 +74,13 @@ const NUKE_FLIGHT_FRAMES: u32 = 419;
 /// `[observed]` (the same over 5 and 28 cells: likely `ChronoDelay=` (60)
 /// and two frames)
 const CHRONO_FRAMES: u32 = 62;
+/// Frames from the Genetic Mutator firing to its victims standing up as
+/// Brutes (the mutation's death animation). `[observed]` (61 and 62 for
+/// three GIs; we use 61)
+const MUTATE_FRAMES: u32 = 61;
+/// Frames from the Psychic Dominator firing to its effect
+/// (`DominatorFireAtPercentage=` 20% into its animation). `[observed]`
+const DOMINATE_FRAMES: u32 = 37;
 
 /// One frame of every house's superweapons, after power is worked out.
 ///
@@ -73,6 +99,26 @@ pub fn update(world: &mut World, rules: &Rules, frame: u32) {
     world
         .objects
         .retain(|o| o.dies_at.is_none_or(|d| d > frame));
+    let due: Vec<Later> = {
+        let (now, rest): (Vec<_>, Vec<_>) = world.later.drain(..).partition(|l| match l {
+            Later::Spawn { at, .. } | Later::Dominate { at, .. } => *at <= frame,
+        });
+        world.later = rest;
+        now
+    };
+    for l in due {
+        match l {
+            Later::Spawn {
+                techno,
+                owner,
+                coord,
+                ..
+            } => {
+                world.spawn(rules, techno, owner, coord);
+            }
+            Later::Dominate { house, cell, .. } => dominate(world, rules, frame, house, cell),
+        }
+    }
     let (now, later): (Vec<_>, Vec<_>) = world.warps.drain(..).partition(|w| w.1 <= frame);
     world.warps = later;
     for (id, _, to) in now {
@@ -220,6 +266,73 @@ fn warp(world: &mut World, rules: &Rules, frame: u32, house: u32, to: (i16, i16)
     }
 }
 
+/// The Genetic Mutator: infantry its warhead reaches (`CellSpread=`, and
+/// `Verses=` above nothing for their armour) die at once and stand up as
+/// the firing house's Brutes. `[observed]`
+fn mutate(world: &mut World, rules: &Rules, frame: u32, house: u32, cell: (i16, i16)) {
+    let g = &rules.general;
+
+    if let Some(wh) = g.mutate_warhead.map(|w| rules.warhead(w)) {
+        let at = cell_centre(cell);
+        let brute = rules
+            .technos
+            .iter()
+            .position(|t| t.id.eq_ignore_ascii_case("BRUTE"));
+        let mut gone = Vec::new();
+        for o in &world.objects {
+            if o.limbo
+                || o.kind != Kind::Infantry
+                || crate::hunt::distance(o.coord, at) > wh.cell_spread
+            {
+                continue;
+            }
+            if wh.verses[rules.technos[o.techno].armor.index()].of(100) > 0 {
+                gone.push((o.id, o.coord));
+            }
+        }
+        for (id, coord) in gone {
+            world.objects.retain(|o| o.id != id);
+            if let Some(techno) = brute {
+                world.later.push(Later::Spawn {
+                    at: frame + MUTATE_FRAMES,
+                    techno,
+                    owner: house,
+                    coord,
+                });
+            }
+        }
+    }
+}
+
+/// The Psychic Dominator's effect: units within `DominatorCaptureRange=`
+/// cells of the target become the firing house's (`[observed]`: a Grizzly
+/// two cells off didn't), and buildings within its warhead's spread take
+/// `DominatorDamage=` (its `Verses=` hit only buildings) `[hypothesis]`.
+fn dominate(world: &mut World, rules: &Rules, frame: u32, house: u32, cell: (i16, i16)) {
+    let g = &rules.general;
+    let at = cell_centre(cell);
+    let reach = g.dominator_capture_range * crate::coords::LEPTONS_PER_CELL;
+    let wh = g.dominator_warhead.map(|w| rules.warhead(w));
+    for o in &mut world.objects {
+        if o.limbo {
+            continue;
+        }
+        let d = crate::hunt::distance(o.coord, at);
+        if o.kind != Kind::Building && d <= reach {
+            o.owner = house;
+        }
+        if let Some(wh) = wh
+            && o.shielded_until <= frame
+        {
+            let full = wh.verses[rules.technos[o.techno].armor.index()].of(g.dominator_damage);
+            o.health -= ra2_rules::production::splash(full, d, wh.cell_spread, wh.percent_at_max);
+        }
+    }
+    world
+        .objects
+        .retain(|o| o.health > 0 || o.dies_at.is_some());
+}
+
 /// Fire a house's charged superweapon at `cell`, on the frame the order
 /// takes effect: its charge starts again from the frame before.
 /// `[observed]` Then its effect:
@@ -284,6 +397,14 @@ pub fn fire(
                 o.shielded_until = until;
             }
         }
+    } else if sw.kind.eq_ignore_ascii_case("GeneticConverter") {
+        mutate(world, rules, frame, house, cell);
+    } else if sw.kind.eq_ignore_ascii_case("PsychicDominator") {
+        world.later.push(Later::Dominate {
+            at: frame + DOMINATE_FRAMES,
+            house,
+            cell,
+        });
     } else if sw.kind.eq_ignore_ascii_case("MultiMissile")
         && let Some(weapon) = g.nuke_payload
     {

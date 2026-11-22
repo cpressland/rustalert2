@@ -423,6 +423,17 @@ pub struct General {
     pub flight_level: i32,
     /// The Nuke's blast (`[NukePayload]`).
     pub nuke_payload: Option<WeaponId>,
+    /// The Genetic Mutator's warhead (`[SpecialWeapons]
+    /// MutateExplosionWarhead=`), and the
+    /// infantry it turns its victims into (the death animation's
+    /// `AnimToInfantry=`, `BRUTE`).
+    pub mutate_warhead: Option<WarheadId>,
+    /// The Psychic Dominator: its warhead and damage (`DominatorWarhead=`,
+    /// `DominatorDamage=`), and how near its target units are captured
+    /// (`DominatorCaptureRange=`, cells).
+    pub dominator_warhead: Option<WarheadId>,
+    pub dominator_damage: i32,
+    pub dominator_capture_range: i32,
     /// How long the Iron Curtain makes things invulnerable, in frames
     /// (`[CombatDamage] IronCurtainDuration=`).
     pub iron_curtain_duration: i32,
@@ -729,6 +740,11 @@ impl Rules {
                 }
             })
             .collect();
+        // Superweapon warheads the game finds through `[General]`.
+        let mutate_warhead = text(rules.section("SpecialWeapons"), "MutateExplosionWarhead")
+            .map(|w| WarheadId(warhead_names.id(&w)));
+        let dominator_warhead = text(rules.section("General"), "DominatorWarhead")
+            .map(|w| WarheadId(warhead_names.id(&w)));
         let warheads = warhead_names
             .0
             .iter()
@@ -853,6 +869,10 @@ impl Rules {
                 ),
                 flight_level: int(rules.section("General"), "FlightLevel", 1500),
                 nuke_payload: Some(nuke_payload),
+                mutate_warhead,
+                dominator_warhead,
+                dominator_damage: int(rules.section("General"), "DominatorDamage", 1000),
+                dominator_capture_range: int(rules.section("General"), "DominatorCaptureRange", 1),
                 iron_curtain_duration: int(c, "IronCurtainDuration", 750),
                 force_shield_radius: int(rules.section("General"), "ForceShieldRadius", 4),
                 force_shield_duration: int(rules.section("General"), "ForceShieldDuration", 500),

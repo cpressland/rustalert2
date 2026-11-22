@@ -1,8 +1,9 @@
 # Superweapons
 
 **Status:** Charging and firing parity-checked. Effects so far: the Force
-Shield's blackout, the Iron Curtain on infantry, the Nuke's blast, and the
-Chronosphere. The rest are still to come.
+Shield's blackout, the Iron Curtain on infantry, the Nuke's blast, the
+Chronosphere, the Genetic Mutator and the Psychic Dominator. The Weather
+Storm, Paratroopers and Spy Plane are still to come.
 **Crate:** `ra2-rules` (`production::recharge_frames`), `ra2-sim`
 (`superweapon`)
 **Issue:** #45
@@ -98,6 +99,27 @@ then the Chrono Warp's on where to. `[observed]`
     `ChronoDistanceFactor=` would make it vary;
   - buildings stay.
 
+### Genetic Mutator (`Type=GeneticConverter`)
+
+- Infantry within its warhead's reach die at once. The warhead is
+  `[SpecialWeapons] MutateExplosionWarhead=` (`MutateExplosion`:
+  `CellSpread=5`, `Verses=` only on infantry armour). A GI three cells off
+  went too. `[observed]`
+- They stand up as the firing house's `BRUTE`s (the mutation death
+  animation's `AnimToInfantry=`) 61 or 62 frames later. We use 61; the
+  one on the target cell was a frame later. `[observed]`
+- Vehicles aren't touched. `[observed]`
+
+### Psychic Dominator (`Type=PsychicDominator`)
+
+- 37 frames after it's fired (`DominatorFireAtPercentage=`, 20% into its
+  animation), units within `DominatorCaptureRange=` (1 cell) of the target
+  become the firing house's. Grizzlies two and four cells off stayed.
+  `[observed]`
+- Its damage (`DominatorDamage=` with `DominatorWarhead=`, whose
+  `Verses=` hit only buildings) falls off over the warhead's spread as the
+  Nuke's does. `[hypothesis]` (no buildings in range in the scenario)
+
 ### Force Shield (`Type=ForceShield`)
 
 - The house makes no power from the frame after it's fired until
@@ -110,8 +132,9 @@ then the Chrono Warp's on where to. `[observed]`
 
 ## Open questions
 
-- The other superweapons' effects: Weather Storm, Genetic Mutator, Psychic
-  Dominator, Paratroopers, Spy Plane.
+- The other superweapons' effects: Weather Storm, Paratroopers, Spy Plane.
+- What captured units and new Brutes do next: they fight nearby enemies on
+  their own, which isn't modelled yet (the Guard mission).
 - What a warped unit does on arrival (`ChronoDelay=` likely freezes it).
 - The Force Shield's and Iron Curtain's protection, under fire; the Nuke's
   flight time at other distances, and its radiation.
@@ -119,6 +142,12 @@ then the Chrono Warp's on where to. `[observed]`
   rebuilt; `UseChargeDrain=` (the Force Shield drains).
 
 ## Parity
+
+`parity/scenarios/yuri-mutator-dominator.toml` (the human as Yuri): 9
+checks at zero tolerance. They cover both superweapons' charge and firing,
+the infantry the Mutator takes, the Brutes it makes, and who the Dominator
+captures. After each effect, the Brutes and captured units fight
+neighbours we don't model yet, so the checks are counts at those frames.
 
 `parity/scenarios/allied-chronosphere.toml` and
 `allied-chronosphere-near.toml`: 8 checks each, at zero tolerance (the

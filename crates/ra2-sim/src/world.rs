@@ -165,6 +165,8 @@ pub struct World {
     /// Units on their way through the Chronosphere: the unit, the frame it
     /// arrives, and where.
     pub warps: Vec<(u32, u32, Coord)>,
+    /// Superweapon effects still to come.
+    pub later: Vec<crate::superweapon::Later>,
     next_id: u32,
 }
 
