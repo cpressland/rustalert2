@@ -1,0 +1,88 @@
+name = "allied-spy-undisguised"
+description = """
+The spy without a disguise, beside an enemy. As allied-spy-disguise but
+the spy isn't told to take the GI's look: it walks up beside the Neutral
+GI on Guard as it is. Covers what the GI makes of a spy in its own house's
+disguise. The AI starts in the far corner."""
+map = "parity_allied_spy_undisguised.yrm"
+end_frame = 2100
+human_start = [35, 35]
+
+[generate]
+name = "allied-spy-undisguised"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[SPY]
+Prerequisite=GAPILE
+Cost=500
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 30
+y = 40
+mission = "Guard"
+
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAPILE"
+
+[[order]]
+frame = 900
+what = "place"
+type = "GAPILE"
+x = 38
+y = 37
+
+[[order]]
+frame = 910
+what = "produce"
+type = "SPY"
+
+[[order]]
+frame = 1560
+what = "move"
+type = "SPY"
+x = 29
+y = 40
+
+# In its own house's look the spy is an enemy to the Neutral GI, which
+# shoots it dead. (The original's GI deployed and hit for 25 where ours,
+# undeployed, hits for 12, so the spy lasts longer in ours; the check is
+# that it's dead, not when.)
+[[check]]
+what = "count"
+type = "SPY"
+at = 1600
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "SPY"
+at = 2000
+tolerance = 0

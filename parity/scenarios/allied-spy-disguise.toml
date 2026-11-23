@@ -1,0 +1,106 @@
+name = "allied-spy-disguise"
+description = """
+The spy's disguise. A Neutral GI stands on Guard west of the human
+player's (British) base. The player trains a spy (the map makes it cheaper
+and needs only the barracks), has it "attack" the GI from eight cells off
+(MakeupKit: Range=-2, any range), which gives it the GI's look, then walks
+it up beside the GI. Covers taking a disguise, and a disguised spy passing
+an enemy. The AI starts in the far corner."""
+map = "parity_allied_spy_disguise.yrm"
+end_frame = 2100
+human_start = [35, 35]
+
+[generate]
+name = "allied-spy-disguise"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[SPY]
+Prerequisite=GAPILE
+Cost=500
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 30
+y = 40
+mission = "Guard"
+
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAPILE"
+
+[[order]]
+frame = 900
+what = "place"
+type = "GAPILE"
+x = 38
+y = 37
+
+[[order]]
+frame = 910
+what = "produce"
+type = "SPY"
+
+[[order]]
+frame = 1500
+what = "attack"
+type = "SPY"
+target = "E1"
+
+[[order]]
+frame = 1560
+what = "move"
+type = "SPY"
+x = 29
+y = 40
+
+# Two frames after the order lands the spy shows as a Neutral GI (ours a
+# frame later), without having moved; it then stands beside the GI to the
+# end, unharmed. Before, it showed as its own side's GI (AlliedDisguise=E1)
+# of its own house.
+[[check]]
+what = "disguise"
+type = "SPY"
+at = 1490
+
+[[check]]
+what = "disguise"
+type = "SPY"
+at = 1510
+
+[[check]]
+what = "position"
+type = "SPY"
+at = 1510
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "SPY"
+at = 2100
+tolerance = 0

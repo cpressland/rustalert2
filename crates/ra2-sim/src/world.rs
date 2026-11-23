@@ -115,6 +115,50 @@ pub struct Object {
     pub controlled_by: Option<(u32, u32)>,
     /// A Gattling's rate (see `TechnoType::gattling`).
     pub gattling_rate: i32,
+    /// What it shows as to other houses, and as whose: a spy's disguise.
+    pub disguise: Option<(usize, u32)>,
+}
+
+impl World {
+    /// A house's side: 0 Allied, 1 Soviet, 2 the third (by its country's
+    /// `Side=`: `Nod` is the Soviets).
+    pub fn side_of(&self, rules: &Rules, house: u32) -> usize {
+        let Some(h) = self
+            .houses
+            .get(usize::try_from(house).unwrap_or(usize::MAX))
+        else {
+            return 0;
+        };
+        rules
+            .countries
+            .iter()
+            .find(|c| c.id.eq_ignore_ascii_case(&h.country))
+            .map_or(0, |c| match c.side.to_ascii_lowercase().as_str() {
+                "nod" => 1,
+                "thirdside" => 2,
+                _ => 0,
+            })
+    }
+
+    /// A spy's look before it takes a disguise: its side's default
+    /// infantry (`AlliedDisguise=`…), as its own house. `[observed]` (a
+    /// spy logged as E1 of its own house from the start)
+    pub(crate) fn default_disguise(
+        &self,
+        rules: &Rules,
+        techno: usize,
+        owner: u32,
+    ) -> Option<(usize, u32)> {
+        if !rules.technos[techno].can_disguise {
+            return None;
+        }
+        let name = &rules.general.disguises[self.side_of(rules, owner)];
+        rules
+            .technos
+            .iter()
+            .position(|t| t.id.eq_ignore_ascii_case(name))
+            .map(|k| (k, owner))
+    }
 }
 
 impl Object {
@@ -313,7 +357,12 @@ impl World {
             c4_at: None,
             controlled_by: None,
             gattling_rate: 0,
+            disguise: None,
         });
+        let look = self.default_disguise(rules, techno, owner);
+        if let Some(o) = self.objects.last_mut() {
+            o.disguise = look;
+        }
         Some(id)
     }
 
@@ -353,7 +402,12 @@ impl World {
             c4_at: None,
             controlled_by: None,
             gattling_rate: 0,
+            disguise: None,
         });
+        let look = self.default_disguise(rules, techno, owner);
+        if let Some(o) = self.objects.last_mut() {
+            o.disguise = look;
+        }
         id
     }
 

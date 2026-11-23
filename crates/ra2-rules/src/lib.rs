@@ -326,6 +326,12 @@ pub struct TechnoType {
     pub max_occupants: i32,
     /// Infantry that infiltrates enemy buildings (`Infiltrate=`, the spy).
     pub infiltrate: bool,
+    /// Can show as another unit (`CanDisguise=`, the spy), and sees
+    /// through that (`DetectDisguise=`, dogs).
+    pub can_disguise: bool,
+    pub detect_disguise: bool,
+    /// Buildings: a refinery (`Refinery=`).
+    pub refinery: bool,
     pub passengers: i32,
     pub ifv_mode: i32,
     /// What goes off when it's destroyed (`DeathWeapon=`), and a factor on
@@ -399,6 +405,9 @@ pub struct Warhead {
     /// Takes control of what it hits instead of hurting it
     /// (`MindControl=`).
     pub mind_control: bool,
+    /// Latches onto what it hits (`Parasite=`): the dog's bite, which kills
+    /// infantry outright.
+    pub parasite: bool,
 }
 
 /// A projectile type (named by weapons' `Projectile=`).
@@ -517,8 +526,13 @@ pub struct General {
     /// Minutes between a Service Depot's repair steps (`URepairRate=`).
     pub unit_repair_rate: Ratio,
     /// Frames a spy in a power plant cuts its owner's power for
-    /// (`SpyPowerBlackout=`).
+    /// (`SpyPowerBlackout=`), and the share of a house's money a spy in
+    /// its refinery takes (`SpyMoneyStealPercent=`).
     pub spy_power_blackout: i32,
+    pub spy_money_steal: Ratio,
+    /// What a spy shows as before it takes a disguise, by side
+    /// (`AlliedDisguise=`, `SovietDisguise=`, `ThirdDisguise=`).
+    pub disguises: [String; 3],
     /// Veterancy: kills worth this many times a unit's cost make it a
     /// veteran, and twice that elite (`VeteranRatio=`); experience stops at
     /// `VeteranCap=`; and what being a veteran does to damage dealt
@@ -822,6 +836,9 @@ impl Rules {
                     cloning: flag(s, "Cloning", false),
                     occupier: flag(s, "Occupier", false),
                     infiltrate: flag(s, "Infiltrate", false),
+                    can_disguise: flag(s, "CanDisguise", false),
+                    detect_disguise: flag(s, "DetectDisguise", false),
+                    refinery: flag(s, "Refinery", false),
                     max_occupants: if flag(s, "CanBeOccupied", false) {
                         int(s, "MaxNumberOccupants", 0)
                     } else {
@@ -989,6 +1006,7 @@ impl Rules {
                     inf_death: int(s, "InfDeath", 0),
                     prone_damage: ratio(s, "ProneDamage", Ratio::ONE),
                     mind_control: flag(s, "MindControl", false),
+                    parasite: flag(s, "Parasite", false),
                 }
             })
             .collect();
@@ -1105,6 +1123,17 @@ impl Rules {
                     Ratio::from_value("15%"),
                 ),
                 spy_power_blackout: int(rules.section("General"), "SpyPowerBlackout", 1000),
+                spy_money_steal: ratio(
+                    rules.section("General"),
+                    "SpyMoneyStealPercent",
+                    Ratio::from_value(".5"),
+                ),
+                disguises: [
+                    text(rules.section("General"), "AlliedDisguise").unwrap_or_else(|| "E1".into()),
+                    text(rules.section("General"), "SovietDisguise").unwrap_or_else(|| "E2".into()),
+                    text(rules.section("General"), "ThirdDisguise")
+                        .unwrap_or_else(|| "INIT".into()),
+                ],
                 unit_repair_rate: ratio(
                     rules.section("General"),
                     "URepairRate",

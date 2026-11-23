@@ -74,6 +74,9 @@ static void dump_vector(FILE *f, const char *what, uint32_t vec, uint32_t bytes)
 #define HOUSE_BALANCE  0x30Cu       /* int: credits */
 #define OBJ_HEALTH     0x6Cu        /* int */
 #define TECHNO_VETERANCY 0x150u     /* float */
+#define TECHNO_DISGUISED 0x1D8u     /* byte */
+#define TECHNO_DISGUISE  0x518u     /* ObjectTypeClass* */
+#define TECHNO_DISGUISE_HOUSE 0x51Cu /* HouseClass* */
 #define OBJ_LOCATION   0x9Cu        /* CoordStruct: three ints, leptons */
 #define TECHNO_OWNER   0x21Cu       /* HouseClass* */
 #define TECHNO_STORAGE 0x33Cu       /* float[4], bails of each ore kind */
@@ -152,6 +155,13 @@ static void write_frame(uint32_t frame) {
                 float v; memcpy(&v, &bits, 4); sum += v;
             }
             if (sum != 0) fprintf(g_out, ",\"cargo\":%d", (int)sum);
+        }
+        if (*(const uint8_t *)GUEST_PTR(o + TECHNO_DISGUISED)) {
+            /* A disguise: the type it shows as and that house
+               (TechnoClass +0x1D8, +0x518, +0x51C: 0x006F4222). */
+            uint32_t as = rd32(o + TECHNO_DISGUISE), house = rd32(o + TECHNO_DISGUISE_HOUSE);
+            if (as) { fputs(",\"disguise\":", g_out); json_id(g_out, as); }
+            if (house) fprintf(g_out, ",\"disguise_house\":%u", rd32(house + HOUSE_INDEX));
         }
         {
             /* Experience: a float, 1 a veteran and 2 elite. */

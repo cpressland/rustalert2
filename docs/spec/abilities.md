@@ -2,7 +2,8 @@
 
 **Status:** Started: engineers capturing and repairing, the IFV's weapon
 by passenger, Tanya's C4, Yuri's mind control, Gattling weapons, the
-Cloning Vats, garrisoning, spies in barracks and power plants. Traced but not modelled: the GI deploying on
+Cloning Vats, garrisoning, spies (disguise, dogs, barracks, power
+plants, refineries). Traced but not modelled: the GI deploying on
 Guard. Tried: the Grinder.
 **Crate:** `ra2-sim` (`command`, `hunt`)
 **Issue:** #44
@@ -108,10 +109,38 @@ engineers and the IFV is in repair.md; this note links to it.
   `SpyPowerBlackout=` (1000) frames less one. `[observed]`
   (`allied-spy-power`: a Neutral plant's 200 gone from the frame the spy
   went in, back 999 frames on; the spy's own house untouched)
-- Other buildings (a refinery's money, `SpyMoneyStealPercent=`; the radar,
-  the battle lab) aren't modelled yet. A refinery is hard to record: in a
-  skirmish the map can't give the Neutral house money (its `Credits=` is
-  ignored), and a spy sent into the AI's base was shot on the way.
+- Into a refinery: `SpyMoneyStealPercent=` (50%) of its owner's money,
+  truncated, goes to the spy's house. `[observed]` (`allied-spy-refinery`,
+  recorded, not a shipped scenario since our engine has no AI yet: the AI
+  had 42574 and kept 21287; checked by a unit test)
+- Other buildings (the radar, the battle lab) aren't modelled yet.
+
+#### Disguise
+
+- A spy (`CanDisguise=yes`, `PermaDisguise=yes`) shows to other houses as
+  infantry of some house. It starts as its own side's default
+  (`AlliedDisguise=E1`, `SovietDisguise=E2`, `ThirdDisguise=INIT`) of its
+  own house. `[observed]` The game keeps it at `TechnoClass +0x1D8` (a
+  flag), `+0x518` (the type) and `+0x51C` (the house). `[recomp
+  0x006F4222]`
+- Ordered to attack infantry, it fires its `MakeupKit` (`Range=-2`, any
+  range; `FireOnce=yes`) and takes the target's type and house as its
+  look, without moving. `[observed]` (`allied-spy-disguise`: from eight
+  cells, two frames after the order landed)
+- Units take it for one of their own house's when its look is of their
+  house, and leave it alone: a Neutral GI let a spy in a Neutral GI's look
+  stand beside it; in its own house's look it was shot dead.
+  `[observed]` (`allied-spy-disguise`, `allied-spy-undisguised`)
+- So disguised as one of the AI's Conscripts, a spy walked through the
+  AI's base, past its Conscripts, flak troopers and a bunker, and into its
+  refinery. `[observed]` (`allied-spy-refinery`)
+- Units with `DetectDisguise=yes` (the attack dogs `DOG`, `ADOG`, `YDOG`,
+  `YADOG`; the Psi Corps trooper; Yuri) see through it: a Neutral dog on
+  Guard killed a spy in a Neutral GI's look as it came beside it.
+  `[observed]` (`allied-spy-dog`) The dog's bite (`BadTeeth`, a
+  `Parasite=yes` warhead) kills infantry outright. The original's dog
+  waited until the spy was about 190 leptons off; ours bites at its
+  weapon's range (1.5 cells), so sooner.
 
 ### The Cloning Vats
 
@@ -155,6 +184,9 @@ engineers and the IFV is in repair.md; this note links to it.
 | `guard-gattling` | The MCV's first damage and its health at 200, 400, 600 and 900 | exact at 200; then one pair (20), the stages coming 2 to 5 frames late |
 | `allied-garrison` | The house Neutral, then the player's; unhurt; the GI still counted | exact, clear of the change (ours 30 frames sooner: infantry speed) |
 | `allied-spy-barracks` | The spy going in; the GI trained after a veteran | exact; the spy ±40 frames (infantry speed) |
+| `allied-spy-disguise` | The spy's look before and after the MakeupKit, that it didn't move, and that it survives beside the Neutral GI | exact |
+| `allied-spy-undisguised` | The spy alive before the GI, dead after | exact clear of the timing (the original's GI deployed) |
+| `allied-spy-dog` | The spy's look, alive before the dog, dead after; the dog unhurt | exact clear of the timing |
 | `allied-spy-power` | The spy going in; the Neutral house's power during and after the blackout, the player's untouched | exact clear of the changes; the spy ±40 frames |
 | `yuri-cloning` | How many Initiates there are after each comes out, and where the first copy appears | exact |
 | `allied-tanya-c4` | The plant destroyed, no crew, the Neutral house's power after, Tanya unhurt | the plant's end ±30 frames (infantry speed) |
