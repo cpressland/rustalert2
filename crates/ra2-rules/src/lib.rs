@@ -324,6 +324,8 @@ pub struct TechnoType {
     /// `MaxNumberOccupants=`; 0 if it can't be).
     pub occupier: bool,
     pub max_occupants: i32,
+    /// Infantry that infiltrates enemy buildings (`Infiltrate=`, the spy).
+    pub infiltrate: bool,
     pub passengers: i32,
     pub ifv_mode: i32,
     /// What goes off when it's destroyed (`DeathWeapon=`), and a factor on
@@ -816,6 +818,7 @@ impl Rules {
                     c4: flag(s, "C4", false),
                     cloning: flag(s, "Cloning", false),
                     occupier: flag(s, "Occupier", false),
+                    infiltrate: flag(s, "Infiltrate", false),
                     max_occupants: if flag(s, "CanBeOccupied", false) {
                         int(s, "MaxNumberOccupants", 0)
                     } else {

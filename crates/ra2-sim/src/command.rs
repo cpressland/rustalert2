@@ -188,6 +188,28 @@ fn cell_i16(v: i32) -> i16 {
     i16::try_from(v).unwrap_or(0)
 }
 
+/// A spy goes into an enemy's building and is used up; what its house
+/// gains depends on the building. A factory of infantry (a barracks): the
+/// house's infantry are built veterans from then on. `[observed]`
+/// (`allied-spy-barracks`) A factory of vehicles: its vehicles, the same
+/// way. `[hypothesis]` Other buildings aren't modelled yet.
+fn infiltrate(world: &mut World, rules: &Rules, owner: u32, b: usize) {
+    let t = &rules.technos[world.objects[b].techno];
+    let Some(kind) = t.factory else {
+        return;
+    };
+    if !matches!(kind, ra2_rules::Kind::Infantry | ra2_rules::Kind::Vehicle) {
+        return;
+    }
+    if let Some(h) = world
+        .houses
+        .get_mut(usize::try_from(owner).unwrap_or(usize::MAX))
+        && !h.veteran_kinds.contains(&kind)
+    {
+        h.veteran_kinds.push(kind);
+    }
+}
+
 /// A C4 carrier (`C4=yes`, Tanya) attacking a building: it walks to the
 /// building's nearest cell as an engineer does, and on arriving plants
 /// its C4; the building goes `production::c4_frames` later, leaving no
@@ -254,6 +276,10 @@ fn capture(world: &mut World, rules: &Rules, frame: u32, i: usize, id: u32) -> b
         let owner = world.objects[i].owner;
         let room =
             usize::try_from(rules.technos[world.objects[b].techno].max_occupants).unwrap_or(0);
+        if rules.technos[world.objects[i].techno].infiltrate && world.objects[b].owner != owner {
+            infiltrate(world, rules, owner, b);
+            return true;
+        }
         if rules.technos[world.objects[i].techno].occupier && room > 0 {
             // A garrison: the infantryman goes inside, and the building is
             // his house's while it's held. `[observed]` (`allied-garrison`:

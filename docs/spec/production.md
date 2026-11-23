@@ -178,6 +178,9 @@ the house's output and drain when an order starts.
   wide one (the Allied barracks, 3×2) or of the column east of a tall one
   (the Yuri barracks, 2×3, from its top row). `[observed]` (GIs, an
   engineer, a Yuri engineer and Yuri) Other barracks, and why, untraced.
+  One exception recorded: after a spy had walked out to the first cell
+  below an Allied barracks and away, the next GI went two cells along, not
+  to the first.
 - The GI's exact walking path out (we're within a few leptons on the way,
   exact on arrival).
 
