@@ -191,8 +191,18 @@ fn start_next(world: &mut World, rules: &Rules, frame: u32, house: u32, kind: Ki
     let techno = world.factories[k].techno;
     let rate = rate_for(world, rules, house, techno);
     let object = world.spawn(rules, techno, house, Coord::default());
+    // A house whose spy got into a factory of this kind builds veterans,
+    // from the start of production. `[observed]` (`allied-spy-barracks`: a
+    // GI begun after the spy went in had experience 1 in limbo)
+    let veteran = world
+        .houses
+        .get(usize::try_from(house).unwrap_or(usize::MAX))
+        .is_some_and(|h| h.veteran_kinds.contains(&rules.technos[techno].kind));
     if let Some(o) = world.objects.iter_mut().find(|o| o.id == object) {
         o.limbo = true;
+        if veteran {
+            o.experience_bits = ra2_rules::veterancy::from_map(100);
+        }
     }
     let f = &mut world.factories[k];
     f.object = Some(object);

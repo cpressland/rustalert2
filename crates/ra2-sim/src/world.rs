@@ -22,6 +22,9 @@ pub struct House {
     /// A blackout (the Force Shield's): no power made from the first frame
     /// to before the second.
     pub blackout: Option<(u32, u32)>,
+    /// What spies brought back: the kinds of unit it now builds as
+    /// veterans (a barracks' infiltrated: infantry).
+    pub veteran_kinds: Vec<ra2_rules::Kind>,
 }
 
 /// What an object is doing.
@@ -232,6 +235,7 @@ impl World {
             power_output: 0,
             power_drain: 0,
             blackout: None,
+            veteran_kinds: Vec::new(),
         });
         index
     }
