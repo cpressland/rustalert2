@@ -138,6 +138,16 @@ pub fn repair_frames(rules: &Rules) -> i32 {
         .max(1)
 }
 
+/// Frames from planting C4 to the building's end: `C4Delay=` × 900 on the
+/// x87, truncated: 0.03 gives 26.99…, so 26. `[observed]`
+/// (`allied-tanya-c4`: a power plant gone 26 frames after Tanya stopped
+/// beside it)
+pub fn c4_frames(rules: &Rules) -> i32 {
+    (X80::double(rules.combat_damage.c4_delay.value()) * X80::double(900.0))
+        .trunc()
+        .max(0)
+}
+
 /// Frames between a Service Depot's repair steps: the first whole frame
 /// count of at least `URepairRate=` × 900 (0.016 gives 14.4, so 15).
 /// `[recomp 0x0044BD38]` (`[observed]`: steps 15 frames apart)

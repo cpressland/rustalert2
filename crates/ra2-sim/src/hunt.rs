@@ -239,6 +239,16 @@ pub fn update(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32
         if o.mission != Mission::Hunt && !attacking {
             continue;
         }
+        if let Some(crate::command::Command::Attack(id)) = o.command
+            && rules.technos[o.techno].c4
+            && world
+                .objects
+                .iter()
+                .any(|b| b.id == id && b.kind == Kind::Building)
+        {
+            crate::command::sapper(world, rules, frame, i, id);
+            continue;
+        }
         hunt(world, rules, rng, frame, i);
     }
     land(world, rules, rng, frame);

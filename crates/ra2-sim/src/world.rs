@@ -106,6 +106,8 @@ pub struct Object {
     pub turret: Option<u16>,
     /// The objects inside it (in limbo), first in first.
     pub passengers: Vec<u32>,
+    /// A building with C4 on it: the frame it's destroyed.
+    pub c4_at: Option<u32>,
 }
 
 impl Object {
@@ -300,6 +302,7 @@ impl World {
             firepower_bonus: ra2_rules::Ratio::ONE,
             turret: None,
             passengers: Vec::new(),
+            c4_at: None,
         });
         Some(id)
     }
@@ -337,6 +340,7 @@ impl World {
             firepower_bonus: ra2_rules::Ratio::ONE,
             turret: None,
             passengers: Vec::new(),
+            c4_at: None,
         });
         id
     }
