@@ -196,7 +196,18 @@ engineers and the IFV is in repair.md; this note links to it.
   truncated, goes to the spy's house. `[observed]` (`allied-spy-refinery`,
   recorded, not a shipped scenario since our engine has no AI yet: the AI
   had 42574 and kept 21287; checked by a unit test)
-- Other buildings (the radar, the battle lab) aren't modelled yet.
+- Into a battle lab (one of `[AI] BuildTech=`: NATECH, GATECH, YATECH):
+  the spy's house gets that lab's side's tech, by the lab's
+  `AIBasePlanningSide=` (0 Allied, 1 Soviet, else Third). `[recomp
+  0x0045734C]` Units with `RequiresStolenAlliedTech=` (the Chrono
+  Commando), `RequiresStolenSovietTech=` or `RequiresStolenThirdTech=` need
+  it. `[recomp 0x004F7976]`
+  - Without it, an order for one is still taken: it's built and paid for,
+    then stays in the factory, held. Ordered again once the house has the
+    tech, it comes out two frames after the order, and no second one is
+    built. Never ordered again, it stays in. `[observed]`
+    (`allied-spy-battle-lab`, and a recording without the second order)
+- Other buildings (the radar) aren't modelled yet.
 
 #### Disguise
 
@@ -286,7 +297,7 @@ engineers and the IFV is in repair.md; this note links to it.
 
 ## Open questions
 
-- Spies in other buildings, the Psychic
+- A spy in a radar, the Psychic
   Dominator's and Yuri Prime's control, Boris, the Magnetron.
 - What holds back a moving Battle Fortress's first shot.
 - The skirmish computer's difficulty, for its GIs' deploy delay.
@@ -304,6 +315,7 @@ engineers and the IFV is in repair.md; this note links to it.
 | `allied-garrison-range` | The Grizzly out of range unhurt; the Rhino's first damage and its health | exact; the health ±9 (one hit) |
 | `allied-spy-barracks` | The spy going in; the GI trained after a veteran | exact; the spy ±40 frames (infantry speed) |
 | `allied-spy-war-factory` | The spy going in; the Grizzly built after a veteran | exact; the spy ±40 frames (infantry speed) |
+| `allied-spy-battle-lab` | The spy going in; the Chrono Commando ordered before built, paid for and held; out on the map two frames after the second order, and only one | exact; the spy ±40 frames (infantry speed) |
 | `allied-spy-disguise` | The spy's look before and after the MakeupKit, that it didn't move, and that it survives beside the Neutral GI | exact |
 | `allied-spy-undisguised` | The spy alive before the GI, dead after | exact clear of the timing (the original's GI deployed) |
 | `allied-spy-dog` | The spy's look, alive before the dog, dead after; the dog unhurt | exact clear of the timing |

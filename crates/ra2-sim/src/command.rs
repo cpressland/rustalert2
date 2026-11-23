@@ -195,10 +195,32 @@ fn cell_i16(v: i32) -> i16 {
 /// way. `[observed]` (`allied-spy-war-factory`) A power plant: its owner makes no power for
 /// `SpyPowerBlackout=` frames less one, from that frame. `[observed]`
 /// (`allied-spy-power`: a Neutral plant's 200 gone from the frame the spy
-/// went in, back 999 frames on) A refinery: see below. Other buildings
-/// aren't modelled yet.
+/// went in, back 999 frames on) A refinery: see below. A battle lab: its
+/// side's tech. Other buildings aren't modelled yet.
 fn infiltrate(world: &mut World, rules: &Rules, frame: u32, owner: u32, b: usize) {
     let t = &rules.technos[world.objects[b].techno];
+    if rules
+        .general
+        .build_tech
+        .iter()
+        .any(|id| id.eq_ignore_ascii_case(&t.id))
+    {
+        // A battle lab (one of `[AI] BuildTech=`): the spy's house gets its
+        // side's tech, by the lab's `AIBasePlanningSide=`. `[recomp
+        // 0x0045734C]` `[observed]` (`allied-spy-battle-lab`)
+        let side = match t.ai_base_planning_side {
+            0 => 0,
+            1 => 1,
+            _ => 2,
+        };
+        if let Some(h) = world
+            .houses
+            .get_mut(usize::try_from(owner).unwrap_or(usize::MAX))
+        {
+            h.stolen_tech[side] = true;
+        }
+        return;
+    }
     if t.refinery {
         // A refinery: `SpyMoneyStealPercent=` of its owner's money,
         // truncated, goes to the spy's house. `[observed]`

@@ -40,6 +40,9 @@ const FREE_UNIT_FRAMES: u32 = 50;
 /// than on open ground, so it arrives a few frames late in ours)
 const VEHICLE_DOOR_FRAMES: u32 = 48;
 
+/// Frames from an order for a finished, held unit to its leaving.
+const RELEASE_FRAMES: u32 = 1;
+
 /// One house's production of one thing, or a thing queued behind it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Factory {
@@ -151,6 +154,17 @@ fn has_prerequisites(world: &World, rules: &Rules, house: u32, techno: usize) ->
             None => owned(p),
         }
     })
+}
+
+/// Whether a house has the tech `techno` needs a spy to have stolen
+/// (`RequiresStolenAlliedTech=` and the others).
+fn has_stolen_tech(world: &World, rules: &Rules, house: u32, techno: usize) -> bool {
+    let need = rules.technos[techno].requires_stolen;
+    let have = world
+        .houses
+        .get(usize::try_from(house).unwrap_or(usize::MAX))
+        .map_or([false; 3], |h| h.stolen_tech);
+    need.iter().zip(have).all(|(&n, h)| !n || h)
 }
 
 /// The time a house takes to build `techno` now, and its step length.
@@ -311,6 +325,12 @@ pub fn order(world: &mut World, rules: &Rules, frame: u32, build: Build) {
             {
                 f.held = None;
                 f.next = frame + u32::try_from(f.rate).unwrap_or(1);
+                // A finished unit held at the door tries to leave again.
+                // `[observed]` (`allied-spy-battle-lab`: out 2 frames after
+                // the order)
+                if f.stage >= STEPS && f.kind != Kind::Building {
+                    f.exit_at = Some(frame + RELEASE_FRAMES);
+                }
                 return;
             }
             let t = &rules.technos[techno];
@@ -461,6 +481,22 @@ pub fn update(world: &mut World, rules: &Rules, frame: u32) {
         .filter(|&k| world.factories[k].exit_at == Some(frame))
         .collect();
     for &k in leaving.iter().rev() {
+        // A unit needing tech its house hasn't stolen is built, and paid
+        // for, but stays in the factory, held, until it's ordered again
+        // with the tech. `[observed]` (`allied-spy-battle-lab`: a Chrono
+        // Commando ordered before the spy went into a battle lab was built
+        // and stayed in; ordered again after, it came out)
+        if !has_stolen_tech(
+            world,
+            rules,
+            world.factories[k].house,
+            world.factories[k].techno,
+        ) {
+            let f = &mut world.factories[k];
+            f.exit_at = None;
+            f.held = Some(frame);
+            continue;
+        }
         let f = world.factories.remove(k);
         leave(world, rules, frame, &f);
         start_next(world, rules, frame, f.house, f.kind);
