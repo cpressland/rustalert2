@@ -56,6 +56,8 @@ pub struct Motion {
     pub goal: Option<Coord>,
     /// The cell a commanded unit's route was planned to.
     pub planned: Option<(i16, i16)>,
+    /// It reached a cell centre this frame, at the end of a leg.
+    pub centred: bool,
 }
 
 /// Full speed, in the millionths [`Motion::speed`] keeps.
@@ -220,6 +222,7 @@ pub(crate) fn travel(o: &mut Object, speed_256: i32) -> bool {
         o.motion.carry += (done - length) * 256;
         o.coord = to;
         o.motion.leg = None;
+        o.motion.centred = true;
         return true;
     }
     o.coord = Coord {
@@ -1009,6 +1012,48 @@ fn passenger(
         weapon: w,
         lands: frame + 1,
     });
+}
+
+/// Crushing: a `Crusher=` vehicle reaching a cell's centre kills the
+/// `Crushable=` infantry anywhere in that cell that aren't its house's,
+/// at once (they don't lie there as shot infantry do), and the kill is
+/// its own. `[observed]` (`grizzly-crush`: a Grizzly driving east; a GI
+/// in the middle of its cell gone the frame the Grizzly reached it, one
+/// in a corner of the next cell the frame it reached that cell's middle,
+/// short of the GI; the Grizzly 0.19 a veteran after both)
+pub(crate) fn crush(world: &mut World, rules: &Rules) {
+    let mut kills = Vec::new();
+    for o in &mut world.objects {
+        if !std::mem::take(&mut o.motion.centred) {
+            continue;
+        }
+        if o.kind == Kind::Vehicle && rules.technos[o.techno].crusher && !o.limbo {
+            kills.push((o.id, o.owner, to_cell(o.coord)));
+        }
+    }
+    for (crusher, owner, cell) in kills {
+        let victims: Vec<usize> = (0..world.objects.len())
+            .filter(|&k| {
+                let v = &world.objects[k];
+                v.kind == Kind::Infantry
+                    && !v.limbo
+                    && v.health > 0
+                    && v.owner != owner
+                    && rules.technos[v.techno].crushable
+                    && to_cell(v.coord) == cell
+            })
+            .collect();
+        for k in victims {
+            let v = &mut world.objects[k];
+            v.health = 0;
+            v.dies_at = None;
+            let (victim, rank, vowner) = (v.techno, v.rank(), v.owner);
+            credit(world, rules, crusher, victim, rank, vowner);
+        }
+    }
+    world
+        .objects
+        .retain(|o| o.health > 0 || o.dies_at.is_some());
 }
 
 /// A teleporter's wait after a warp of `distance` leptons: that over

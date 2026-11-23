@@ -1,7 +1,7 @@
 # Special abilities
 
 **Status:** Started: engineers capturing and repairing, the IFV's weapon
-by passenger, the Battle Fortress's passengers, Tanya's C4, Yuri's mind control, Gattling weapons, the GI
+by passenger, the Battle Fortress's passengers, crushing infantry, Tanya's C4, Yuri's mind control, Gattling weapons, the GI
 deploying, the Chrono Legionnaire, the Cloning Vats, garrisoning, spies
 (disguise, dogs, barracks, power plants, refineries). Tried: the Grinder.
 **Crate:** `ra2-sim` (`command`, `hunt`)
@@ -61,11 +61,28 @@ engineers and the IFV is in repair.md; this note links to it.
   modelled.
 - The Battle Fortress is an `OmniCrusher=`. Ordered to attack a Grizzly,
   it fired as it drove up and then drove over it, killing it with 270
-  health left. `[observed]` Crushing isn't modelled; the scenarios take
-  it away.
+  health left. `[observed]` Crushing vehicles isn't modelled; the
+  scenarios take crushing away.
 - The Fortress came out of the war factory a cell north of ours, (46, 36)
   against our (46, 37), after first backing into the factory. `[observed]`
   The scenarios move it to a set cell first.
+
+### Crushing
+
+- A `Crusher=yes` vehicle that reaches the centre of a cell kills the
+  `Crushable=yes` infantry anywhere in that cell, at once: they're gone
+  that frame, not lying there for 15 frames as shot infantry do.
+  `[observed]` (`grizzly-crush`: a Grizzly driving east. A GI in the
+  middle of its cell went the frame the Grizzly reached it. One in a
+  corner of the next cell went the frame the Grizzly reached that cell's
+  middle, short of the GI.)
+- The kill is the crusher's: the Grizzly was 0.19 a veteran after two GIs
+  (2 × 200 ÷ (700 × 3)). `[observed]`
+- Its own house's infantry aren't crushed. `[hypothesis]` Infantry are
+  `Crushable=` unless set, other things not. `[hypothesis]`
+- Sleeping GIs didn't move aside. Whether awake infantry scatter from a
+  crusher, and `OmniCrusher=` (the Battle Fortress over vehicles), aren't
+  recorded or modelled yet.
 
 ### Tanya's C4
 
@@ -240,7 +257,7 @@ engineers and the IFV is in repair.md; this note links to it.
 
 - Spies in other buildings, the Psychic
   Dominator's and Yuri Prime's control, Boris, the Magnetron.
-- Crushing (`Crusher=`, `OmniCrusher=`).
+- Infantry scattering from a crusher; `OmniCrusher=` against vehicles.
 - Whether Tanya's C4 differs against units, and with `C4=` on other
   infantry (Navy SEALs).
 
@@ -260,6 +277,7 @@ engineers and the IFV is in repair.md; this note links to it.
 | `allied-garrison-fire` | The house's first hit, the Grizzly's health as it fires, and the Grizzly gone | first hit exact; health one hit (9) |
 | `allied-garrison-two` | As above with two GIs inside, and the kill's experience | first hit exact; health one hit (9) |
 | `allied-garrison-three` | As above with three GIs inside | exact |
+| `grizzly-crush` | Both GIs there, the first one's end, each gone in turn, and the Grizzly's experience | removal ±4 frames (drive start-up, #40); experience exact |
 | `allied-battle-fortress-far` | The Fortress's first hit and the Grizzly's health with only the Fortress firing | first hit ±2 frames; health one hit (6) |
 | `allied-battle-fortress` | The Grizzly's first hit and health as the Fortress and the GI inside fire, the Grizzly gone, the GI alive | first hit ±1 frame (the Fortress's); health ±18 (a hit of each) |
 | `yuri-cloning` | How many Initiates there are after each comes out, and where the first copy appears | exact |

@@ -222,6 +222,7 @@ impl Sim {
             // repair shows in its house's power a frame later. `[observed]`
             // (`yuri-engineer-repair`)
             crate::command::update(&mut self.world, rules, &mut self.rng, self.frame + 1);
+            crate::hunt::crush(&mut self.world, rules);
         }
         self.frame += 1;
         events
