@@ -80,9 +80,9 @@ engineers and the IFV is in repair.md; this note links to it.
   (2 × 200 ÷ (700 × 3)). `[observed]`
 - Its own house's infantry aren't crushed. `[hypothesis]` Infantry are
   `Crushable=` unless set, other things not. `[hypothesis]`
-- Sleeping GIs didn't move aside. Whether awake infantry scatter from a
-  crusher, and `OmniCrusher=` (the Battle Fortress over vehicles), aren't
-  recorded or modelled yet.
+- Infantry don't move aside: GIs on Guard, firing at the Grizzly, were
+  crushed as sleeping ones were. `[observed]` (`grizzly-crush-guard`)
+- `OmniCrusher=` (the Battle Fortress over vehicles) isn't modelled yet.
 
 ### Tanya's C4
 
@@ -257,7 +257,10 @@ engineers and the IFV is in repair.md; this note links to it.
 
 - Spies in other buildings, the Psychic
   Dominator's and Yuri Prime's control, Boris, the Magnetron.
-- Infantry scattering from a crusher; `OmniCrusher=` against vehicles.
+- `OmniCrusher=` against vehicles.
+- A Neutral GI on Guard hit a Grizzly with its deployed Para from its
+  first shot (`grizzly-crush-guard`), where in `guard-mcv` one deployed
+  after three: what sets it off isn't traced.
 - Whether Tanya's C4 differs against units, and with `C4=` on other
   infantry (Navy SEALs).
 
@@ -278,6 +281,7 @@ engineers and the IFV is in repair.md; this note links to it.
 | `allied-garrison-two` | As above with two GIs inside, and the kill's experience | first hit exact; health one hit (9) |
 | `allied-garrison-three` | As above with three GIs inside | exact |
 | `grizzly-crush` | Both GIs there, the first one's end, each gone in turn, and the Grizzly's experience | removal ±4 frames (drive start-up, #40); experience exact |
+| `grizzly-crush-guard` | The GI's health as the Grizzly fires back, each GI's end, the gap between them | health one hit (16); removal ±5 frames (drive start-up) |
 | `allied-battle-fortress-far` | The Fortress's first hit and the Grizzly's health with only the Fortress firing | first hit ±2 frames; health one hit (6) |
 | `allied-battle-fortress` | The Grizzly's first hit and health as the Fortress and the GI inside fire, the Grizzly gone, the GI alive | first hit ±1 frame (the Fortress's); health ±18 (a hit of each) |
 | `yuri-cloning` | How many Initiates there are after each comes out, and where the first copy appears | exact |
