@@ -1,0 +1,106 @@
+name = "allied-garrison-fire"
+description = """
+A garrison firing. As allied-garrison: a GI takes a Neutral civilian house
+(CAHSE01) with a Neutral Grizzly asleep three cells off. Then the house is
+ordered to attack the Grizzly. Covers the occupant's OccupyWeapon= fired
+from the building, with OccupyDamageMultiplier=, OccupyROFMultiplier= and
+OccupyWeaponRange=. The AI starts in the far corner."""
+map = "parity_allied_garrison_fire.yrm"
+end_frame = 2400
+human_start = [35, 35]
+
+[generate]
+name = "allied-garrison-fire"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.structure]]
+owner = "Neutral"
+type = "CAHSE01"
+x = 28
+y = 36
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 25
+y = 37
+facing = 64
+mission = "Sleep"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAPILE"
+
+[[order]]
+frame = 900
+what = "place"
+type = "GAPILE"
+x = 38
+y = 37
+
+[[order]]
+frame = 910
+what = "produce"
+type = "E1"
+
+[[order]]
+frame = 1500
+what = "capture"
+type = "E1"
+target = "CAHSE01"
+
+[[order]]
+frame = 1800
+what = "attack"
+type = "CAHSE01"
+target = "MTNK"
+
+# Ordered to attack, the house fires its GI's UCPara from the frame after
+# the order: 30 × OccupyDamageMultiplier=1.2 = 36, 9 a hit on heavy armour,
+# every 13 to 15 frames (ROF=15 plus 0 to 2, ÷ OccupyROFMultiplier=1.2),
+# until the Grizzly is gone. One hit's tolerance for the random part.
+[[check]]
+what = "first_damage"
+type = "MTNK"
+window = 0
+
+[[check]]
+what = "hp"
+type = "MTNK"
+at = 1900
+tolerance = 9
+
+[[check]]
+what = "hp"
+type = "MTNK"
+at = 2200
+tolerance = 9
+
+[[check]]
+what = "count"
+type = "MTNK"
+at = 2300
+tolerance = 0
