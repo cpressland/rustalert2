@@ -71,7 +71,7 @@ pub fn update(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32
                     o.mission = Mission::Guard;
                 }
             }
-            Some(Command::Capture(id)) if capture(world, rules, i, id) => {
+            Some(Command::Capture(id)) if capture(world, rules, frame, i, id) => {
                 gone.push(world.objects[i].id);
             }
             Some(Command::Enter(id)) => enter(world, rules, frame, i, id),
@@ -192,9 +192,9 @@ fn cell_i16(v: i32) -> i16 {
 /// nearest cell and goes in when it reaches one. Its own side's building
 /// is repaired to full strength, at no cost, and the engineer is used up.
 /// `[observed]` (`yuri-engineer-repair`: a Bio Reactor at 500 of 700, whole
-/// on the frame the engineer reached its top-left cell) True once it's
-/// gone in. Capturing an enemy's building isn't recorded yet.
-fn capture(world: &mut World, rules: &Rules, i: usize, id: u32) -> bool {
+/// on the frame the engineer reached its top-left cell) An enemy's building
+/// is captured. True once it's gone in.
+fn capture(world: &mut World, rules: &Rules, frame: u32, i: usize, id: u32) -> bool {
     let Some(b) = world.objects.iter().position(|o| o.id == id && !o.limbo) else {
         let o = &mut world.objects[i];
         o.command = None;
@@ -208,10 +208,19 @@ fn capture(world: &mut World, rules: &Rules, i: usize, id: u32) -> bool {
         (x0..x0 + w).contains(&i32::from(c.0)) && (y0..y0 + h).contains(&i32::from(c.1))
     };
     if inside(here) {
-        let same_side = world.objects[b].owner == world.objects[i].owner;
-        if same_side {
+        let owner = world.objects[i].owner;
+        if world.objects[b].owner == owner {
             let strength = rules.technos[world.objects[b].techno].strength;
             world.objects[b].health = strength;
+        } else {
+            // An enemy's building becomes the engineer's house's, as it
+            // stands, and both houses' power is counted again at once.
+            // `[observed]` (`allied-engineer-capture`: a Neutral power
+            // plant, 750 of 750; the player's output 200 to 400 on the same
+            // frame)
+            world.objects[b].owner = owner;
+            world.objects[b].repairing = false;
+            crate::production::power(world, rules, frame);
         }
         return true;
     }
