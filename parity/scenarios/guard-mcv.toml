@@ -1,0 +1,88 @@
+name = "guard-mcv"
+description = """
+The Guard mission. Neutral units stand on Guard at different distances
+from the idle human player's MCV: a Grizzly 4 cells east (within its
+weapon's range), a Grizzly 9 cells south (within its sight, out of
+range), a Grizzly 14 cells west (beyond its sight) and a GI 3 cells
+north. Covers which guards take on a target, from how far, whether they
+move to it, and when they fire. The AI starts in the far corner."""
+map = "parity_guard_mcv.yrm"
+end_frame = 300
+human_start = [35, 35]
+
+[generate]
+name = "guard-mcv"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 39
+y = 35
+facing = 0
+mission = "Guard"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 35
+y = 44
+facing = 0
+mission = "Guard"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 21
+y = 35
+facing = 0
+mission = "Guard"
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 35
+y = 32
+mission = "Guard"
+
+# The GI deploys after its third shot (Deployer=yes, DeployFire=yes) and
+# fires its deployed weapon from 117; that's a special ability, not yet
+# modelled, so the damage checks stop before it. The scenario ends at 300,
+# before the MCV falls (the human loses then and the game stops).
+
+# The GI's first hit (3, M60 on heavy armour) lands on 48; the near
+# Grizzly's (65) on 68, after its turret turns a quarter; the GI's second
+# and third on 71 and 94.
+[[check]]
+what = "first_damage"
+type = "AMCV"
+owner = 0
+window = 0
+
+[[check]]
+what = "hp"
+type = "AMCV"
+owner = 0
+at = 60
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "AMCV"
+owner = 0
+at = 110
+tolerance = 0
+
+# Guards out of range stay put: the Grizzlies 9 and 14 cells off, as well
+# as the one in range.
+[[check]]
+what = "position"
+type = "MTNK"
+owner = 2
+at = 300
+tolerance = 0
