@@ -42,8 +42,9 @@ Firing, projectiles and damage. Target choice belongs to missions.
   on 68, after its turret turned a quarter and its shell flew 9 frames;
   Grizzlies 9 and 14 cells off didn't move) Where the 46 comes from (a
   scan interval, or the mission's first delay) isn't traced.
-  - A computer's GI on Guard deploys after its third shot (`Deployer=yes`,
-    `DeployFire=yes`) and fires its deployed weapon (abilities.md).
+  - A computer's GI on Guard deploys after `AIAutoDeployFrameDelay=`
+    frames on Guard (100 for the civilian houses) and fires its deployed
+    weapon (abilities.md).
   - A player's units on Guard don't take on the civilian houses (Neutral,
     Special) by themselves; the civilians take on anyone. `[observed]`
     (`allied-gi-deploy`: a GI beside a sleeping Neutral Grizzly fired only

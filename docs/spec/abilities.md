@@ -239,11 +239,19 @@ engineers and the IFV is in repair.md; this note links to it.
 - Deployed, it fires its `Secondary=` (`Para`: 25, `ROF=15`, `SSA`): 10 a
   hit on heavy armour every 17 to 19 frames, where its M60 does 3.
   `[observed]` The elite one's `EliteSecondary=` isn't read yet.
-- Infantry not under a player's control with `DeployFire=yes` deploy by
-  themselves to use it (`[recomp 0x00522378]`): a Neutral GI on Guard hit
-  with its M60 three times, then with Para from the next shot. We deploy
-  it after its third shot; what the game waits for isn't traced.
-  `[observed]` (`guard-mcv`)
+- A computer's GI deploys by itself once it has been on Guard for
+  `AIAutoDeployFrameDelay=` frames, by its house's difficulty (15 hard,
+  25 medium, 100 easy). The check is in the infantry's Guard mission:
+  it needs `Deployer=yes`, `DeployFire=yes`, no `DeployFireWeapon=`, an
+  owner that isn't human, and the GI standing still. The delay counts
+  from when its current mission began. `[recomp 0x0052150D]`
+  - The civilian houses wait the easy 100 frames. `[observed]`
+    (`guard-mcv`: a Neutral GI on Guard from the start hit with its M60
+    on 48, 71 and 94, then with Para from 117; `grizzly-crush-guard`: a
+    Neutral GI that had stood 2,000 frames hit with Para from its first
+    shot) Where a house's difficulty is held (`HouseClass` + 0x184, an
+    index into the rules' list) is traced; what sets it for the civilian
+    houses isn't.
 - Undeploying, and its delay, aren't recorded yet.
 
 ### The Grinder (not working yet)
@@ -258,9 +266,7 @@ engineers and the IFV is in repair.md; this note links to it.
 - Spies in other buildings, the Psychic
   Dominator's and Yuri Prime's control, Boris, the Magnetron.
 - `OmniCrusher=` against vehicles.
-- A Neutral GI on Guard hit a Grizzly with its deployed Para from its
-  first shot (`grizzly-crush-guard`), where in `guard-mcv` one deployed
-  after three: what sets it off isn't traced.
+- The skirmish computer's difficulty, for its GIs' deploy delay.
 - Whether Tanya's C4 differs against units, and with `C4=` on other
   infantry (Navy SEALs).
 

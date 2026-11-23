@@ -121,10 +121,11 @@ pub struct Object {
     pub gattling_rate: i32,
     /// What it shows as to other houses, and as whose: a spy's disguise.
     pub disguise: Option<(usize, u32)>,
-    /// Deployed infantry (a GI behind sandbags), and the shots it has fired
-    /// on Guard (a computer's GI deploys after its third).
+    /// Deployed infantry (a GI behind sandbags).
     pub deployed: bool,
-    pub guard_shots: u32,
+    /// The mission it last had, and the frame that mission began.
+    pub last_mission: Mission,
+    pub mission_since: u32,
     /// Being erased by a Chrono beam: by whom, and what's left of it (the
     /// target's strength × 10 to begin with).
     pub erasing: Option<(u32, i32)>,
@@ -372,7 +373,8 @@ impl World {
             gattling_rate: 0,
             disguise: None,
             deployed: false,
-            guard_shots: 0,
+            last_mission: Mission::parse(&p.mission),
+            mission_since: 0,
             erasing: None,
         });
         let look = self.default_disguise(rules, techno, owner);
@@ -422,7 +424,8 @@ impl World {
             gattling_rate: 0,
             disguise: None,
             deployed: false,
-            guard_shots: 0,
+            last_mission: Mission::Guard,
+            mission_since: 0,
             erasing: None,
         });
         let look = self.default_disguise(rules, techno, owner);
