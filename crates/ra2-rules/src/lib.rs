@@ -551,6 +551,10 @@ pub struct General {
     /// (`SpyPowerBlackout=`), and the share of a house's money a spy in
     /// its refinery takes (`SpyMoneyStealPercent=`).
     pub spy_power_blackout: i32,
+    /// Frames a computer's deployer (the GI) stands on Guard before it
+    /// deploys by itself, by difficulty: hard, medium, easy
+    /// (`AIAutoDeployFrameDelay=`).
+    pub ai_auto_deploy_delay: Vec<i32>,
     /// A teleporter's wait after a warp: the distance in leptons over
     /// `ChronoDistanceFactor=`, at least `ChronoMinimumDelay=` frames.
     pub chrono_distance_factor: i32,
@@ -1166,6 +1170,10 @@ impl Rules {
                     Ratio::from_value("15%"),
                 ),
                 spy_power_blackout: int(rules.section("General"), "SpyPowerBlackout", 1000),
+                ai_auto_deploy_delay: list(rules.section("General"), "AIAutoDeployFrameDelay")
+                    .iter()
+                    .filter_map(|v| v.trim().parse().ok())
+                    .collect(),
                 chrono_distance_factor: int(rules.section("General"), "ChronoDistanceFactor", 32),
                 chrono_minimum_delay: int(rules.section("General"), "ChronoMinimumDelay", 0),
                 spy_money_steal: ratio(

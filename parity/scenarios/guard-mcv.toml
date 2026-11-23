@@ -50,7 +50,7 @@ x = 35
 y = 32
 mission = "Guard"
 
-# The GI deploys after its third shot (Deployer=yes, DeployFire=yes) and
+# The GI deploys after 100 frames on Guard (AIAutoDeployFrameDelay=, easy) and
 # fires its deployed weapon, Para (10 a hit), from 117 (ours from 118). The scenario ends at 300,
 # before the MCV falls (the human loses then and the game stops).
 

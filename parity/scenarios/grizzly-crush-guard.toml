@@ -96,9 +96,9 @@ y = 38
 # aside: each is crushed the frame the Grizzly reaches its cell's middle,
 # on 2055 and 2082. The Grizzly, at under half health, drives at three
 # quarters of its speed: 27 frames between the two, not 19. Ours drives
-# up 5 frames sooner (drive start-up, #40). The Grizzly's own health isn't
-# checked: the original's GI hits with its deployed Para from the first
-# shot, ours with its M60 for three.
+# up 5 frames sooner (drive start-up, #40). The GIs, on Guard since the
+# start, have deployed by themselves (AIAutoDeployFrameDelay=) and hit
+# with their Para from the first shot, 10 a time.
 [[check]]
 what = "count"
 type = "E1"
@@ -129,3 +129,10 @@ what = "count"
 type = "E1"
 at = 2090
 tolerance = 0
+
+[[check]]
+what = "hp"
+type = "MTNK"
+owner = 0
+at = 2000
+tolerance = 10

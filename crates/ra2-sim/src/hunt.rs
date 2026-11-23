@@ -256,7 +256,14 @@ pub fn update(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32
             passenger(world, rules, rng, frame, i, id);
             continue;
         }
+        if o.mission != o.last_mission {
+            let o = &mut world.objects[i];
+            o.last_mission = o.mission;
+            o.mission_since = frame;
+        }
+        let o = &world.objects[i];
         if o.mission == Mission::Guard && o.command.is_none() && !o.limbo {
+            auto_deploy(world, rules, frame, i);
             guard(world, rules, rng, frame, i);
             continue;
         }
@@ -286,6 +293,38 @@ pub fn update(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32
     release(world);
     spin(world, rules);
     erase(world, rules);
+}
+
+/// A computer's deployer that fires deployed (`Deployer=`, `DeployFire=`,
+/// no `DeployFireWeapon=`: the GI) deploys by itself once it has stood on
+/// Guard longer than `AIAutoDeployFrameDelay=` for its house's difficulty,
+/// if it isn't moving. `[recomp 0x0052150D]` The civilian houses deploy
+/// after the easy delay, 100 frames. `[observed]` (`guard-mcv`: a Neutral
+/// GI's M60 hit on 48, 71 and 94, its Para from 117; `grizzly-crush-guard`:
+/// a Neutral GI on Guard from the start fired its Para from the first
+/// shot) Where the house's difficulty comes from isn't traced.
+fn auto_deploy(world: &mut World, rules: &Rules, frame: u32, i: usize) {
+    const CIVILIAN_DIFFICULTY: usize = 2;
+    let o = &world.objects[i];
+    let t = &rules.technos[o.techno];
+    if o.kind != Kind::Infantry
+        || o.deployed
+        || !t.deployer
+        || !t.deploy_fire
+        || player(world, o.owner)
+        || o.motion.leg.is_some()
+    {
+        return;
+    }
+    let delay = rules
+        .general
+        .ai_auto_deploy_delay
+        .get(CIVILIAN_DIFFICULTY)
+        .copied()
+        .unwrap_or(0);
+    if i64::from(frame) > i64::from(o.mission_since) + i64::from(delay) {
+        world.objects[i].deployed = true;
+    }
 }
 
 /// The first frames a unit on Guard can take a target. `[observed]`
@@ -376,15 +415,6 @@ fn guard(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: 
     };
     if aimed && o.motion.reload == 0 {
         fire(world, rules, rng, frame, i, target_id, infantry);
-        // A computer's GI (`Deployer=`, `DeployFire=`) deploys after its
-        // third shot. `[observed]` (`guard-mcv`: a Neutral GI's M60 hit on
-        // 48, 71 and 94, its Para from 117; the trigger isn't traced)
-        let computer = !player(world, world.objects[i].owner);
-        let o = &mut world.objects[i];
-        o.guard_shots += 1;
-        if t.deployer && t.deploy_fire && !o.deployed && o.guard_shots >= 3 && computer {
-            o.deployed = true;
-        }
     }
 }
 
