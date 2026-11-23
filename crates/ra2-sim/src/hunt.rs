@@ -240,6 +240,10 @@ pub fn update(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32
             continue;
         }
         let attacking = matches!(o.command, Some(crate::command::Command::Attack(_)));
+        if let (true, Some(crate::command::Command::Attack(id))) = (o.limbo, o.command) {
+            passenger(world, rules, rng, frame, i, id);
+            continue;
+        }
         if o.mission == Mission::Guard && o.command.is_none() && !o.limbo {
             guard(world, rules, rng, frame, i);
             continue;
@@ -881,6 +885,130 @@ fn garrison(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, 
         / ra2_rules::x87::X80::double(rules.combat_damage.occupy_rof.value()))
     .trunc();
     world.objects[i].motion.reload = reload | 1;
+}
+
+/// The weapon a passenger fires out of an open-topped transport: by its
+/// `OpenTransportWeapon=`, its primary or secondary, else its usual one.
+fn open_transport_weapon(world: &World, rules: &Rules, o: &Object) -> Option<ra2_rules::WeaponId> {
+    let t = &rules.technos[o.techno];
+    let elite = o.rank() >= 2;
+    match t.open_transport_weapon {
+        0 => weapon_of(t, o.rank()),
+        1 if elite => t.elite_secondary.or(t.secondary),
+        1 => t.secondary,
+        _ => weapon_now(world, rules, o),
+    }
+}
+
+/// An attack order to an open-topped transport (`OpenTopped=`, the Battle
+/// Fortress) goes to its passengers too, those whose weapon reaches the
+/// target from it then, with `[CombatDamage] OpenToppedRangeBonus=`.
+/// `[observed]` (`allied-battle-fortress`: a GI aboard fired with the
+/// Fortress, from 3 cells; in a recording with the Grizzly 7.2 cells off,
+/// beyond the GI's Para at 5 + 2, it never fired, even once the Fortress
+/// had driven up to it)
+const PASSENGER_FIRST_SHOT: i32 = 3;
+
+pub(crate) fn open_topped_order(world: &mut World, rules: &Rules, id: u32, target: u32) {
+    let Some(b) = world.objects.iter().position(|o| o.id == id) else {
+        return;
+    };
+    if !rules.technos[world.objects[b].techno].open_topped {
+        return;
+    }
+    let Some(target_at) = world
+        .objects
+        .iter()
+        .find(|o| o.id == target)
+        .map(|o| o.coord)
+    else {
+        return;
+    };
+    let from = world.objects[b].coord;
+    let bonus = rules.combat_damage.open_topped_range_bonus * LEPTONS_PER_CELL;
+    for p in world.objects[b].passengers.clone() {
+        let Some(k) = world.objects.iter().position(|o| o.id == p) else {
+            continue;
+        };
+        let reaches = open_transport_weapon(world, rules, &world.objects[k])
+            .is_some_and(|w| distance(from, target_at) <= rules.weapon(w).range + bonus);
+        if reaches {
+            // Its first shot lands four frames after the order's, one
+            // after the transport's. `[observed]` (fitted, one recording)
+            let o = &mut world.objects[k];
+            o.command = Some(crate::command::Command::Attack(target));
+            o.motion.reload = o.motion.reload.max(PASSENGER_FIRST_SHOT);
+        }
+    }
+}
+
+/// A passenger firing out of an open-topped transport: from where the
+/// transport is, with `OpenToppedRangeBonus=` more range and its damage ×
+/// `OpenToppedDamageMultiplier=`, reloading as it would outside.
+/// `[observed]` (`allied-battle-fortress`: a GI's Para, 25 × 1.2 = 30, 12
+/// a hit on heavy armour, 17 to 19 frames apart, alongside the Fortress's
+/// own 20mmRapid)
+fn passenger(
+    world: &mut World,
+    rules: &Rules,
+    rng: &mut Randomizer,
+    frame: u32,
+    i: usize,
+    id: u32,
+) {
+    let me = world.objects[i].id;
+    let Some(b) = world
+        .objects
+        .iter()
+        .position(|o| o.passengers.contains(&me))
+    else {
+        return;
+    };
+    if !rules.technos[world.objects[b].techno].open_topped {
+        return;
+    }
+    let Some(target_at) = world
+        .objects
+        .iter()
+        .find(|o| o.id == id && o.health > 0)
+        .map(|o| o.coord)
+    else {
+        world.objects[i].command = None;
+        return;
+    };
+    let from = world.objects[b].coord;
+    let o = &world.objects[i];
+    let Some(w) = open_transport_weapon(world, rules, o) else {
+        return;
+    };
+    let weapon = rules.weapon(w);
+    let t = &rules.technos[o.techno];
+    let rank = o.rank();
+    let infantry = o.kind == Kind::Infantry;
+    let damage = rules
+        .combat_damage
+        .open_topped_damage
+        .of(ra2_rules::veterancy::firepower(
+            rules,
+            t,
+            rank,
+            o.firepower_bonus.of(weapon.damage),
+        ));
+    let bonus = rules.combat_damage.open_topped_range_bonus * LEPTONS_PER_CELL;
+    let o = &mut world.objects[i];
+    o.motion.reload = (o.motion.reload - 1).max(0);
+    if o.motion.reload > 0 || distance(from, target_at) > weapon.range + bonus {
+        return;
+    }
+    o.motion.reload = ra2_rules::veterancy::rof(rules, t, rank, weapon.rof + rng.ranged(0, 2))
+        + if infantry { 2 } else { 0 };
+    world.shots.push(Shot {
+        shooter: me,
+        damage,
+        target: id,
+        weapon: w,
+        lands: frame + 1,
+    });
 }
 
 /// A teleporter's wait after a warp of `distance` leptons: that over

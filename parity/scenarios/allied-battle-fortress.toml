@@ -1,0 +1,157 @@
+name = "allied-battle-fortress"
+description = """
+The Battle Fortress's passengers firing out. The human player (British)
+builds a power plant, a war factory and a barracks (the map makes the war
+factory cheaper, with fewer prerequisites, and the Battle Fortress cheaper
+and buildable from the war factory alone), then a Battle Fortress and a
+GI. The GI gets in, and the Battle Fortress is ordered to attack a
+sleeping Neutral Grizzly. The map takes away its crushing, so it fights
+from where it stands rather than driving over the Grizzly, and it's moved
+to a set cell first, so where it parks out of the factory doesn't matter.
+Covers OpenTopped= passengers firing their own
+weapons from the transport, with OpenToppedDamageMultiplier= and
+OpenToppedRangeBonus=, alongside the transport's own gun. Nothing else is
+near: the AI starts in the far corner."""
+map = "parity_allied_battle_fortress.yrm"
+end_frame = 3000
+human_start = [35, 35]
+
+[generate]
+name = "allied-battle-fortress"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[GAWEAP]
+Prerequisite=POWER,GACNST
+Cost=500
+
+[BFRT]
+Prerequisite=GAWEAP
+Cost=1000
+Crusher=no
+OmniCrusher=no
+
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 50
+y = 39
+facing = 64
+mission = "Sleep"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAWEAP"
+
+[[order]]
+frame = 890
+what = "place"
+type = "GAWEAP"
+x = 41
+y = 36
+
+[[order]]
+frame = 900
+what = "produce"
+type = "GAPILE"
+
+[[order]]
+frame = 905
+what = "produce"
+type = "BFRT"
+
+[[order]]
+frame = 1300
+what = "place"
+type = "GAPILE"
+x = 37
+y = 38
+
+[[order]]
+frame = 1310
+what = "produce"
+type = "E1"
+
+[[order]]
+frame = 1600
+what = "move"
+type = "BFRT"
+x = 47
+y = 38
+
+[[order]]
+frame = 2000
+what = "enter"
+type = "E1"
+target = "BFRT"
+
+[[order]]
+frame = 2400
+what = "attack"
+type = "BFRT"
+target = "MTNK"
+
+# The GI gets in on 2257. Ordered to attack, the Fortress's 20mmRapid
+# lands from 2403, 6 a hit on heavy armour, every 20 to 22 frames; the GI
+# fires its OpenTransportWeapon=1, the Para, from 2404: 25 ×
+# OpenToppedDamageMultiplier=1.2 = 30, 12 a hit on heavy armour, every 17
+# to 19 frames. Ours lands the Fortress's first a frame early, so one
+# frame on the first hit and a hit of each on health.
+[[check]]
+what = "count"
+type = "MTNK"
+at = 2390
+tolerance = 0
+
+[[check]]
+what = "first_damage"
+type = "MTNK"
+window = 1
+
+[[check]]
+what = "hp"
+type = "MTNK"
+at = 2500
+tolerance = 18
+
+[[check]]
+what = "hp"
+type = "MTNK"
+at = 2600
+tolerance = 18
+
+[[check]]
+what = "count"
+type = "MTNK"
+at = 2720
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "E1"
+at = 2900
+tolerance = 0

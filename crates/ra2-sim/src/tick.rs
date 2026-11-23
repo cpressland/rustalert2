@@ -188,6 +188,9 @@ impl Sim {
                         };
                         if let Some(command) = command {
                             crate::command::order(&mut self.world, id, command);
+                            if let (Some(rules), Command::Attack(target)) = (&self.rules, command) {
+                                crate::hunt::open_topped_order(&mut self.world, rules, id, target);
+                            }
                         }
                     }
                 }
