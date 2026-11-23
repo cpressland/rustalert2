@@ -468,8 +468,8 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
                 })
                 .min_by_key(|o| (i64::from(distance(o.coord, me.coord)), o.id))
         })
-        .map(|o| (o.id, o.coord));
-    let Some((target_id, target_at)) = target else {
+        .map(|o| (o.id, o.coord, omni_crushable(rules, t, me.owner, o)));
+    let Some((target_id, target_at, crushing)) = target else {
         return;
     };
     let fresh = me.motion.target != Some(target_id);
@@ -483,6 +483,15 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
         weapon.range
     };
     let in_range = |c: Coord| distance(c, target_at) <= reach;
+    // An omni-crusher drives onto a vehicle it can crush, firing on the
+    // way. `[observed]` (`allied-battle-fortress-crush`)
+    let arrived_at = |c: Coord| {
+        if crushing {
+            to_cell(c) == to_cell(target_at)
+        } else {
+            in_range(c)
+        }
+    };
 
     // Both drive or walk cell to cell along the route toward the target,
     // stopping in the first cell with the target in range. Vehicles stand
@@ -521,7 +530,7 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
     if !(o.motion.arrived || infantry && fresh) {
         if o.motion.leg.is_none() {
             let cell = cell_centre(o.coord);
-            if o.motion.rolling && in_range(cell) || !o.motion.rolling && in_range(o.coord) {
+            if o.motion.rolling && arrived_at(cell) || !o.motion.rolling && arrived_at(o.coord) {
                 o.motion.arrived = true;
                 o.motion.arrived_at = frame;
             } else {
@@ -532,7 +541,11 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
                     // Infantry close to their full range; vehicles to half
                     // a cell inside it. `[observed]` (the GI walks to
                     // (37,38) where range less half a cell gives (37,37))
-                    let reach = weapon.range + if infantry { 128 } else { 0 };
+                    let reach = if crushing {
+                        0
+                    } else {
+                        weapon.range + if infantry { 128 } else { 0 }
+                    };
                     let goal = pathfind::approach(here, to_cell(target_at), reach);
                     o.motion.goal = Some(Coord {
                         x: i32::from(goal.0) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
@@ -1080,19 +1093,20 @@ pub(crate) fn crush(world: &mut World, rules: &Rules) {
             continue;
         }
         if o.kind == Kind::Vehicle && rules.technos[o.techno].crusher && !o.limbo {
-            kills.push((o.id, o.owner, to_cell(o.coord)));
+            kills.push((o.id, o.owner, o.techno, to_cell(o.coord)));
         }
     }
-    for (crusher, owner, cell) in kills {
+    for (crusher, owner, techno, cell) in kills {
+        let t = &rules.technos[techno];
         let victims: Vec<usize> = (0..world.objects.len())
             .filter(|&k| {
                 let v = &world.objects[k];
-                v.kind == Kind::Infantry
-                    && !v.limbo
-                    && v.health > 0
-                    && v.owner != owner
-                    && rules.technos[v.techno].crushable
-                    && to_cell(v.coord) == cell
+                let can = match v.kind {
+                    Kind::Infantry => rules.technos[v.techno].crushable,
+                    Kind::Vehicle => omni_crushable(rules, t, owner, v),
+                    _ => false,
+                };
+                can && !v.limbo && v.health > 0 && v.owner != owner && to_cell(v.coord) == cell
             })
             .collect();
         for k in victims {
@@ -1106,6 +1120,24 @@ pub(crate) fn crush(world: &mut World, rules: &Rules) {
     world
         .objects
         .retain(|o| o.health > 0 || o.dies_at.is_some());
+}
+
+/// Whether a crusher of type `t` owned by `owner` crushes vehicle `v`:
+/// it's `OmniCrusher=`, `v` isn't `OmniCrushResistant=`, and they're
+/// different houses'. A crushed vehicle is gone at once, with neither its
+/// death weapon nor a crew. `[observed]` (`allied-battle-fortress-crush`:
+/// the Grizzly gone the frame the Battle Fortress reached its cell's
+/// middle, the Fortress unhurt and credited)
+fn omni_crushable(
+    rules: &Rules,
+    t: &ra2_rules::TechnoType,
+    owner: u32,
+    v: &crate::world::Object,
+) -> bool {
+    t.omni_crusher
+        && v.kind == Kind::Vehicle
+        && v.owner != owner
+        && !rules.technos[v.techno].omni_crush_resistant
 }
 
 /// A teleporter's wait after a warp of `distance` leptons: that over
