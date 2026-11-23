@@ -3,8 +3,7 @@
 **Status:** Parity-checked (self-healing, building repair, the Service
 Depot, engineers repairing, experience from kills, veterancy's effects on
 an attacker, crates: picking up, Money, Veteran, Unit and Speed; the
-IFV's repair turret). Still to
-come: the other powerups.
+IFV's repair turret). Still to come: the other powerups.
 **Crate:** `ra2-rules` (`production::repair_frames`,
 `production::repair_step_cost`, `production::experience_after_kill`),
 `veterancy`), `ra2-sim` (`production::heal`, `hunt::credit`)
