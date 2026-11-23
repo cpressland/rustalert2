@@ -71,8 +71,13 @@ here too, because the repair scenario damages its building that way.
   on the frame the engineer reached its top-left cell; the house's credits
   didn't change)
 - As with repair, the house's power shows it a frame later. `[observed]`
-- We walk it to the building's nearest cell. Capturing an enemy's building
-  isn't recorded yet.
+- An engineer ordered onto an enemy's building captures it the same way:
+  on reaching one of its cells the building becomes its house's, as it
+  stands, and the engineer is used up. Both houses' power is counted again
+  on that frame. `[observed]` (`allied-engineer-capture`: a Neutral power
+  plant; the player's output went from 200 to 400 on the frame the
+  engineer went in, the Neutral house's to nothing)
+- We walk it to the building's nearest cell.
 
 ### The Service Depot
 
@@ -268,6 +273,7 @@ on the x87. `[recomp 0x0070D0D0]`
 | `allied-ifv-repair` | The Grizzly's health after the IFV's missiles and after one RepairBullet, where the IFV ends, the engineer aboard | exact |
 | `mcv-crates` | Credits after a money crate and a veteran crate (money without a trainable unit), the unit crate's Grizzly and where the MCV stops, and its speed after a speed crate | credits ±900 a crate (the random part); positions exact, one ±64 |
 | `allied-depot-repair` | The IFV's health after the shell, after the first step and once whole, the house's credits at each, and where it parks after | exact |
+| `allied-engineer-capture` | The engineer going in, the plant's owner and health after, both houses' power | exact; the engineer's arrival ±40 frames (infantry speed) |
 | `yuri-engineer-repair` | The reactor's health before and after, the engineer going in, the house's power and credits after | exact; the engineer's arrival ±30 frames |
 | `grizzly-veteran-hunts-mcv` | A veteran from the map: its experience, its position at 120, the MCV's first damage and its health at 600 and 900 | as `grizzly-hunts-mcv`: one shell (71), 3 frames |
 | `grizzly-elite-hunts-mcv` | Elite from the map: its experience, its health (self-healing) at 140 and 440, the MCV's first damage, its health at 300 and when it's destroyed | health exact; one shell, 3 frames |
