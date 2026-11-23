@@ -279,6 +279,15 @@ fn can_place(world: &World, rules: &Rules, house: u32, techno: usize, cell: (i32
 pub fn order(world: &mut World, rules: &Rules, frame: u32, build: Build) {
     match build {
         Build::Deploy { house, techno } => {
+            // A GI (`Deployer=yes`) deploys where it stands, at once: an
+            // attack ordered two frames after its deploy hit with its
+            // deployed weapon. `[observed]` (`allied-gi-deploy`)
+            if let Some(o) = world.objects.iter_mut().find(|o| {
+                o.owner == house && o.techno == techno && !o.limbo && rules.technos[techno].deployer
+            }) {
+                o.deployed = true;
+                return;
+            }
             let unit = world.objects.iter().find(|o| {
                 o.owner == house
                     && o.techno == techno
