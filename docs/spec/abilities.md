@@ -2,7 +2,7 @@
 
 **Status:** Started: engineers capturing and repairing, the IFV's weapon
 by passenger, Tanya's C4, Yuri's mind control, Gattling weapons, the
-Cloning Vats, garrisoning, spies in barracks. Traced but not modelled: the GI deploying on
+Cloning Vats, garrisoning, spies in barracks and power plants. Traced but not modelled: the GI deploying on
 Guard. Tried: the Grinder.
 **Crate:** `ra2-sim` (`command`, `hunt`)
 **Issue:** #44
@@ -104,9 +104,12 @@ engineers and the IFV is in repair.md; this note links to it.
   built veterans from then on, with experience 1 from the start of their
   training; one begun before the spy went in stays a rookie. `[observed]`
 - Into a war factory: its vehicles the same way. `[hypothesis]`
-- Other buildings (a power plant's blackout, `SpyPowerBlackout=`; a
-  refinery's money, `SpyMoneyStealPercent=`; the radar, the battle lab)
-  aren't modelled yet.
+- Into a power plant: its owner makes no power from that frame for
+  `SpyPowerBlackout=` (1000) frames less one. `[observed]`
+  (`allied-spy-power`: a Neutral plant's 200 gone from the frame the spy
+  went in, back 999 frames on; the spy's own house untouched)
+- Other buildings (a refinery's money, `SpyMoneyStealPercent=`; the radar,
+  the battle lab) aren't modelled yet.
 
 ### The Cloning Vats
 
@@ -150,5 +153,6 @@ engineers and the IFV is in repair.md; this note links to it.
 | `guard-gattling` | The MCV's first damage and its health at 200, 400, 600 and 900 | exact at 200; then one pair (20), the stages coming 2 to 5 frames late |
 | `allied-garrison` | The house Neutral, then the player's; unhurt; the GI still counted | exact, clear of the change (ours 30 frames sooner: infantry speed) |
 | `allied-spy-barracks` | The spy going in; the GI trained after a veteran | exact; the spy ±40 frames (infantry speed) |
+| `allied-spy-power` | The spy going in; the Neutral house's power during and after the blackout, the player's untouched | exact clear of the changes; the spy ±40 frames |
 | `yuri-cloning` | How many Initiates there are after each comes out, and where the first copy appears | exact |
 | `allied-tanya-c4` | The plant destroyed, no crew, the Neutral house's power after, Tanya unhurt | the plant's end ±30 frames (infantry speed) |

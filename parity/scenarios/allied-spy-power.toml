@@ -1,0 +1,107 @@
+name = "allied-spy-power"
+description = """
+Spies in a power plant. A Neutral power plant stands west of the human
+player's (British) base. The player builds a power plant and a barracks,
+trains a spy (the map makes it cheaper and needs only the barracks) and
+sends it into the Neutral plant. Covers a power plant's infiltration: the
+owner's power cut (SpyPowerBlackout=). The AI starts in the far corner."""
+map = "parity_allied_spy_power.yrm"
+end_frame = 2900
+human_start = [35, 35]
+
+[generate]
+name = "allied-spy-power"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[SPY]
+Prerequisite=GAPILE
+Cost=500
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.structure]]
+owner = "Neutral"
+type = "GAPOWR"
+x = 28
+y = 36
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAPILE"
+
+[[order]]
+frame = 900
+what = "place"
+type = "GAPILE"
+x = 38
+y = 37
+
+[[order]]
+frame = 910
+what = "produce"
+type = "SPY"
+
+[[order]]
+frame = 1500
+what = "capture"
+type = "SPY"
+target = "GAPOWR"
+
+# Tolerances: the spy walks faster than the original's (see
+# locomotors.md), so it goes in, and the blackout starts, 31 frames sooner.
+
+# The spy goes in and is used up, and the Neutral house's output (its
+# plant's 200) is gone from that frame for SpyPowerBlackout= less one, 999
+# frames; the player's own power isn't touched.
+[[check]]
+what = "event"
+type = "SPY"
+owner = 0
+event = "removed"
+window = 40
+
+[[check]]
+what = "power"
+house = 2
+at = 1800
+tolerance = 0
+
+[[check]]
+what = "power"
+house = 2
+at = 2700
+tolerance = 0
+
+[[check]]
+what = "power"
+house = 0
+at = 2000
+tolerance = 0
+
+[[check]]
+what = "power"
+house = 2
+at = 2800
+tolerance = 0

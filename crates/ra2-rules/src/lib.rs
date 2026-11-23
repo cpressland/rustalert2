@@ -516,6 +516,9 @@ pub struct General {
     pub repair_percent: Ratio,
     /// Minutes between a Service Depot's repair steps (`URepairRate=`).
     pub unit_repair_rate: Ratio,
+    /// Frames a spy in a power plant cuts its owner's power for
+    /// (`SpyPowerBlackout=`).
+    pub spy_power_blackout: i32,
     /// Veterancy: kills worth this many times a unit's cost make it a
     /// veteran, and twice that elite (`VeteranRatio=`); experience stops at
     /// `VeteranCap=`; and what being a veteran does to damage dealt
@@ -1101,6 +1104,7 @@ impl Rules {
                     "RepairPercent",
                     Ratio::from_value("15%"),
                 ),
+                spy_power_blackout: int(rules.section("General"), "SpyPowerBlackout", 1000),
                 unit_repair_rate: ratio(
                     rules.section("General"),
                     "URepairRate",
