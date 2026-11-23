@@ -1,0 +1,129 @@
+name = "allied-battle-fortress-far"
+description = """
+A Battle Fortress's passenger out of range. As allied-battle-fortress, but
+the sleeping Neutral Grizzly is 7.6 cells from where the Fortress waits:
+beyond its own gun and beyond the GI's Para with OpenToppedRangeBonus=.
+Covers whether a passenger takes the Fortress's target when it's out of
+reach at the order, as the Fortress drives into range."""
+map = "parity_allied_battle_fortress_far.yrm"
+end_frame = 3000
+human_start = [35, 35]
+
+[generate]
+name = "allied-battle-fortress-far"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[GAWEAP]
+Prerequisite=POWER,GACNST
+Cost=500
+
+[BFRT]
+Prerequisite=GAWEAP
+Cost=1000
+Crusher=no
+OmniCrusher=no
+
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 54
+y = 41
+facing = 64
+mission = "Sleep"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAWEAP"
+
+[[order]]
+frame = 890
+what = "place"
+type = "GAWEAP"
+x = 41
+y = 36
+
+[[order]]
+frame = 900
+what = "produce"
+type = "GAPILE"
+
+[[order]]
+frame = 905
+what = "produce"
+type = "BFRT"
+
+[[order]]
+frame = 1300
+what = "place"
+type = "GAPILE"
+x = 37
+y = 38
+
+[[order]]
+frame = 1310
+what = "produce"
+type = "E1"
+
+[[order]]
+frame = 1600
+what = "move"
+type = "BFRT"
+x = 47
+y = 38
+
+[[order]]
+frame = 2000
+what = "enter"
+type = "E1"
+target = "BFRT"
+
+[[order]]
+frame = 2400
+what = "attack"
+type = "BFRT"
+target = "MTNK"
+
+# The Fortress drives up and fires from 2451, 6 a hit every 20 to 22
+# frames; the GI inside never fires, though the Fortress closes to within
+# its reach. Two frames on the first hit, a hit on health.
+[[check]]
+what = "first_damage"
+type = "MTNK"
+window = 2
+
+[[check]]
+what = "hp"
+type = "MTNK"
+at = 2700
+tolerance = 6
+
+[[check]]
+what = "hp"
+type = "MTNK"
+at = 2990
+tolerance = 6

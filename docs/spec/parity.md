@@ -45,6 +45,7 @@ the community's YRpp headers. `[observed]`
 | Superweapons | `HouseClass +0x254`: one `SuperClass*` per type; `+0x30`/`+0x38` charge timer, `+0x6D` present, `+0x6F` charged, `+0x70` on hold | the class's vtable (`0x007F3FE8`) found by scanning the house; the fields from its update (`0x006CBCA0`) and a recording |
 | Cargo | `TechnoClass +0x33C`: four `float`s, bails of each ore kind | counts 1 to 40 a bail at a time as a War Miner harvests, back to 0 as the refinery pays |
 | Cells | `MapClass` (`0x0087F7E8`) `+0x13C`: `CellClass*` per cell, index `y × 512 + x` | the lookup `0x005657A0` |
+| On the map | `ObjectClass +0x74` (byte) | 1 for a GI on the map, 0 once inside a garrison (its position unchanged) |
 | Overlay, its data | `CellClass +0x44` (`int`, −1 for none), `+0x11E` (byte) | the overlay goes from 102 (`TIB01`) to −1 when its data has counted down from 11 to 0 |
 
 ### Log format
@@ -58,6 +59,9 @@ JSON lines, one per observed frame:
 ```
 
 - `cargo` appears on objects carrying ore or gems: their bails, in total.
+- `limbo` (true) marks an object off the map: inside a building or
+  transport, or not placed yet. The original keeps its last position;
+  ours logs 0.
 - `supers` (on a house) lists its superweapons: type index, charged,
   on hold, frames left.
 - `ore` lists every cell holding ore or gems: x, y, the overlay's index in

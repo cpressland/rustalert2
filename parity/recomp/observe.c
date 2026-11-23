@@ -164,6 +164,7 @@ static void write_frame(uint32_t frame) {
             if (as) { fputs(",\"disguise\":", g_out); json_id(g_out, as); }
             if (house) fprintf(g_out, ",\"disguise_house\":%u", rd32(house + HOUSE_INDEX));
         }
+        if (!*(const uint8_t *)GUEST_PTR(o + OBJ_ON_MAP)) fputs(",\"limbo\":true", g_out);
         {
             /* Experience: a float, 1 a veteran and 2 elite. */
             uint32_t bits = rd32(o + TECHNO_VETERANCY);

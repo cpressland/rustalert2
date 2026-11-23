@@ -321,6 +321,7 @@ pub fn observe(sim: &Sim, rules: &Rules) -> Frame {
                 vet_micros: (f64::from(f32::from_bits(o.experience_bits)) * 1e6).round() as i64,
                 disguise: o.disguise.map(|(t, _)| rules.technos[t].id.clone()),
                 disguise_house: o.disguise.map(|(_, h)| h),
+                limbo: o.limbo,
             })
             .collect(),
         ore: world

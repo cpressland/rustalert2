@@ -67,6 +67,15 @@ pub struct Object {
     pub disguise: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub disguise_house: Option<u32>,
+    /// Off the map: inside a building or transport, or not yet placed. The
+    /// original keeps such an object's last position.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub limbo: bool,
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_false(v: &bool) -> bool {
+    !*v
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)]

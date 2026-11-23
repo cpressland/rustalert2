@@ -346,6 +346,12 @@ pub struct TechnoType {
     pub death_weapon: Option<WeaponId>,
     /// What it fires from inside a garrisoned building (`OccupyWeapon=`).
     pub occupy_weapon: Option<WeaponId>,
+    /// A transport its passengers fire out of (`OpenTopped=`).
+    pub open_topped: bool,
+    /// Which weapon it fires from an open-topped transport
+    /// (`OpenTransportWeapon=`): 0 its primary, 1 its secondary, otherwise
+    /// as it would anyway.
+    pub open_transport_weapon: i32,
     pub death_weapon_damage_modifier: Ratio,
     /// Crew get out when it's destroyed (`Crewed=`).
     pub crewed: bool,
@@ -632,6 +638,11 @@ pub struct CombatDamage {
     /// `OccupyROFMultiplier=`).
     pub occupy_damage: Ratio,
     pub occupy_rof: Ratio,
+    /// Passengers firing out of an open-topped transport: their damage
+    /// and extra range in cells (`OpenToppedDamageMultiplier=`,
+    /// `OpenToppedRangeBonus=`).
+    pub open_topped_damage: Ratio,
+    pub open_topped_range_bonus: i32,
     pub harvester_immune: bool,
     pub destroyable_bridges: bool,
 }
@@ -840,6 +851,8 @@ impl Rules {
                     elite_primary: weapon("ElitePrimary"),
                     death_weapon: weapon("DeathWeapon"),
                     occupy_weapon: weapon("OccupyWeapon"),
+                    open_topped: flag(s, "OpenTopped", false),
+                    open_transport_weapon: int(s, "OpenTransportWeapon", -1),
                     weapons: (1..=int(s, "WeaponCount", 0).clamp(0, 32))
                         .map(|n| weapon(&format!("Weapon{n}")))
                         .collect(),
@@ -1266,6 +1279,12 @@ impl Rules {
                 c4_delay: ratio(c, "C4Delay", Ratio::from_value(".03")),
                 occupy_damage: ratio(c, "OccupyDamageMultiplier", Ratio::from_value("1.2")),
                 occupy_rof: ratio(c, "OccupyROFMultiplier", Ratio::from_value("1.2")),
+                open_topped_damage: ratio(
+                    c,
+                    "OpenToppedDamageMultiplier",
+                    Ratio::from_value("1.2"),
+                ),
+                open_topped_range_bonus: int(c, "OpenToppedRangeBonus", 0),
                 destroyable_bridges: flag(c, "DestroyableBridges", true),
             },
             audio_visual: AudioVisual {

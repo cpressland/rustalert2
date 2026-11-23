@@ -1,7 +1,7 @@
 # Special abilities
 
 **Status:** Started: engineers capturing and repairing, the IFV's weapon
-by passenger, Tanya's C4, Yuri's mind control, Gattling weapons, the GI
+by passenger, the Battle Fortress's passengers, Tanya's C4, Yuri's mind control, Gattling weapons, the GI
 deploying, the Chrono Legionnaire, the Cloning Vats, garrisoning, spies
 (disguise, dogs, barracks, power plants, refineries). Tried: the Grinder.
 **Crate:** `ra2-sim` (`command`, `hunt`)
@@ -33,6 +33,39 @@ engineers and the IFV is in repair.md; this note links to it.
 - A gunner (`Gunner=yes`) fires `Weapon<n>`, n its first passenger's
   `IFVMode=` + 1; an engineer aboard gives the IFV `RepairBullet`. See
   repair.md, "The IFV's repair turret". `[observed]`
+
+### The Battle Fortress
+
+- Passengers of an open-topped transport (`OpenTopped=yes`: in Yuri's
+  Revenge only the Battle Fortress) fire out of it. An attack order to the
+  transport goes to them too, from the frame after it. `[observed]`
+  (`allied-battle-fortress`)
+- Each fires its `OpenTransportWeapon=` (0 its primary, 1 its secondary,
+  else its usual weapon: a GI's is 1, the Para), from where the
+  transport is. Its range has `[CombatDamage] OpenToppedRangeBonus=` (2)
+  more cells and its damage is × `OpenToppedDamageMultiplier=` (1.2). It
+  reloads as it would outside. `[observed]` (a GI's Para, 30, 12 a hit
+  on heavy armour, every 17 to 19 frames, beside the Fortress's own
+  20mmRapid, 6 a hit every 20 to 22)
+- The passenger's first shot landed a frame after the Fortress's, four
+  frames after the order (fitted, one recording). `[observed]`
+- Only passengers that reach the target at the order take it. One out of
+  reach doesn't fire at all, even once the transport has closed in.
+  `[observed]` (`allied-battle-fortress-far`: the Grizzly 7.6 cells off,
+  beyond the Para's 5 + 2; the Fortress drove into its own range and
+  fired, the GI never did; also a recording with crushing on, 7.2 cells)
+- A passenger keeps its last position while inside, until the transport
+  moves; then it's carried along. `[observed]`
+- A GI ordered into the Fortress didn't get in when the Fortress was
+  ordered to move while the GI was on its way. `[observed]` Ours isn't
+  modelled.
+- The Battle Fortress is an `OmniCrusher=`. Ordered to attack a Grizzly,
+  it fired as it drove up and then drove over it, killing it with 270
+  health left. `[observed]` Crushing isn't modelled; the scenarios take
+  it away.
+- The Fortress came out of the war factory a cell north of ours, (46, 36)
+  against our (46, 37), after first backing into the factory. `[observed]`
+  The scenarios move it to a set cell first.
 
 ### Tanya's C4
 
@@ -206,8 +239,8 @@ engineers and the IFV is in repair.md; this note links to it.
 ## Open questions
 
 - Spies in other buildings, the Psychic
-  Dominator's and Yuri Prime's control, Boris, the Magnetron, the Battle
-  Fortress.
+  Dominator's and Yuri Prime's control, Boris, the Magnetron.
+- Crushing (`Crusher=`, `OmniCrusher=`).
 - Whether Tanya's C4 differs against units, and with `C4=` on other
   infantry (Navy SEALs).
 
@@ -227,6 +260,8 @@ engineers and the IFV is in repair.md; this note links to it.
 | `allied-garrison-fire` | The house's first hit, the Grizzly's health as it fires, and the Grizzly gone | first hit exact; health one hit (9) |
 | `allied-garrison-two` | As above with two GIs inside, and the kill's experience | first hit exact; health one hit (9) |
 | `allied-garrison-three` | As above with three GIs inside | exact |
+| `allied-battle-fortress-far` | The Fortress's first hit and the Grizzly's health with only the Fortress firing | first hit ±2 frames; health one hit (6) |
+| `allied-battle-fortress` | The Grizzly's first hit and health as the Fortress and the GI inside fire, the Grizzly gone, the GI alive | first hit ±1 frame (the Fortress's); health ±18 (a hit of each) |
 | `yuri-cloning` | How many Initiates there are after each comes out, and where the first copy appears | exact |
 | `allied-gi-deploy` | The Grizzly untouched before the attack order, the deployed GI's first hit and the Grizzly's health after, the GI unmoved | first hit ±2 frames; health one hit (10) |
 | `allied-chrono-legion` | Where it warps to attack and to move, the Grizzly untouched while frozen, and when it's gone | positions exact; the erasure ±5 frames |
