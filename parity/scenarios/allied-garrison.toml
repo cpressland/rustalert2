@@ -1,7 +1,7 @@
 name = "allied-garrison"
 description = """
 Garrisons. A Neutral civilian house (CAHSE01) stands west of the human
-player's (British) base, and a Neutral Grizzly sleeps six cells beyond it.
+player's (British) base, and a Neutral Grizzly sleeps three cells beyond it.
 The player builds a power plant and a barracks, trains a GI and sends it
 into the house (a capture order: an Enter order on it is taken as an
 attack). Covers occupying a building: whose it becomes, and the
@@ -29,7 +29,7 @@ y = 36
 [[generate.unit]]
 owner = "Neutral"
 type = "MTNK"
-x = 22
+x = 25
 y = 37
 facing = 64
 mission = "Sleep"
@@ -85,8 +85,7 @@ owner = 2
 at = 1650
 tolerance = 0
 
-# ...then the player's, unhurt, with the GI inside (still counted). The
-# garrison didn't fire on the Grizzly six cells off in the original.
+# ...then the player's, unhurt, with the GI inside (still counted).
 [[check]]
 what = "count"
 type = "CAHSE01"

@@ -88,9 +88,11 @@ engineers and the IFV is in repair.md; this note links to it.
   house, 11 a hit). `[observed]`
 - The civilian house a map gives to `Special` the original filed under
   Neutral. `[observed]`
-- Firing from the building (`OccupyWeapon=`, `OccupyDamageMultiplier=`,
-  `OccupyROFMultiplier=`, `OccupyWeaponRange=`) isn't modelled yet: the
-  garrison didn't fire on a Grizzly six cells off.
+- The garrison didn't fire by itself on a sleeping Neutral Grizzly, 3
+  cells off or 6, within its `OccupyWeapon=` range (`UCPara`, 6).
+  `[observed]` What it does take on, and the `Occupy…Multiplier=` and
+  `OccupyWeaponRange=` effects, aren't recorded yet; ours doesn't fire
+  either.
 
 ### The Cloning Vats
 
