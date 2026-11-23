@@ -2,7 +2,7 @@
 
 **Status:** Started: engineers capturing and repairing, the IFV's weapon
 by passenger, Tanya's C4, Yuri's mind control, Gattling weapons, the
-Cloning Vats. Traced but not modelled: the GI deploying on
+Cloning Vats, garrisoning. Traced but not modelled: the GI deploying on
 Guard. Tried: the Grinder.
 **Crate:** `ra2-sim` (`command`, `hunt`)
 **Issue:** #44
@@ -77,6 +77,21 @@ engineers and the IFV is in repair.md; this note links to it.
   frames (see combat.md). `[observed]`
 - Its fall when it loses its target isn't recorded yet.
 
+### Garrisons
+
+- Infantry with `Occupier=yes` ordered onto a garrisonable building
+  (`CanBeOccupied=yes`, up to `MaxNumberOccupants=`) walk to its nearest
+  cell and go inside; the building is then their house's. `[observed]`
+  (`allied-garrison`: a GI into a Neutral civilian house, CAHSE01)
+- The order is the capture mission, as an engineer's: an Enter order on
+  a Neutral civilian building is taken as an attack (the GI shot the
+  house, 11 a hit). `[observed]`
+- The civilian house a map gives to `Special` the original filed under
+  Neutral. `[observed]`
+- Firing from the building (`OccupyWeapon=`, `OccupyDamageMultiplier=`,
+  `OccupyROFMultiplier=`, `OccupyWeaponRange=`) isn't modelled yet: the
+  garrison didn't fire on a Grizzly six cells off.
+
 ### The Cloning Vats
 
 - With Cloning Vats (`Cloning=yes`), each infantryman the house trains
@@ -104,7 +119,7 @@ engineers and the IFV is in repair.md; this note links to it.
 
 ## Open questions
 
-- Spies, garrisons, the Chrono Legionnaire, the Psychic Dominator's and
+- Spies, firing from garrisons, the Chrono Legionnaire, the Psychic Dominator's and
   Yuri Prime's control, Boris, the
   Magnetron, Gattling weapons, the Cloning Vats, the Battle Fortress.
 - Whether Tanya's C4 differs against units, and with `C4=` on other
@@ -117,5 +132,6 @@ engineers and the IFV is in repair.md; this note links to it.
 | `allied-engineer-capture` | see repair.md | |
 | `yuri-mind-control` | The Grizzly Neutral before Yuri is in range and his after; the Rhino his and the Grizzly Neutral again; both unhurt | exact at frames clear of the changes (ours come up to 21 frames sooner: infantry speed) |
 | `guard-gattling` | The MCV's first damage and its health at 200, 400, 600 and 900 | exact at 200; then one pair (20), the stages coming 2 to 5 frames late |
+| `allied-garrison` | The house Neutral, then the player's; unhurt; the GI still counted | exact, clear of the change (ours 30 frames sooner: infantry speed) |
 | `yuri-cloning` | How many Initiates there are after each comes out, and where the first copy appears | exact |
 | `allied-tanya-c4` | The plant destroyed, no crew, the Neutral house's power after, Tanya unhurt | the plant's end ±30 frames (infantry speed) |

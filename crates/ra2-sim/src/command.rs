@@ -252,6 +252,26 @@ fn capture(world: &mut World, rules: &Rules, frame: u32, i: usize, id: u32) -> b
     };
     if inside(here) {
         let owner = world.objects[i].owner;
+        let room =
+            usize::try_from(rules.technos[world.objects[b].techno].max_occupants).unwrap_or(0);
+        if rules.technos[world.objects[i].techno].occupier && room > 0 {
+            // A garrison: the infantryman goes inside, and the building is
+            // his house's while it's held. `[observed]` (`allied-garrison`:
+            // a GI into a Neutral civilian house)
+            if world.objects[b].passengers.len() < room {
+                let id = world.objects[i].id;
+                world.objects[b].owner = owner;
+                world.objects[b].passengers.push(id);
+                let o = &mut world.objects[i];
+                o.limbo = true;
+                o.command = None;
+                o.mission = Mission::Sleep;
+                o.motion = crate::hunt::Motion::default();
+            } else {
+                stand(world, i);
+            }
+            return false;
+        }
         if world.objects[b].owner == owner {
             let strength = rules.technos[world.objects[b].techno].strength;
             world.objects[b].health = strength;
