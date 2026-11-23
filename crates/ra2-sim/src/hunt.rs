@@ -74,7 +74,7 @@ fn micro(r: ra2_rules::Ratio) -> i32 {
 /// driver. `[recomp 0x004B0F69]` (the speed is a double in the game; we
 /// keep millionths, so a frame now and then may differ by one unit)
 pub(crate) fn throttle(rules: &Rules, o: &mut Object, t: &ra2_rules::TechnoType, dist: i32) -> i32 {
-    let top = top_speed(rules, t, o.rank());
+    let top = object_speed(rules, t, o);
     let m = &mut o.motion;
     if t.accelerates {
         if m.speed < CRAWL {
@@ -95,11 +95,12 @@ pub(crate) fn throttle(rules: &Rules, o: &mut Object, t: &ra2_rules::TechnoType,
     i32::try_from(units).unwrap_or(0) * DRIVE_SPEED
 }
 
-/// A type's full speed as the game keeps it (see
-/// `TechnoType::speed_fraction`), × `VeteranSpeed=` if its rank has
-/// `FASTER`, truncated. `[recomp 0x004DB1FA]`
-pub(crate) fn top_speed(rules: &Rules, t: &ra2_rules::TechnoType, rank: u8) -> i32 {
-    ra2_rules::veterancy::speed_factor(rules, t, rank).of(t.speed_fraction)
+/// An object's full speed: its type's × a speed crate's bonus, truncated,
+/// then × `VeteranSpeed=` if it has `FASTER`. `[recomp 0x004DB1D5]`
+/// (`[observed]`: an MCV's 10 became 12 after a 1.2 speed crate)
+pub(crate) fn object_speed(rules: &Rules, t: &ra2_rules::TechnoType, o: &Object) -> i32 {
+    let base = o.speed_bonus.of(t.speed_fraction);
+    ra2_rules::veterancy::speed_factor(rules, t, o.rank()).of(base)
 }
 
 fn isqrt(v: i64) -> i32 {
@@ -317,7 +318,7 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
             if i32::from(o.dir) == want {
                 o.motion.rolling = true;
                 let speed = if infantry {
-                    top_speed(rules, t, o.rank()) * WALK_SPEED
+                    object_speed(rules, t, o) * WALK_SPEED
                 } else {
                     let dist = o.motion.goal.map_or(i32::MAX, |g| distance(g, o.coord));
                     throttle(rules, o, t, dist)
@@ -369,7 +370,8 @@ fn fire(
         0
     };
     let shooter = o.id;
-    let damage = ra2_rules::veterancy::firepower(rules, t, rank, weapon.damage);
+    let damage =
+        ra2_rules::veterancy::firepower(rules, t, rank, o.firepower_bonus.of(weapon.damage));
     world.shots.push(Shot {
         shooter,
         damage,
@@ -421,6 +423,14 @@ fn land(world: &mut World, rules: &Rules, frame: u32) {
         // `[recomp 0x007019CB]`
         let ot = &rules.technos[o.techno];
         let raw = ra2_rules::veterancy::armor(rules, ot, o.rank(), s.damage);
+        // A crate's armor bonus divides it too. `[hypothesis]`
+        let raw = if o.armor_bonus == ra2_rules::Ratio::ONE {
+            raw
+        } else {
+            (ra2_rules::x87::X80::int(raw) / ra2_rules::x87::X80::double(o.armor_bonus.value()))
+                .trunc()
+                .max(1)
+        };
         let damage = weapon
             .warhead
             .map_or(raw, |wh| rules.warhead(wh).verses[ot.armor.index()].of(raw));

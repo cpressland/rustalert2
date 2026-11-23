@@ -87,6 +87,10 @@ pub enum OrderKind {
     Enter,
     /// ... to capture it (an engineer).
     Capture,
+    /// Move the game's crate to `x`, `y` (a skirmish puts its crates at
+    /// random; the map's are dropped) and make it the powerup `type`
+    /// (`Money`, `Veteran`…, or `Random` for a pick by weight).
+    Crate,
 }
 
 /// What objects a check looks at.

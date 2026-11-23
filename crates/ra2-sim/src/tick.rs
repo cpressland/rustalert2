@@ -81,6 +81,9 @@ pub enum Order {
         kind: usize,
         cell: (i16, i16),
     },
+    /// Put the crate at a cell with a powerup (`ra2_rules::POWERUPS`
+    /// index, or 19 and up for a pick by weight).
+    Crate { cell: (i16, i16), kind: u8 },
     /// Command a house's first object of a type (a techno index). An
     /// attack, enter or capture names its target by type too: the first
     /// object of that type, of any house.
@@ -188,6 +191,7 @@ impl Sim {
                         }
                     }
                 }
+                Order::Crate { cell, kind } => crate::crates::place(&mut self.world, cell, kind),
                 Order::Fire { house, kind, cell } => {
                     if let Some(rules) = &self.rules {
                         crate::superweapon::fire(
@@ -214,7 +218,7 @@ impl Sim {
             // Commanded units after the power count too: an engineer's
             // repair shows in its house's power a frame later. `[observed]`
             // (`yuri-engineer-repair`)
-            crate::command::update(&mut self.world, rules, self.frame + 1);
+            crate::command::update(&mut self.world, rules, &mut self.rng, self.frame + 1);
         }
         self.frame += 1;
         events

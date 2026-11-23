@@ -65,3 +65,11 @@ pub fn speed_factor(rules: &Rules, t: &TechnoType, rank: u8) -> crate::Ratio {
 pub fn from_map(veterancy: i32) -> u32 {
     (X80::int(veterancy.max(0)) / X80::int(100)).to_float()
 }
+
+/// Experience after a crate's `levels` (each worth 1), capped at
+/// `VeteranCap=`, as a float's bits. `[hypothesis]` (as a kill's)
+pub fn promote(rules: &Rules, experience: u32, levels: i32) -> u32 {
+    let total = X80::float(experience) + X80::int(levels);
+    let cap = X80::double(rules.general.veteran_cap.value());
+    if cap <= total { cap } else { total }.to_float()
+}
