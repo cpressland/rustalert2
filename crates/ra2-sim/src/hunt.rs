@@ -14,6 +14,10 @@ use crate::world::{Mission, Object, Shot, World};
 /// vehicles about 1.56, infantry about 1.05. `[observed]`
 pub(crate) const DRIVE_SPEED: i32 = 406;
 pub(crate) const WALK_SPEED: i32 = 277;
+/// Frames more a mind control link takes to land. `[observed]`
+/// (`yuri-mind-control`: Yuri fired the frame after he stopped, 1,739
+/// leptons off, and the Grizzly was his 5 frames later)
+const MIND_CONTROL_FLIGHT: i32 = 4;
 /// Leptons of distance per frame of an arcing shell's flight. `[observed]`
 const ARC_LEPTONS_PER_FRAME: i32 = 128;
 /// A full turn in the 16-bit facing the game keeps.
@@ -253,6 +257,7 @@ pub fn update(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32
     }
     land(world, rules, rng, frame);
     crate::death::update(world, rules, frame);
+    release(world);
 }
 
 /// The first frames a unit on Guard can take a target. `[observed]`
@@ -525,8 +530,13 @@ fn fire(
     let arcing = weapon
         .projectile
         .is_some_and(|p| rules.projectile(p).arcing);
+    let mind = weapon
+        .warhead
+        .is_some_and(|wh| rules.warhead(wh).mind_control);
     let flight = if arcing {
         distance(o.coord, target_at) / ARC_LEPTONS_PER_FRAME
+    } else if mind {
+        MIND_CONTROL_FLIGHT
     } else {
         0
     };
@@ -606,6 +616,14 @@ fn land(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
         if o.shielded_until > frame || o.health <= 0 {
             continue;
         }
+        if weapon
+            .warhead
+            .is_some_and(|wh| rules.warhead(wh).mind_control)
+        {
+            let target = o.id;
+            control(world, s.shooter, target, weapon.damage);
+            continue;
+        }
         // Its veterancy's `STRONGER` first, then the warhead's `Verses=`.
         // `[recomp 0x007019CB]`
         let ot = &rules.technos[o.techno];
@@ -635,6 +653,65 @@ fn land(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
     world
         .objects
         .retain(|o| o.health > 0 || o.dies_at.is_some());
+}
+
+/// A mind control link: the target becomes the shooter's house's, unless
+/// it's a building or already its own; past the weapon's `Damage=` links
+/// (Yuri's 1), the oldest is let go, back to its house. `[observed]`
+/// (`yuri-mind-control`: a Neutral Grizzly became the Yuri player's)
+/// Letting go isn't recorded yet. `[hypothesis]`
+fn control(world: &mut World, shooter: u32, target: u32, links: i32) {
+    let Some(owner) = world
+        .objects
+        .iter()
+        .find(|o| o.id == shooter)
+        .map(|o| o.owner)
+    else {
+        return;
+    };
+    let Some(t) = world.objects.iter().position(|o| o.id == target) else {
+        return;
+    };
+    if world.objects[t].kind == Kind::Building || world.objects[t].owner == owner {
+        return;
+    }
+    let mut held: Vec<usize> = (0..world.objects.len())
+        .filter(|&k| {
+            world.objects[k]
+                .controlled_by
+                .is_some_and(|(c, _)| c == shooter)
+        })
+        .collect();
+    while i32::try_from(held.len()).unwrap_or(i32::MAX) >= links.max(1) {
+        let k = held.remove(0);
+        if let Some((_, was)) = world.objects[k].controlled_by.take() {
+            world.objects[k].owner = was;
+        }
+    }
+    let o = &mut world.objects[t];
+    o.controlled_by = Some((shooter, o.owner));
+    o.owner = owner;
+    o.command = None;
+    o.mission = Mission::Guard;
+    o.motion.target = None;
+}
+
+/// Units a dead controller held go back to their houses. `[hypothesis]`
+pub(crate) fn release(world: &mut World) {
+    let alive: Vec<u32> = world
+        .objects
+        .iter()
+        .filter(|o| o.health > 0)
+        .map(|o| o.id)
+        .collect();
+    for o in &mut world.objects {
+        if let Some((c, was)) = o.controlled_by
+            && !alive.contains(&c)
+        {
+            o.owner = was;
+            o.controlled_by = None;
+        }
+    }
 }
 
 /// A kill's experience for its shooter, if it's trainable and the victim

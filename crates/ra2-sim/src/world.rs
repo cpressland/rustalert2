@@ -108,6 +108,8 @@ pub struct Object {
     pub passengers: Vec<u32>,
     /// A building with C4 on it: the frame it's destroyed.
     pub c4_at: Option<u32>,
+    /// Under mind control: by whom, and the house it belonged to.
+    pub controlled_by: Option<(u32, u32)>,
 }
 
 impl Object {
@@ -303,6 +305,7 @@ impl World {
             turret: None,
             passengers: Vec::new(),
             c4_at: None,
+            controlled_by: None,
         });
         Some(id)
     }
@@ -341,6 +344,7 @@ impl World {
             turret: None,
             passengers: Vec::new(),
             c4_at: None,
+            controlled_by: None,
         });
         id
     }

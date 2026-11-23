@@ -1,7 +1,7 @@
 # Special abilities
 
 **Status:** Started: engineers capturing and repairing, the IFV's weapon
-by passenger, Tanya's C4. Traced but not modelled: the GI deploying on
+by passenger, Tanya's C4, Yuri's mind control. Traced but not modelled: the GI deploying on
 Guard. Tried: the Grinder.
 **Crate:** `ra2-sim` (`command`, `hunt`)
 **Issue:** #44
@@ -46,6 +46,19 @@ engineers and the IFV is in repair.md; this note links to it.
 - Her `Secondary=Sapper` (2500, `Range=1.5`) isn't what does it; we don't
   fire it. `[observed]` (the plant lost 1 hit point a shot, not 2500)
 
+### Mind control
+
+- A warhead with `MindControl=yes` (`Controller`: Yuri's `MindControl`,
+  `Range=7`) does no damage: what it hits becomes the shooter's house's,
+  unless it's a building. `[observed]` (`yuri-mind-control`: Yuri stopped
+  at the first spot within 7 cells of a Neutral Grizzly, fired the frame
+  after, and the Grizzly was his 5 frames later, unhurt, where it stood)
+- The weapon's `Damage=` is how many it can hold (Yuri: 1); taking another
+  lets the oldest go back to its house, and a dead controller's go back
+  too. `[hypothesis]` (not recorded yet)
+- The link's flight is the 5 frames above; its projectile is invisible
+  (`PsychicControl`) and its speed isn't traced.
+
 ### The GI deploying (not modelled)
 
 - Infantry not under human control, with `Deployer=yes` and
@@ -63,7 +76,8 @@ engineers and the IFV is in repair.md; this note links to it.
 
 ## Open questions
 
-- Spies, garrisons, the Chrono Legionnaire, mind control, Boris, the
+- Spies, garrisons, the Chrono Legionnaire, the Psychic Dominator's and
+  Yuri Prime's control, Boris, the
   Magnetron, Gattling weapons, the Cloning Vats, the Battle Fortress.
 - Whether Tanya's C4 differs against units, and with `C4=` on other
   infantry (Navy SEALs).
@@ -73,4 +87,5 @@ engineers and the IFV is in repair.md; this note links to it.
 | Scenario | Checks | Tolerance |
 |---|---|---|
 | `allied-engineer-capture` | see repair.md | |
+| `yuri-mind-control` | The Grizzly Neutral before Yuri is in range, his after, unhurt and where it stood | the change ±21 frames (infantry speed) |
 | `allied-tanya-c4` | The plant destroyed, no crew, the Neutral house's power after, Tanya unhurt | the plant's end ±30 frames (infantry speed) |

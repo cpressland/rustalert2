@@ -1,0 +1,109 @@
+name = "yuri-mind-control"
+description = """
+Mind control. A Neutral Grizzly sleeps (Mission Sleep: it won't fire) west
+of the Yuri player's base. The player builds a Bio Reactor and a barracks
+and trains Yuri (the map makes him cheaper and needs only the barracks),
+then orders him at the Grizzly. Covers the MindControl weapon: its range,
+when the unit changes hands, and Yuri's link. The AI starts in the far
+corner."""
+map = "parity_yuri_mind_control.yrm"
+end_frame = 2000
+human_start = [35, 35]
+human_country = "YuriCountry"
+
+[generate]
+name = "yuri-mind-control"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[YURI]
+Prerequisite=YABRCK
+Cost=500
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 22
+y = 36
+facing = 64
+mission = "Sleep"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "PCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "YAPOWR"
+
+[[order]]
+frame = 430
+what = "place"
+type = "YAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 440
+what = "produce"
+type = "YABRCK"
+
+[[order]]
+frame = 720
+what = "place"
+type = "YABRCK"
+x = 31
+y = 34
+
+[[order]]
+frame = 730
+what = "produce"
+type = "YURI"
+
+[[order]]
+frame = 1300
+what = "attack"
+type = "YURI"
+target = "MTNK"
+
+# Tolerances: Yuri comes out of the barracks on the same frame and to the
+# same cell as in the original, but walks faster (see locomotors.md), so he
+# is in range, and the Grizzly his, 21 frames sooner.
+
+# Still Neutral before Yuri is in range...
+[[check]]
+what = "count"
+type = "MTNK"
+owner = 2
+at = 1400
+tolerance = 0
+
+# ...then his: one shot of MindControl from 7 cells, landing 5 frames after
+# he stops; no damage, and the Grizzly stays where it is.
+[[check]]
+what = "count"
+type = "MTNK"
+owner = 0
+at = 1500
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "MTNK"
+owner = 0
+at = 1500
+tolerance = 0
+
+[[check]]
+what = "position"
+type = "MTNK"
+owner = 0
+at = 2000
+tolerance = 0

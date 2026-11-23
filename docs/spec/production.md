@@ -171,9 +171,13 @@ the house's output and drain when an order starts.
 - Ships leaving a naval yard; which factory is primary when there are
   several (we use the oldest).
 - Power output from damaged buildings, recorded.
-- How many crew a sold building lets out, and where; which cell a unit
-  leaving a factory walks to (the game's pick varies between recordings,
-  likely from its random numbers).
+- How many crew a sold building lets out, and where; which cell a vehicle
+  leaving a war factory goes to (the game's pick varies between
+  recordings, likely from its random numbers).
+- Infantry leaving a barracks go to the first free cell of the row below a
+  wide one (the Allied barracks, 3×2) or of the column east of a tall one
+  (the Yuri barracks, 2×3, from its top row). `[observed]` (GIs, an
+  engineer, a Yuri engineer and Yuri) Other barracks, and why, untraced.
 - The GI's exact walking path out (we're within a few leptons on the way,
   exact on arrival).
 

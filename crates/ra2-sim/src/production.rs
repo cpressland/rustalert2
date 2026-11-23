@@ -697,20 +697,28 @@ fn leave(world: &mut World, rules: &Rules, frame: u32, f: &Factory) {
         y: y0 * LEPTONS_PER_CELL + INFANTRY_EXIT.1,
         z: 0,
     };
-    // The first cell of the row below the factory with nobody standing or
-    // heading there. `[observed]` (the game's pick varies; see the spec)
-    let row = y0 + h;
-    let taken = |x: i32| {
+    // The first cell with nobody standing or heading there: along the row
+    // below a wide factory (the Allied barracks, 3×2), down the column east
+    // of a tall one (the Yuri barracks, 2×3). `[observed]` (an engineer, a
+    // GI and Yuri; the game's pick varies; see the spec)
+    let taken = |c: (i32, i32)| {
+        let c = (cell_i16(c.0), cell_i16(c.1));
         world.objects.iter().any(|o| {
             o.kind == Kind::Infantry
                 && !o.limbo
-                && (to_cell(o.coord) == (cell_i16(x), cell_i16(row))
-                    || o.motion
-                        .goal
-                        .is_some_and(|g| to_cell(g) == (cell_i16(x), cell_i16(row))))
+                && (to_cell(o.coord) == c || o.motion.goal.is_some_and(|g| to_cell(g) == c))
         })
     };
-    let x = (x0..x0 + w.max(1) + 8).find(|&x| !taken(x)).unwrap_or(x0);
+    let cells: Vec<(i32, i32)> = if h > w {
+        (y0..y0 + h + 8).map(|y| (x0 + w, y)).collect()
+    } else {
+        (x0..x0 + w.max(1) + 8).map(|x| (x, y0 + h)).collect()
+    };
+    let (x, row) = cells
+        .iter()
+        .copied()
+        .find(|&c| !taken(c))
+        .unwrap_or(cells[0]);
     let goal = Coord {
         x: x * LEPTONS_PER_CELL + INFANTRY_SPOT.0,
         y: row * LEPTONS_PER_CELL + INFANTRY_SPOT.1,
