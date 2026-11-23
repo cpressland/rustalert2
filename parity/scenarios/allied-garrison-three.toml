@@ -1,0 +1,141 @@
+name = "allied-garrison-three"
+description = """
+A garrison of three. As allied-garrison-fire, but three GIs go into the
+Neutral civilian house (CAHSE01) one after another, before it's ordered to
+attack the sleeping Neutral Grizzly three cells off. Covers how several
+occupants fire: in turn or together, and at what rate. The AI starts in
+the far corner."""
+map = "parity_allied_garrison_three.yrm"
+end_frame = 3000
+human_start = [35, 35]
+
+[generate]
+name = "allied-garrison-three"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.structure]]
+owner = "Neutral"
+type = "CAHSE01"
+x = 28
+y = 36
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 25
+y = 37
+facing = 64
+mission = "Sleep"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAPILE"
+
+[[order]]
+frame = 900
+what = "place"
+type = "GAPILE"
+x = 38
+y = 37
+
+[[order]]
+frame = 910
+what = "produce"
+type = "E1"
+
+[[order]]
+frame = 911
+what = "produce"
+type = "E1"
+
+[[order]]
+frame = 912
+what = "produce"
+type = "E1"
+
+[[order]]
+frame = 1500
+what = "capture"
+type = "E1"
+target = "CAHSE01"
+
+[[order]]
+frame = 1900
+what = "capture"
+type = "E1"
+target = "CAHSE01"
+
+[[order]]
+frame = 2250
+what = "capture"
+type = "E1"
+target = "CAHSE01"
+
+[[order]]
+frame = 2600
+what = "attack"
+type = "CAHSE01"
+target = "MTNK"
+
+# The house fires from the frame after the order, its GIs in turn: 15
+# (plus 0 to 2) over three occupants is 5 frames, over
+# OccupyROFMultiplier=1.2 is 4, rounded up to odd is 5. With three the
+# random part drops out, so the Grizzly's health is exact all the way.
+# The kill's experience is a GI's, not the house's.
+[[check]]
+what = "count"
+type = "MTNK"
+at = 2590
+tolerance = 0
+
+[[check]]
+what = "first_damage"
+type = "MTNK"
+window = 0
+
+[[check]]
+what = "hp"
+type = "MTNK"
+at = 2650
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "MTNK"
+at = 2740
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "MTNK"
+at = 2800
+tolerance = 0
+
+[[check]]
+what = "experience"
+type = "E1"
+at = 2900
+tolerance = 0

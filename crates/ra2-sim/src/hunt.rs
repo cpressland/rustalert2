@@ -826,24 +826,22 @@ fn control(world: &mut World, shooter: u32, target: u32, links: i32) {
     o.motion.target = None;
 }
 
-/// A garrisoned building ordered to attack: its first occupant's
-/// `OccupyWeapon=` fires from it, the damage × `OccupyDamageMultiplier=`
-/// and the reload (`ROF=` plus 0 to 2) ÷ `OccupyROFMultiplier=`, each
-/// truncated. `[observed]` (`allied-garrison-fire`: a GI's `UCPara`, 30 ×
-/// 1.2 = 36, 9 a hit on heavy armour, every 13 to 15 frames from the frame
-/// after the order) The order ends when the target's gone.
+/// A garrison firing on its target. Its occupants take turns, the next
+/// one each shot (the second first), each with its `OccupyWeapon=` at
+/// `[CombatDamage] OccupyDamageMultiplier=`, and the kill is the firing
+/// occupant's. The reload is `ROF=` plus 0 to 2, over the number of
+/// occupants (whole frames), over `OccupyROFMultiplier=`, truncated.
+/// `[recomp 0x006FD15E]` The building only tries again every other frame
+/// from the frame after it fires, so the gap is that rounded up to an odd
+/// number. `[observed]` (`allied-garrison-fire`: one GI, 13 or 15 frames;
+/// two, 5 or 7; `allied-garrison-three`: three, always 5; the kill's
+/// experience went to the second, then the first)
 fn garrison(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: usize, id: u32) {
     let b = &world.objects[i];
-    let Some(gunner) = b
-        .passengers
-        .first()
-        .and_then(|p| world.objects.iter().find(|o| o.id == *p))
-    else {
+    let n = b.passengers.len();
+    if n == 0 {
         return;
-    };
-    let Some(w) = rules.technos[gunner.techno].occupy_weapon else {
-        return;
-    };
+    }
     let Some(target_at) = world
         .objects
         .iter()
@@ -854,26 +852,35 @@ fn garrison(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, 
         b.command = None;
         return;
     };
+    let next = (b.firing_occupant + 1) % n;
+    let Some(gunner) = world.objects.iter().find(|o| o.id == b.passengers[next]) else {
+        return;
+    };
+    let Some(w) = rules.technos[gunner.techno].occupy_weapon else {
+        return;
+    };
+    let gunner = gunner.id;
     let weapon = rules.weapon(w);
     let b = &mut world.objects[i];
     b.motion.reload = (b.motion.reload - 1).max(0);
     if b.motion.reload > 0 || distance(b.coord, target_at) > weapon.range + 2 * LEPTONS_PER_CELL {
         return;
     }
+    b.firing_occupant = next;
     let damage = rules.combat_damage.occupy_damage.of(weapon.damage);
-    let shooter = b.id;
     world.shots.push(Shot {
-        shooter,
+        shooter: gunner,
         damage,
         target: id,
         weapon: w,
         lands: frame + 1,
     });
-    let reload = weapon.rof + rng.ranged(0, 2);
+    let occupants = i32::try_from(n).unwrap_or(1);
+    let reload = (weapon.rof + rng.ranged(0, 2)) / occupants;
     let reload = (ra2_rules::x87::X80::int(reload)
         / ra2_rules::x87::X80::double(rules.combat_damage.occupy_rof.value()))
     .trunc();
-    world.objects[i].motion.reload = reload + 1;
+    world.objects[i].motion.reload = reload | 1;
 }
 
 /// A teleporter's wait after a warp of `distance` leptons: that over
