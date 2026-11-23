@@ -41,6 +41,10 @@ Choosing the route is pathfinding (#39).
     to the target.
   Not while it's on a turning track (index 64 or more), nor for a unit
   type with `Passive=yes`.
+- At or below `[AudioVisual] ConditionYellow=` health (50%) the fraction
+  is × 0.75, before the truncation below. `[recomp 0x004B3DDF]`
+  (`grizzly-crush-guard`: a Grizzly at 140 of 300 moved 19 leptons a
+  frame, its 17 units × 0.75 truncated to 12; 27 unhurt) `[observed]`
 - What it moves on a frame is the stored speed × that fraction (× house
   and veterancy multipliers), truncated: a War Miner (stored 10) moves 3
   points at a crawl and gains a point about every 3 frames. `[recomp

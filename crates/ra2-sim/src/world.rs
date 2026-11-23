@@ -111,6 +111,8 @@ pub struct Object {
     pub passengers: Vec<u32>,
     /// A garrison's last occupant to fire, by index into `passengers`.
     pub firing_occupant: usize,
+    /// The last enemy to hurt it, whom it fires back at on Guard.
+    pub retaliate: Option<u32>,
     /// A building with C4 on it: the frame it's destroyed.
     pub c4_at: Option<u32>,
     /// Under mind control: by whom, and the house it belonged to.
@@ -364,6 +366,7 @@ impl World {
             turret: None,
             passengers: Vec::new(),
             firing_occupant: 0,
+            retaliate: None,
             c4_at: None,
             controlled_by: None,
             gattling_rate: 0,
@@ -413,6 +416,7 @@ impl World {
             turret: None,
             passengers: Vec::new(),
             firing_occupant: 0,
+            retaliate: None,
             c4_at: None,
             controlled_by: None,
             gattling_rate: 0,

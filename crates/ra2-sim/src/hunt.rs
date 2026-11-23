@@ -97,7 +97,16 @@ pub(crate) fn throttle(rules: &Rules, o: &mut Object, t: &ra2_rules::TechnoType,
     } else {
         m.speed = FULL;
     }
-    let units = i64::from(top) * i64::from(m.speed) / i64::from(FULL);
+    // At or below `ConditionYellow=` health it drives at three quarters.
+    // `[recomp 0x004B3DDF]` (`grizzly-crush-guard`: a Grizzly at 140 of
+    // 300 drove 19 leptons a frame, 27 unhurt)
+    let damaged = o.health <= rules.audio_visual.condition_yellow.of(t.strength);
+    let speed = if damaged {
+        o.motion.speed * 3 / 4
+    } else {
+        o.motion.speed
+    };
+    let units = i64::from(top) * i64::from(speed) / i64::from(FULL);
     i32::try_from(units).unwrap_or(0) * DRIVE_SPEED
 }
 
@@ -312,19 +321,24 @@ fn guard(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: 
     if frame < from {
         return;
     }
-    let (at, owner) = (me.coord, me.owner);
+    let (at, owner, revenge) = (me.coord, me.owner, me.retaliate);
+    // It fires back at whoever hurt it, even one it wouldn't take on by
+    // itself: a player's Grizzly shot by a Neutral GI returned fire.
+    // `[observed]` (`grizzly-crush-guard`)
     let in_range = |o: &crate::world::Object| {
         o.owner != owner
             && !o.limbo
             && o.health > 0
             && seen_as_enemy(t, owner, o)
-            && takes_on(world, owner, o.owner)
+            && (takes_on(world, owner, o.owner) || revenge == Some(o.id))
             && distance(o.coord, at) <= weapon.range
     };
+    let find = |id: u32| world.objects.iter().find(|o| o.id == id && in_range(o));
     let target = me
         .motion
         .target
-        .and_then(|id| world.objects.iter().find(|o| o.id == id && in_range(o)))
+        .and_then(find)
+        .or_else(|| revenge.and_then(find))
         .or_else(|| {
             world
                 .objects
@@ -729,6 +743,11 @@ fn land(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
             spy.motion.target = None;
             continue;
         }
+        let shooter_owner = world
+            .objects
+            .iter()
+            .find(|x| x.id == s.shooter)
+            .map(|x| x.owner);
         let Some(o) = world.objects.iter_mut().find(|o| o.id == s.target) else {
             continue;
         };
@@ -765,6 +784,9 @@ fn land(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
         // A mending weapon's negative damage heals, up to full strength.
         // `[hypothesis]`
         o.health = (o.health - damage).min(if damage < 0 { ot.strength } else { i32::MAX });
+        if damage > 0 && shooter_owner.is_some_and(|h| h != o.owner) {
+            o.retaliate = Some(s.shooter);
+        }
         // A dog's bite (a `Parasite=yes` warhead) kills infantry outright.
         // `[observed]` (`allied-spy-dog`: a spy at 100 dead in one bite of
         // 30)

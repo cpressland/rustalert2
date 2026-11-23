@@ -48,6 +48,11 @@ Firing, projectiles and damage. Target choice belongs to missions.
     Special) by themselves; the civilians take on anyone. `[observed]`
     (`allied-gi-deploy`: a GI beside a sleeping Neutral Grizzly fired only
     when ordered)
+  - A unit on Guard fires back at whoever last hurt it, within its range,
+    even a civilian it wouldn't take on by itself. `[observed]`
+    (`grizzly-crush-guard`: a player's Grizzly shot by a Neutral GI fired
+    back, 16 a hit about every 62 frames) Ours keeps its current target
+    first, then that attacker, then the nearest enemy. `[hypothesis]`
 - **Infantry deaths**: infantry killed by a shot fall and are taken away
   15 frames later. `[observed]` (a spy shot dead on 1698, gone on 1713)
 - **Turrets**: a turret (`Turret=yes`) turns toward the target at the
