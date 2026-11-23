@@ -657,9 +657,9 @@ fn land(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
 
 /// A mind control link: the target becomes the shooter's house's, unless
 /// it's a building or already its own; past the weapon's `Damage=` links
-/// (Yuri's 1), the oldest is let go, back to its house. `[observed]`
-/// (`yuri-mind-control`: a Neutral Grizzly became the Yuri player's)
-/// Letting go isn't recorded yet. `[hypothesis]`
+/// (Yuri's 1), the oldest is let go, back to its house, on the same frame.
+/// `[observed]` (`yuri-mind-control`: a Neutral Grizzly became the Yuri
+/// player's, and went back when Yuri took a Rhino)
 fn control(world: &mut World, shooter: u32, target: u32, links: i32) {
     let Some(owner) = world
         .objects
@@ -689,10 +689,11 @@ fn control(world: &mut World, shooter: u32, target: u32, links: i32) {
         }
     }
     let o = &mut world.objects[t];
+    // It keeps its mission: a sleeping Grizzly taken stayed asleep.
+    // `[observed]`
     o.controlled_by = Some((shooter, o.owner));
     o.owner = owner;
     o.command = None;
-    o.mission = Mission::Guard;
     o.motion.target = None;
 }
 
