@@ -51,10 +51,11 @@ pub fn order(world: &mut World, id: u32, command: Command) {
     o.mission = Mission::Other;
     o.motion.route.clear();
     o.motion.planned = None;
-    o.motion.target = match command {
-        Command::Attack(t) => Some(t),
-        _ => None,
-    };
+    // Hunt takes an attack order's target from the order, as a new one,
+    // and goes to it afresh.
+    o.motion.target = None;
+    o.motion.arrived = false;
+    o.motion.goal = None;
 }
 
 /// One frame of every commanded unit.
@@ -93,6 +94,10 @@ fn enter(world: &mut World, rules: &Rules, frame: u32, i: usize, id: u32) {
         return;
     };
     let depot = &rules.technos[world.objects[b].techno];
+    if depot.passengers > 0 {
+        board(world, rules, i, b);
+        return;
+    }
     if !depot.unit_repair {
         stand(world, i);
         return;
@@ -148,6 +153,28 @@ fn enter(world: &mut World, rules: &Rules, frame: u32, i: usize, id: u32) {
             steps: 0,
             whole_at: None,
         });
+    }
+}
+
+/// Infantry boarding a transport (`Passengers=`): it walks to the
+/// transport's cell and goes in on reaching it, if there's room.
+/// `[observed]` (`allied-ifv-repair`: an engineer into an IFV)
+fn board(world: &mut World, rules: &Rules, i: usize, b: usize) {
+    let room = usize::try_from(rules.technos[world.objects[b].techno].passengers).unwrap_or(0);
+    if world.objects[b].owner != world.objects[i].owner || world.objects[b].passengers.len() >= room
+    {
+        stand(world, i);
+        return;
+    }
+    let goal = to_cell(world.objects[b].coord);
+    if to_cell(world.objects[i].coord) == goal || drive(world, rules, None, i, goal) {
+        let id = world.objects[i].id;
+        let o = &mut world.objects[i];
+        o.limbo = true;
+        o.command = None;
+        o.mission = Mission::Sleep;
+        o.motion = crate::hunt::Motion::default();
+        world.objects[b].passengers.push(id);
     }
 }
 

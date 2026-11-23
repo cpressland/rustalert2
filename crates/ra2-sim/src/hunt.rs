@@ -264,9 +264,12 @@ fn guard(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: 
     if me.kind == Kind::Building || me.health <= 0 {
         return;
     }
-    let Some(weapon) = weapon_of(t, me.rank()).map(|w| rules.weapon(w)) else {
+    let Some(weapon) = weapon_now(world, rules, me).map(|w| rules.weapon(w)) else {
         return;
     };
+    if weapon.damage < 0 {
+        return;
+    }
     let from = if infantry {
         GUARD_FROM_INFANTRY
     } else {
@@ -327,12 +330,17 @@ fn guard(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: 
 fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: usize) {
     let me = world.objects[i].clone();
     let t = &rules.technos[me.techno];
-    let Some(weapon) = weapon_of(t, me.rank()).map(|w| rules.weapon(w)) else {
+    let Some(weapon) = weapon_now(world, rules, &me).map(|w| rules.weapon(w)) else {
         return;
     };
-    // An attack order's target: once it's gone, the unit stands.
+    // An attack order's target: once it's gone (or, for a mending weapon,
+    // whole), the unit stands.
     if let Some(crate::command::Command::Attack(id)) = me.command
-        && !world.objects.iter().any(|o| o.id == id && o.health > 0)
+        && !world.objects.iter().any(|o| {
+            o.id == id
+                && o.health > 0
+                && (weapon.damage >= 0 || o.health < rules.technos[o.techno].strength)
+        })
     {
         let o = &mut world.objects[i];
         o.command = None;
@@ -342,9 +350,12 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
     }
     // The target: kept while it lives, else the nearest object of another
     // house. `[hypothesis]` (threat and house alliances not yet weighed)
-    let target = me
-        .motion
-        .target
+    let ordered = match me.command {
+        Some(crate::command::Command::Attack(id)) => Some(id),
+        _ => None,
+    };
+    let target = ordered
+        .or(me.motion.target)
         .and_then(|id| world.objects.iter().find(|o| o.id == id))
         .or_else(|| {
             world
@@ -489,7 +500,9 @@ fn fire(
     let o = &world.objects[i];
     let t = &rules.technos[o.techno];
     let rank = o.rank();
-    let Some(w) = weapon_of(t, rank) else { return };
+    let Some(w) = weapon_now(world, rules, o) else {
+        return;
+    };
     let weapon = rules.weapon(w);
     let Some(target_at) = world
         .objects
@@ -543,6 +556,32 @@ fn weapon_of(t: &ra2_rules::TechnoType, rank: u8) -> Option<ra2_rules::WeaponId>
     }
 }
 
+/// An object's weapon: a gunner's (`Gunner=yes`, the IFV) is its
+/// `Weapon<n>`, n its first passenger's `IFVMode=` + 1, the first when
+/// empty. `[community]` (`[observed]`: an engineer aboard an IFV mended)
+pub(crate) fn weapon_now(world: &World, rules: &Rules, o: &Object) -> Option<ra2_rules::WeaponId> {
+    let t = &rules.technos[o.techno];
+    if t.gunner && !t.weapons.is_empty() {
+        let mode = o
+            .passengers
+            .first()
+            .and_then(|id| world.objects.iter().find(|p| p.id == *id))
+            .map_or(0, |p| rules.technos[p.techno].ifv_mode);
+        let list = if o.rank() >= 2 {
+            &t.elite_weapons
+        } else {
+            &t.weapons
+        };
+        let k = usize::try_from(mode).unwrap_or(0);
+        return list
+            .get(k)
+            .copied()
+            .flatten()
+            .or(t.weapons.first().copied().flatten());
+    }
+    weapon_of(t, o.rank())
+}
+
 /// Apply the damage of every shell landing this frame; remove the dead.
 fn land(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
     let (now, later): (Vec<Shot>, Vec<Shot>) =
@@ -572,7 +611,9 @@ fn land(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
         let damage = weapon
             .warhead
             .map_or(raw, |wh| rules.warhead(wh).verses[ot.armor.index()].of(raw));
-        o.health -= damage;
+        // A mending weapon's negative damage heals, up to full strength.
+        // `[hypothesis]`
+        o.health = (o.health - damage).min(if damage < 0 { ot.strength } else { i32::MAX });
         if o.health <= 0 {
             let (victim, rank, owner, id) = (o.techno, o.rank(), o.owner, o.id);
             credit(world, rules, s.shooter, victim, rank, owner);

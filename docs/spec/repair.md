@@ -2,8 +2,9 @@
 
 **Status:** Parity-checked (self-healing, building repair, the Service
 Depot, engineers repairing, experience from kills, veterancy's effects on
-an attacker, crates: picking up, Money, Veteran, Unit and Speed). Still to
-come: the other powerups, and the IFV's repair turret.
+an attacker, crates: picking up, Money, Veteran, Unit and Speed; the
+IFV's repair turret). Still to
+come: the other powerups.
 **Crate:** `ra2-rules` (`production::repair_frames`,
 `production::repair_step_cost`, `production::experience_after_kill`),
 `veterancy`), `ra2-sim` (`production::heal`, `hunt::credit`)
@@ -97,6 +98,23 @@ the scenario damages the IFV. The original's Grizzly fired its first shell
 about 20 frames after the order, its turret turning (combat.md). Ours
 turns too, but our IFV parks on the Grizzly's cell (see below), so the
 first shell's frame differs.
+
+### The IFV's repair turret
+
+- Infantry ordered into a transport (`Passengers=` above 0, its own
+  side's, with room) walk to its cell and get in. `[observed]`
+  (`allied-ifv-repair`: an engineer into an IFV)
+- A gunner (`Gunner=yes`, the IFV) fires its `Weapon<n>`, n its first
+  passenger's `IFVMode=` + 1, or `Weapon1=` empty: an engineer (mode 1)
+  gives it `RepairBullet` (`Damage=-50`, `Range=1.8`). `[community]`
+  `[observed]`
+- A negative damage mends, up to full strength: one shot took a Grizzly
+  from 268 to 300. `[observed]` An attack with a mending weapon ends once
+  the target is whole. `[hypothesis]`
+- The original's IFV mended only once it had stopped beside the Grizzly;
+  ours mends as soon as it's in range on the move, 9 frames sooner.
+- Not modelled yet: a gunner on Guard taking on damaged friends by
+  itself, other passengers' weapons beyond the table, and unloading.
 
 ### Crates
 
@@ -230,7 +248,6 @@ on the x87. `[recomp 0x0070D0D0]`
 
 ## Open questions
 
-- The IFV's repair turret (an engineer inside) needs passengers.
 - Two units leaving a war factory: the original sent the first a cell
   further on, so the second had the door cell; ours send both to the
   door cell.
@@ -249,6 +266,7 @@ on the x87. `[recomp 0x0070D0D0]`
 
 | Scenario | Checks | Tolerance |
 |---|---|---|
+| `allied-ifv-repair` | The Grizzly's health after the IFV's missiles and after one RepairBullet, where the IFV ends, the engineer aboard | exact |
 | `mcv-crates` | Credits after a money crate and a veteran crate (money without a trainable unit), the unit crate's Grizzly and where the MCV stops, and its speed after a speed crate | credits ±900 a crate (the random part); positions exact, one ±64 |
 | `allied-depot-repair` | The IFV's health after the shell, after the first step and once whole, the house's credits at each, and where it parks after | exact |
 | `yuri-engineer-repair` | The reactor's health before and after, the engineer going in, the house's power and credits after | exact; the engineer's arrival ±30 frames |
