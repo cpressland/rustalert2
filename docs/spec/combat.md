@@ -32,6 +32,19 @@ Firing, projectiles and damage. Target choice belongs to missions.
 - **Targets**: a hunter keeps its target while it lives, else takes the
   nearest living object of another house. `[hypothesis]` (threat ratings and
   alliances not yet weighed)
+- **Guard**: an armed unit on Guard (the default for map units and
+  anything idle) takes the nearest living enemy within its weapon's
+  range, keeps it while it lives and stays in range, and fires on it
+  without moving. Enemies out of range are left alone, even within its
+  sight. It can first take a target on frame 46 (infantry, which fire the
+  frame after) or 47 (vehicles). `[observed]` (`guard-mcv`, three seeds:
+  a GI 3 cells from an MCV hit it on 48, 71 and 94; a Grizzly 4 cells off
+  on 68, after its turret turned a quarter and its shell flew 9 frames;
+  Grizzlies 9 and 14 cells off didn't move) Where the 46 comes from (a
+  scan interval, or the mission's first delay) isn't traced.
+  - A GI on Guard deploys after its third shot (`Deployer=yes`,
+    `DeployFire=yes`) and fires its deployed weapon. Not modelled yet
+    (special abilities, #44).
 - **Turrets**: a turret (`Turret=yes`) turns toward the target at the
   body's `ROT=` × 256 a frame, from the body's facing at first, and the
   unit fires only once it's on the target. `[observed]` (a Grizzly's
@@ -85,3 +98,11 @@ hit points at every checked frame.
 - The reload's random part and the order of draws from the generator.
 - Projectile flight time.
 - Whether turrets have their own rate (`TurretROT`-like) for other units.
+
+## Parity
+
+| Scenario | Checks | Tolerance |
+|---|---|---|
+| `*-hunts-mcv` | see locomotors.md | one shot, a few frames |
+| `guard-mcv` | the MCV's first damage, its health at 60 and 110, the Grizzlies' positions at 300 | exact |
+| `grizzly-veteran` | the kill, the crewman out and killed by the wreck's blast | ±2 frames |

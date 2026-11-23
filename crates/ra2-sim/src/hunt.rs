@@ -232,6 +232,10 @@ pub fn update(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32
     for i in 0..world.objects.len() {
         let o = &world.objects[i];
         let attacking = matches!(o.command, Some(crate::command::Command::Attack(_)));
+        if o.mission == Mission::Guard && o.command.is_none() && !o.limbo {
+            guard(world, rules, rng, frame, i);
+            continue;
+        }
         if o.mission != Mission::Hunt && !attacking {
             continue;
         }
@@ -239,6 +243,84 @@ pub fn update(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32
     }
     land(world, rules, rng, frame);
     crate::death::update(world, rules, frame);
+}
+
+/// The first frames a unit on Guard can take a target. `[observed]`
+/// (`guard-mcv`, three seeds: a GI's first hit landed on 48, fired the
+/// frame after it took the target; a Grizzly's on 68, after a 13-frame
+/// turret turn and a 9-frame shell)
+const GUARD_FROM_INFANTRY: u32 = 46;
+const GUARD_FROM_VEHICLE: u32 = 47;
+
+/// Guard: an armed unit takes the nearest living enemy within its
+/// weapon's range, keeps it while it lives and stays in range, and fires
+/// on it without moving. Enemies out of range are left alone, even within
+/// sight. `[observed]` (`guard-mcv`: Grizzlies 9 and 14 cells off stayed
+/// put)
+fn guard(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: usize) {
+    let me = &world.objects[i];
+    let t = &rules.technos[me.techno];
+    let infantry = me.kind == Kind::Infantry;
+    if me.kind == Kind::Building || me.health <= 0 {
+        return;
+    }
+    let Some(weapon) = weapon_of(t, me.rank()).map(|w| rules.weapon(w)) else {
+        return;
+    };
+    let from = if infantry {
+        GUARD_FROM_INFANTRY
+    } else {
+        GUARD_FROM_VEHICLE
+    };
+    if frame < from {
+        return;
+    }
+    let (at, owner) = (me.coord, me.owner);
+    let in_range = |o: &crate::world::Object| {
+        o.owner != owner && !o.limbo && o.health > 0 && distance(o.coord, at) <= weapon.range
+    };
+    let target = me
+        .motion
+        .target
+        .and_then(|id| world.objects.iter().find(|o| o.id == id && in_range(o)))
+        .or_else(|| {
+            world
+                .objects
+                .iter()
+                .filter(|o| in_range(o))
+                .min_by_key(|o| (i64::from(distance(o.coord, at)), o.id))
+        })
+        .map(|o| (o.id, o.coord));
+    let o = &mut world.objects[i];
+    o.motion.reload = (o.motion.reload - 1).max(0);
+    let Some((target_id, target_at)) = target else {
+        o.motion.target = None;
+        return;
+    };
+    let fresh = o.motion.target != Some(target_id);
+    o.motion.target = Some(target_id);
+    if fresh && infantry {
+        // Infantry fire from the frame after they take a target.
+        o.motion.arrived_at = frame;
+        return;
+    }
+    let aimed = if t.turret {
+        let want = facing_to(o.coord, target_at);
+        let now = turn(i32::from(o.turret.unwrap_or(o.dir)), want, t.rot * 256);
+        o.turret = Some(u16::try_from(now).unwrap_or(0));
+        now == want
+    } else if infantry {
+        o.dir = u16::try_from(facing_to(o.coord, target_at)).unwrap_or(0);
+        true
+    } else {
+        let want = facing_to(o.coord, target_at);
+        let now = turn(i32::from(o.dir), want, t.rot * 256);
+        o.dir = u16::try_from(now).unwrap_or(0);
+        now == want
+    };
+    if aimed && o.motion.reload == 0 {
+        fire(world, rules, rng, frame, i, target_id, infantry);
+    }
 }
 
 #[allow(clippy::too_many_lines)]
