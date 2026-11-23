@@ -10,6 +10,43 @@
 #![allow(clippy::struct_excessive_bools)]
 
 pub mod production;
+
+/// The powerups a crate can hold, in the game's order (a crate's overlay
+/// data names one; 19 or more means a pick by `[Powerups]` weight).
+/// `[recomp 0x00481ACE]` (the order is Tiberian Sun's; Money first and Unit
+/// second are `[observed]`)
+pub const POWERUPS: [&str; 19] = [
+    "Money",
+    "Unit",
+    "HealBase",
+    "Cloak",
+    "Explosion",
+    "Napalm",
+    "Squad",
+    "Darkness",
+    "Reveal",
+    "Armor",
+    "Speed",
+    "Firepower",
+    "ICBM",
+    "Invulnerability",
+    "Veteran",
+    "IonStorm",
+    "Gas",
+    "Tiberium",
+    "Pod",
+];
+
+/// A powerup's index by name, or 255 (a random pick) for `Random`.
+pub fn crate_kind(name: &str) -> Option<u8> {
+    if name.eq_ignore_ascii_case("random") {
+        return Some(255);
+    }
+    POWERUPS
+        .iter()
+        .position(|p| p.eq_ignore_ascii_case(name))
+        .and_then(|i| u8::try_from(i).ok())
+}
 pub mod scenario;
 pub mod veterancy;
 pub mod x87;
@@ -512,6 +549,25 @@ pub struct CombatDamage {
     pub destroyable_bridges: bool,
 }
 
+/// One `[Powerups]` entry: `weight,anim,water,data` (data the powerup's
+/// number: money, a multiplier, veterancy levels…). `[community]`
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Powerup {
+    pub weight: i32,
+    pub data: Ratio,
+}
+
+/// `[Powerups]`, in [`POWERUPS`] order, and `[CrateRules]`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Crates {
+    pub powerups: Vec<Powerup>,
+    /// Leptons from the crate in which area powerups (veterancy, speed,
+    /// armor, firepower) reach (`CrateRadius=`, cells).
+    pub radius: i32,
+    /// A unit crate's unit (`UnitCrateType=`; `none`, a random one).
+    pub unit_type: Option<String>,
+}
+
 /// `[AudioVisual]`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AudioVisual {
@@ -536,7 +592,35 @@ pub struct Rules {
     pub general: General,
     pub combat_damage: CombatDamage,
     pub audio_visual: AudioVisual,
+    pub crates: Crates,
     by_id: BTreeMap<String, usize>,
+}
+
+/// `[Powerups]` and `[CrateRules]`.
+fn crates(rules: &Ini) -> Crates {
+    let p = rules.section("Powerups");
+    let powerups = POWERUPS
+        .iter()
+        .map(|name| {
+            let fields: Vec<String> = p
+                .and_then(|s| s.get(name))
+                .map(|v| v.split(',').map(|f| f.trim().to_string()).collect())
+                .unwrap_or_default();
+            Powerup {
+                weight: fields.first().map_or(0, |w| atoi(w)),
+                data: fields
+                    .get(3)
+                    .filter(|d| !d.is_empty())
+                    .map_or(Ratio::ONE, |d| Ratio::from_value(d)),
+            }
+        })
+        .collect();
+    let c = rules.section("CrateRules");
+    Crates {
+        powerups,
+        radius: ratio(c, "CrateRadius", Ratio::from_value("3.0")).of(256),
+        unit_type: text(c, "UnitCrateType").filter(|u| !u.eq_ignore_ascii_case("none")),
+    }
 }
 
 /// A section's value as an int, else `default`.
@@ -1025,6 +1109,7 @@ impl Rules {
                 condition_yellow: ratio(av, "ConditionYellow", Ratio(32_768)),
                 condition_red: ratio(av, "ConditionRed", Ratio(16_384)),
             },
+            crates: crates(rules),
             by_id,
         }
     }

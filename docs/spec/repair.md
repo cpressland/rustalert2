@@ -2,7 +2,8 @@
 
 **Status:** Parity-checked (self-healing, building repair, the Service
 Depot, engineers repairing, experience from kills, veterancy's effects on
-an attacker). Still to come: crates and the IFV's repair turret.
+an attacker, crates: picking up, Money, Veteran, Unit and Speed). Still to
+come: the other powerups, and the IFV's repair turret.
 **Crate:** `ra2-rules` (`production::repair_frames`,
 `production::repair_step_cost`, `production::experience_after_kill`),
 `veterancy`), `ra2-sim` (`production::heal`, `hunt::credit`)
@@ -96,6 +97,46 @@ the scenario damages the IFV. The original's Grizzly fired its first shell
 about 20 frames after the order (its turret turning); ours fires when the
 order lands.
 
+### Crates
+
+- A crate is overlay `CRATE` (index 179 in `[OverlayTypes]`; `WCRATE`,
+  242, on water). `[observed]`
+- A skirmish drops the map's crates and puts its own at random, one per
+  human player (`[CrateRules] CrateMinimum=`). It puts a new one at random
+  as soon as one is taken. `[observed]` `[recomp 0x005FD474]`
+- The game keeps them in `MapClass +0x158`: 256 entries of 16 bytes, a
+  timer then the cell at `+0xC`. `[recomp 0x0056BF83]` The recorder moves
+  the game's crate to the scenario's cell and sets its powerup the same
+  way.
+- A crate's overlay data names its powerup: below 19, that one of
+  `ra2_rules::POWERUPS` (Tiberian Sun's order: Money 0, Unit 1, HealBase
+  2, … Veteran 14). 19 and up means a pick by `[Powerups]` weight: a
+  number from 1 to their sum, and the first powerup whose running total
+  reaches it. A random crate's data is 255. `[recomp 0x00481ACE]`
+- A unit takes it on the frame it sets off into the crate's cell; the
+  pathfinder steers round a crate that isn't the destination. `[observed]`
+  (`mcv-crates`)
+- What each gives (`[Powerups]` is `weight,anim,water,data`):
+  - **Money**: data + 0 to 900 credits, at random (2000 gave 2879 and
+    2412). `[recomp 0x00482484]` `[observed]`
+  - **Veteran**: data levels for each trainable unit of the house within
+    `CrateRadius=` (3 cells); with none, it's money. `[observed]` (an MCV
+    alone got money) The levels' arithmetic is `[hypothesis]`.
+  - **Unit**: a unit of `[CrateRules] UnitCrateType=` (random if `none`,
+    not modelled) on the crate's cell. The unit that took it stops a cell
+    short. `[observed]`
+  - **Speed**: × data (1.2) on the house's units within the radius. It
+    multiplies the stored speed, truncated, before veterancy: an MCV's 10
+    became 12, 19 leptons a frame. `[recomp 0x004DB1D5]` `[observed]`
+  - **Armor** and **Firepower**: ÷ damage taken, × damage dealt, the same
+    way. `[hypothesis]`
+  - **HealBase**: the house's buildings whole. `[hypothesis]`
+  - the rest (cloak, explosions, reveal, darkness, ICBM…) aren't modelled
+    yet; we give money.
+- Our random numbers don't yet follow the original's, so a random
+  crate's powerup and a money crate's random part differ from the
+  original's.
+
 ### Power while damaged and repaired
 
 - A power plant's output scales with its health (see
@@ -188,13 +229,14 @@ on the x87. `[recomp 0x0070D0D0]`
 - When a unit attacks a building, the original fires while still driving
   up, and stops elsewhere than our hunt does. A Grizzly shelling a
   Construction Yard fired 5 frames sooner than ours.
-- Crates depend on the game's random numbers: what's in each one, and
-  where new ones appear.
+- Crates: where new ones appear, the random parts, a random unit crate's
+  unit, and the powerups not yet modelled.
 
 ## Parity
 
 | Scenario | Checks | Tolerance |
 |---|---|---|
+| `mcv-crates` | Credits after a money crate and a veteran crate (money without a trainable unit), the unit crate's Grizzly and where the MCV stops, and its speed after a speed crate | credits ±900 a crate (the random part); positions exact, one ±64 |
 | `allied-depot-repair` | The IFV's health after the shell, after the first step and once whole, the house's credits at each, and where it parks after | exact |
 | `yuri-engineer-repair` | The reactor's health before and after, the engineer going in, the house's power and credits after | exact; the engineer's arrival ±30 frames |
 | `grizzly-veteran-hunts-mcv` | A veteran from the map: its experience, its position at 120, the MCV's first damage and its health at 600 and 900 | as `grizzly-hunts-mcv`: one shell (71), 3 frames |

@@ -756,7 +756,7 @@ fn walk_out(world: &mut World, rules: &Rules, frame: u32) {
         }
         let t = &rules.technos[o.techno];
         let speed = if o.kind == Kind::Infantry {
-            crate::hunt::top_speed(rules, t, o.rank()) * WALK_SPEED
+            crate::hunt::object_speed(rules, t, o) * WALK_SPEED
         } else {
             let left = crate::hunt::distance(goal, o.coord);
             crate::hunt::throttle(rules, o, t, left)

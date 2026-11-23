@@ -1,0 +1,145 @@
+name = "mcv-crates"
+description = """
+Crates. A skirmish drops the map's crates and puts one of its own at
+random, so the recorder moves the game's crate into the MCV's path and
+names its powerup before each pickup: Money, Veteran, Unit (the map's
+rules make a unit crate's unit a Grizzly) and Speed. Each time the
+human player's MCV drives onto it; a new crate appears at random after
+each pickup, and the next order moves that one. Covers picking up a crate
+and four powerups."""
+map = "parity_mcv_crates.yrm"
+end_frame = 1200
+human_start = [65, 65]
+
+[generate]
+name = "mcv-crates"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[CrateRules]
+UnitCrateType=MTNK
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[order]]
+frame = 10
+what = "crate"
+type = "Money"
+x = 69
+y = 65
+
+[[order]]
+frame = 30
+what = "move"
+type = "AMCV"
+x = 69
+y = 65
+
+[[order]]
+frame = 250
+what = "crate"
+type = "Veteran"
+x = 69
+y = 61
+
+[[order]]
+frame = 260
+what = "move"
+type = "AMCV"
+x = 69
+y = 61
+
+[[order]]
+frame = 500
+what = "crate"
+type = "Unit"
+x = 65
+y = 61
+
+[[order]]
+frame = 510
+what = "move"
+type = "AMCV"
+x = 65
+y = 61
+
+[[order]]
+frame = 750
+what = "crate"
+type = "Speed"
+x = 65
+y = 64
+
+[[order]]
+frame = 760
+what = "move"
+type = "AMCV"
+x = 65
+y = 64
+
+[[order]]
+frame = 900
+what = "move"
+type = "AMCV"
+x = 72
+y = 64
+
+# Tolerances: a money crate's amount has a random part (0 to 900) that our
+# random numbers don't yet reproduce, and our MCV sets off sooner and
+# gathers speed faster (see mcv-move), so it picks each crate up about 10
+# frames early.
+
+# Money: 2000 plus 0 to 900.
+[[check]]
+what = "credits"
+house = 0
+at = 200
+tolerance = 900
+
+# Veteran, with nothing trainable near (an MCV isn't): money instead.
+[[check]]
+what = "credits"
+house = 0
+at = 450
+tolerance = 1800
+
+# Unit: a Grizzly on the crate's cell; the MCV stops a cell short.
+[[check]]
+what = "count"
+type = "MTNK"
+owner = 0
+at = 700
+tolerance = 0
+
+[[check]]
+what = "position"
+type = "MTNK"
+owner = 0
+at = 700
+tolerance = 0
+
+[[check]]
+what = "position"
+type = "AMCV"
+owner = 0
+at = 700
+tolerance = 0
+
+# Speed: × 1.2, so the last run is over by 1100 (19 leptons a frame, not
+# 16).
+[[check]]
+what = "position"
+type = "AMCV"
+owner = 0
+at = 1060
+tolerance = 64
+
+[[check]]
+what = "position"
+type = "AMCV"
+owner = 0
+at = 1200
+tolerance = 0

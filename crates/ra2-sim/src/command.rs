@@ -7,6 +7,7 @@ use ra2_rules::Rules;
 use crate::coords::{Coord, LEPTONS_PER_CELL};
 use crate::hunt::{cell_centre, distance, step_facing, throttle, to_cell, travel, turn};
 use crate::pathfind;
+use crate::rng::Randomizer;
 use crate::world::{Mission, World};
 
 /// What a unit was told to do.
@@ -57,13 +58,13 @@ pub fn order(world: &mut World, id: u32, command: Command) {
 }
 
 /// One frame of every commanded unit.
-pub fn update(world: &mut World, rules: &Rules, frame: u32) {
+pub fn update(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
     let mut gone = Vec::new();
     for i in 0..world.objects.len() {
         let command = world.objects[i].command;
         match command {
             Some(Command::Move(goal)) => {
-                if drive(world, rules, i, goal) {
+                if drive(world, rules, Some(&mut *rng), i, goal) {
                     let o = &mut world.objects[i];
                     o.command = None;
                     o.mission = Mission::Guard;
@@ -141,7 +142,7 @@ fn enter(world: &mut World, rules: &Rules, frame: u32, i: usize, id: u32) {
         });
         return;
     }
-    if drive(world, rules, i, pad) {
+    if drive(world, rules, None, i, pad) {
         world.objects[i].depot = Some(DepotVisit {
             next: frame + DEPOT_FIRST_STEP,
             steps: 0,
@@ -204,15 +205,20 @@ fn capture(world: &mut World, rules: &Rules, i: usize, id: u32) -> bool {
     let Some((goal, _)) = best else {
         return false;
     };
-    drive(world, rules, i, goal);
+    drive(world, rules, None, i, goal);
     false
 }
 
 /// Drive toward `goal` along a planned route: turn on the spot to the
 /// first step, then cell centre to cell centre, as harvesters do. True
 /// once there.
-pub(crate) fn drive(world: &mut World, rules: &Rules, i: usize, goal: (i16, i16)) -> bool {
-    let t = &rules.technos[world.objects[i].techno];
+pub(crate) fn drive(
+    world: &mut World,
+    rules: &Rules,
+    rng: Option<&mut Randomizer>,
+    i: usize,
+    goal: (i16, i16),
+) -> bool {
     let cells = &world.cells;
     let o = &mut world.objects[i];
     if o.motion.planned != Some(goal) {
@@ -242,14 +248,28 @@ pub(crate) fn drive(world: &mut World, rules: &Rules, i: usize, goal: (i16, i16)
             z: cell.z,
         };
         o.motion.leg = Some((o.coord, next, 0));
+        let into = to_cell(next);
+        if let Some(rng) = rng
+            && world.crates.contains_key(&into)
+            && crate::crates::enter(world, rules, rng, i, into)
+        {
+            let o = &mut world.objects[i];
+            o.motion.leg = None;
+            o.motion.route.clear();
+            o.motion.planned = None;
+            o.motion.rolling = false;
+            return true;
+        }
     }
+    let t = &rules.technos[world.objects[i].techno];
+    let o = &mut world.objects[i];
     if let Some((from, to, _)) = o.motion.leg {
         let want = step_facing(to.x - from.x, to.y - from.y);
         let facing = i32::from(o.dir);
         if o.kind == ra2_rules::Kind::Infantry {
             // Infantry turn at once and walk. `[observed]` (as hunting)
             o.dir = u16::try_from(want).unwrap_or(0);
-            let speed = crate::hunt::top_speed(rules, t, o.rank()) * crate::hunt::WALK_SPEED;
+            let speed = crate::hunt::object_speed(rules, t, o) * crate::hunt::WALK_SPEED;
             if travel(o, speed) && to_cell(o.coord) == goal {
                 o.motion.planned = None;
                 o.motion.route.clear();

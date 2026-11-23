@@ -164,14 +164,15 @@ static void write_frame(uint32_t frame) {
     }
     fputs("],\"ore\":[", g_out);
     {
-        /* Every cell holding ore or gems: x, y, overlay, its data. */
+        /* Every cell holding ore, gems or a crate (179, 242): x, y, overlay,
+           its data. */
         uint32_t arr = rd32(MAP_CELLS);
         int any = 0;
         for (uint32_t idx = 0; arr && idx < 0x40000u; idx++) {
             uint32_t c = rd32(arr + 4u * idx);
             if (!c) continue;
             int32_t ov = (int32_t)rd32(c + CELL_OVERLAY);
-            if (!((ov >= 27 && ov <= 38) || (ov >= 102 && ov <= 121) || (ov >= 127 && ov <= 166))) continue;
+            if (!((ov >= 27 && ov <= 38) || (ov >= 102 && ov <= 121) || (ov >= 127 && ov <= 166) || ov == 179 || ov == 242)) continue;
             fprintf(g_out, "%s[%u,%u,%d,%u]", any ? "," : "", idx % 512, idx / 512, ov,
                     *(const uint8_t *)GUEST_PTR(c + CELL_OVERLAY_DATA));
             any = 1;
@@ -200,6 +201,14 @@ static void write_frame(uint32_t frame) {
                                   house: mission 1 (Attack)
      E <type> <target>            ... to enter it: mission 7 (Enter)
      C <type> <target>            ... to capture it: mission 8 (Capture)
+     X <x> <y> <kind>             move the game's first crate to a cell (a
+                                  skirmish drops a map's crates and puts its
+                                  own at random): its overlay, and its entry
+                                  in MapClass's crates (+0x158, 256 of 16
+                                  bytes, the cell at +0xC: 0x0056BF83),
+                                  and make it a <kind> of powerup (its
+                                  overlay data; 19 or more is a random pick
+                                  by [Powerups] weight: 0x00481ACE)
    Layout from the constructors at 0x004C65E0, 0x004C6970, 0x004C6AE0;
    MEGAMISSION's (0x004C6860): whom at +7, the mission at +0xC, target at
    +0xE, destination at +0x13, each an id and a type byte (0x34 an object,
@@ -286,6 +295,29 @@ static void run_orders(uint32_t frame) {
             }
             queue_event(ev);
             fprintf(g_out, "# order %u %c %s id %u target %u cell %d,%d\n", frame, kind, arg, whom, target, x, y);
+        } else if (kind == 'X') {
+            int x, y, crate_kind = 255;
+            if (sscanf(o, "%u %c %d %d %d", &at, &kind, &x, &y, &crate_kind) < 4) continue;
+            uint32_t crates = 0x87F7E8u + 0x158u, arr = rd32(MAP_CELLS);
+            for (uint32_t k = 0; k < 256 && arr; k++) {
+                uint32_t e = crates + 16u * k;
+                int16_t cx = *(int16_t *)GUEST_PTR(e + 0xC), cy = *(int16_t *)GUEST_PTR(e + 0xE);
+                uint32_t from = (uint32_t)cy * 512u + (uint32_t)cx;
+                if (cx <= 0 || cy <= 0 || from >= 0x40000u) continue;
+                uint32_t c = rd32(arr + 4u * from), to = rd32(arr + 4u * ((uint32_t)y * 512u + (uint32_t)x));
+                if (!c || !to) break;
+                int32_t ov = (int32_t)rd32(c + CELL_OVERLAY);
+                uint8_t data = *(uint8_t *)GUEST_PTR(c + CELL_OVERLAY_DATA);
+                *(int32_t *)GUEST_PTR(c + CELL_OVERLAY) = -1;
+                *(uint8_t *)GUEST_PTR(c + CELL_OVERLAY_DATA) = 0;
+                *(int32_t *)GUEST_PTR(to + CELL_OVERLAY) = ov;
+                *(uint8_t *)GUEST_PTR(to + CELL_OVERLAY_DATA) = (uint8_t)crate_kind;
+                (void)data;
+                *(int16_t *)GUEST_PTR(e + 0xC) = (int16_t)x;
+                *(int16_t *)GUEST_PTR(e + 0xE) = (int16_t)y;
+                fprintf(g_out, "# order %u crate %d,%d -> %d,%d (overlay %d)\n", frame, cx, cy, x, y, ov);
+                break;
+            }
         } else if (kind == 'F') {
             int sw, x, y;
             if (sscanf(o, "%u %c %d %d %d", &at, &kind, &sw, &x, &y) != 5) continue;

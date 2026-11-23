@@ -101,9 +101,10 @@ A scenario is TOML in `parity/scenarios/`:
   something cheaper or quicker to record.
 - **`[[order]]`**: the human player's orders: `frame`, `what` (`deploy`,
   `produce`, `place`, `sell`, `repair`, `abandon`, `hold`, `fire`, `move`,
-  `attack`, `enter` or `capture`), `type` (for `fire`, the superweapon;
+  `attack`, `enter`, `capture` or `crate`), `type` (for `fire`, the
+  superweapon; for `crate`, the powerup, or `Random`;
   for a unit order, the player's first unit of that type), `x`/`y` for
-  placing, firing or moving, and `target` (a type: the first object of it,
+  placing, firing, moving or the crate, and `target` (a type: the first object of it,
   of any house) for attacking, entering or capturing. Unit orders are the
   game's `MEGAMISSION` event with the mission Move, Attack, Enter or
   Capture. The recorder

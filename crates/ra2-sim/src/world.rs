@@ -96,6 +96,11 @@ pub struct Object {
     pub command: Option<crate::command::Command>,
     /// Its stay on a Service Depot.
     pub depot: Option<crate::command::DepotVisit>,
+    /// What crates gave it: × its speed, ÷ damage it takes, × damage it
+    /// deals.
+    pub speed_bonus: ra2_rules::Ratio,
+    pub armor_bonus: ra2_rules::Ratio,
+    pub firepower_bonus: ra2_rules::Ratio,
 }
 
 impl Object {
@@ -185,6 +190,8 @@ pub struct World {
     pub cells: std::collections::BTreeSet<(i16, i16)>,
     /// Ore and gems, by cell.
     pub ore: std::collections::BTreeMap<(i16, i16), Ore>,
+    /// Crates by cell: the powerup each holds (see `crates`).
+    pub crates: std::collections::BTreeMap<(i16, i16), u8>,
     /// What each house is building.
     pub factories: Vec<crate::production::Factory>,
     /// Units unpacking into buildings: the unit and the frame it's done.
@@ -281,6 +288,9 @@ impl World {
             experience_bits: ra2_rules::veterancy::from_map(p.veterancy),
             command: None,
             depot: None,
+            speed_bonus: ra2_rules::Ratio::ONE,
+            armor_bonus: ra2_rules::Ratio::ONE,
+            firepower_bonus: ra2_rules::Ratio::ONE,
         });
         Some(id)
     }
@@ -313,6 +323,9 @@ impl World {
             experience_bits: 0,
             command: None,
             depot: None,
+            speed_bonus: ra2_rules::Ratio::ONE,
+            armor_bonus: ra2_rules::Ratio::ONE,
+            firepower_bonus: ra2_rules::Ratio::ONE,
         });
         id
     }

@@ -192,6 +192,13 @@ pub fn observer_orders(scenario: &Scenario, rules: &Rules) -> String {
                 OrderKind::Sell => format!("{} S {}", o.frame, o.type_id),
                 OrderKind::Repair => format!("{} R {}", o.frame, o.type_id),
                 OrderKind::Move => format!("{} M {} {} {}", o.frame, o.type_id, o.x, o.y),
+                OrderKind::Crate => format!(
+                    "{} X {} {} {}",
+                    o.frame,
+                    o.x,
+                    o.y,
+                    ra2_rules::crate_kind(&o.type_id)?
+                ),
                 OrderKind::Attack | OrderKind::Enter | OrderKind::Capture => {
                     let letter = match o.what {
                         OrderKind::Attack => 'K',
@@ -341,6 +348,10 @@ pub fn sim_orders(scenario: &Scenario, rules: &Rules) -> Vec<(u32, Order)> {
         .filter_map(|o| {
             let house = 0;
             let cell = (i16::try_from(o.x).ok()?, i16::try_from(o.y).ok()?);
+            if o.what == OrderKind::Crate {
+                let kind = ra2_rules::crate_kind(&o.type_id)?;
+                return Some((o.frame, Order::Crate { cell, kind }));
+            }
             if o.what == OrderKind::Fire {
                 let kind = rules
                     .super_weapons
@@ -395,6 +406,7 @@ pub fn sim_orders(scenario: &Scenario, rules: &Rules) -> Vec<(u32, Order)> {
                 OrderKind::Abandon => Build::Abandon { house, techno },
                 OrderKind::Hold => Build::Hold { house, techno },
                 OrderKind::Fire
+                | OrderKind::Crate
                 | OrderKind::Move
                 | OrderKind::Attack
                 | OrderKind::Enter
