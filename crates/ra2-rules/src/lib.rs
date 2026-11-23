@@ -319,6 +319,11 @@ pub struct TechnoType {
     /// Buildings: copies each infantryman its house trains (`Cloning=`,
     /// the Cloning Vats).
     pub cloning: bool,
+    /// Infantry that can garrison a building (`Occupier=`), and how many a
+    /// garrisonable building holds (`CanBeOccupied=` and
+    /// `MaxNumberOccupants=`; 0 if it can't be).
+    pub occupier: bool,
+    pub max_occupants: i32,
     pub passengers: i32,
     pub ifv_mode: i32,
     /// What goes off when it's destroyed (`DeathWeapon=`), and a factor on
@@ -810,6 +815,12 @@ impl Rules {
                     rate_down: int(s, "RateDown", 0),
                     c4: flag(s, "C4", false),
                     cloning: flag(s, "Cloning", false),
+                    occupier: flag(s, "Occupier", false),
+                    max_occupants: if flag(s, "CanBeOccupied", false) {
+                        int(s, "MaxNumberOccupants", 0)
+                    } else {
+                        0
+                    },
                     passengers: int(s, "Passengers", 0),
                     ifv_mode: int(s, "IFVMode", 0),
                     death_weapon_damage_modifier: s
