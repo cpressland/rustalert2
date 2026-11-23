@@ -192,9 +192,21 @@ fn cell_i16(v: i32) -> i16 {
 /// gains depends on the building. A factory of infantry (a barracks): the
 /// house's infantry are built veterans from then on. `[observed]`
 /// (`allied-spy-barracks`) A factory of vehicles: its vehicles, the same
-/// way. `[hypothesis]` Other buildings aren't modelled yet.
-fn infiltrate(world: &mut World, rules: &Rules, owner: u32, b: usize) {
+/// way. `[hypothesis]` A power plant: its owner makes no power for
+/// `SpyPowerBlackout=` frames less one, from that frame. `[observed]`
+/// (`allied-spy-power`: a Neutral plant's 200 gone from the frame the spy
+/// went in, back 999 frames on) Other buildings aren't modelled yet.
+fn infiltrate(world: &mut World, rules: &Rules, frame: u32, owner: u32, b: usize) {
     let t = &rules.technos[world.objects[b].techno];
+    if t.power > 0 {
+        let victim = usize::try_from(world.objects[b].owner).unwrap_or(usize::MAX);
+        let lasts = u32::try_from(rules.general.spy_power_blackout).unwrap_or(0);
+        if let Some(h) = world.houses.get_mut(victim) {
+            h.blackout = Some((frame, (frame + lasts).saturating_sub(1)));
+        }
+        crate::production::power(world, rules, frame);
+        return;
+    }
     let Some(kind) = t.factory else {
         return;
     };
@@ -277,7 +289,7 @@ fn capture(world: &mut World, rules: &Rules, frame: u32, i: usize, id: u32) -> b
         let room =
             usize::try_from(rules.technos[world.objects[b].techno].max_occupants).unwrap_or(0);
         if rules.technos[world.objects[i].techno].infiltrate && world.objects[b].owner != owner {
-            infiltrate(world, rules, owner, b);
+            infiltrate(world, rules, frame, owner, b);
             return true;
         }
         if rules.technos[world.objects[i].techno].occupier && room > 0 {
