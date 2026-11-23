@@ -23,6 +23,24 @@ pub enum Command {
     Capture(u32),
 }
 
+/// A unit on a Service Depot: when it arrived, when its next repair step
+/// is due, and when it was whole.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DepotVisit {
+    pub next: u32,
+    pub steps: u32,
+    pub whole_at: Option<u32>,
+}
+
+/// After docking, the first repair step comes this many frames on, the
+/// second this many after it, and then one every
+/// `production::unit_repair_frames`. The long second wait is likely the
+/// depot's animation. `[observed]` (`allied-depot-repair`)
+const DEPOT_FIRST_STEP: u32 = 4;
+const DEPOT_SECOND_STEP: u32 = 85;
+/// A repaired unit drives off this long after it's whole. `[observed]`
+const DEPOT_LEAVE: u32 = 12;
+
 /// Give the unit with `id` a command, from the frame it lands.
 pub fn order(world: &mut World, id: u32, command: Command) {
     let Some(o) = world.objects.iter_mut().find(|o| o.id == id) else {
@@ -39,7 +57,7 @@ pub fn order(world: &mut World, id: u32, command: Command) {
 }
 
 /// One frame of every commanded unit.
-pub fn update(world: &mut World, rules: &Rules, _frame: u32) {
+pub fn update(world: &mut World, rules: &Rules, frame: u32) {
     let mut gone = Vec::new();
     for i in 0..world.objects.len() {
         let command = world.objects[i].command;
@@ -54,10 +72,92 @@ pub fn update(world: &mut World, rules: &Rules, _frame: u32) {
             Some(Command::Capture(id)) if capture(world, rules, i, id) => {
                 gone.push(world.objects[i].id);
             }
+            Some(Command::Enter(id)) => enter(world, rules, frame, i, id),
             _ => {}
         }
     }
     world.objects.retain(|o| !gone.contains(&o.id));
+}
+
+/// A unit sent into a building. A Service Depot (`UnitRepair=yes`): it
+/// drives onto the depot's centre cell and is repaired there,
+/// `RepairStep=` hit points a step for what that costs (see
+/// `production::repair_step_cost`), then drives off the pad to the cell
+/// below the depot's left column. `[observed]` (`allied-depot-repair`: an
+/// IFV, 3 credits a step) What happens when the house can't pay isn't
+/// recorded: it leaves.
+fn enter(world: &mut World, rules: &Rules, frame: u32, i: usize, id: u32) {
+    let Some(b) = world.objects.iter().position(|o| o.id == id && !o.limbo) else {
+        stand(world, i);
+        return;
+    };
+    let depot = &rules.technos[world.objects[b].techno];
+    if !depot.unit_repair {
+        stand(world, i);
+        return;
+    }
+    let (x0, y0) = crate::production::top_left(rules, &world.objects[b]);
+    let (w, h) = depot.foundation;
+    let pad = (cell_i16(x0 + w / 2), cell_i16(y0 + h / 2));
+    if let Some(visit) = world.objects[i].depot {
+        let t = &rules.technos[world.objects[i].techno];
+        if let Some(at) = visit.whole_at {
+            if frame >= at + DEPOT_LEAVE {
+                let o = &mut world.objects[i];
+                o.depot = None;
+                o.command = Some(Command::Move((cell_i16(x0), cell_i16(y0 + h))));
+            }
+            return;
+        }
+        if frame < visit.next {
+            return;
+        }
+        let cost = ra2_rules::production::repair_step_cost(rules, t);
+        let owner = usize::try_from(world.objects[i].owner).unwrap_or(usize::MAX);
+        let Some(house) = world.houses.get_mut(owner) else {
+            return;
+        };
+        let strength = t.strength;
+        let o = &mut world.objects[i];
+        if house.credits < cost {
+            o.depot = Some(DepotVisit {
+                whole_at: Some(frame),
+                ..visit
+            });
+            return;
+        }
+        house.credits -= cost;
+        o.health = (o.health + rules.general.repair_step).min(strength);
+        let every = u32::try_from(ra2_rules::production::unit_repair_frames(rules)).unwrap_or(1);
+        o.depot = Some(DepotVisit {
+            next: frame
+                + if visit.steps == 0 {
+                    DEPOT_SECOND_STEP
+                } else {
+                    every
+                },
+            steps: visit.steps + 1,
+            whole_at: (o.health >= strength).then_some(frame),
+        });
+        return;
+    }
+    if drive(world, rules, i, pad) {
+        world.objects[i].depot = Some(DepotVisit {
+            next: frame + DEPOT_FIRST_STEP,
+            steps: 0,
+            whole_at: None,
+        });
+    }
+}
+
+fn stand(world: &mut World, i: usize) {
+    let o = &mut world.objects[i];
+    o.command = None;
+    o.mission = Mission::Guard;
+}
+
+fn cell_i16(v: i32) -> i16 {
+    i16::try_from(v).unwrap_or(0)
 }
 
 /// An engineer on its way to a building: it walks to the building's

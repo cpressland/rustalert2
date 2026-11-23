@@ -260,6 +260,9 @@ pub struct TechnoType {
     /// Gains experience from its kills (`Trainable=`; buildings no by
     /// default, others yes).
     pub trainable: bool,
+    /// Buildings: repairs units that dock on it (`UnitRepair=`, the
+    /// Service Depot).
+    pub unit_repair: bool,
     /// What being a veteran and elite give it (`VeteranAbilities=`,
     /// `EliteAbilities=`; an elite has both).
     pub veteran_abilities: Vec<String>,
@@ -437,6 +440,8 @@ pub struct General {
     pub repair_rate: Ratio,
     pub repair_step: i32,
     pub repair_percent: Ratio,
+    /// Minutes between a Service Depot's repair steps (`URepairRate=`).
+    pub unit_repair_rate: Ratio,
     /// Veterancy: kills worth this many times a unit's cost make it a
     /// veteran, and twice that elite (`VeteranRatio=`); experience stops at
     /// `VeteranCap=`; and what being a veteran does to damage dealt
@@ -685,6 +690,7 @@ impl Rules {
                     wall: flag(s, "Wall", false),
                     self_healing: flag(s, "SelfHealing", false),
                     trainable: flag(s, "Trainable", kind != Kind::Building),
+                    unit_repair: flag(s, "UnitRepair", false),
                     veteran_abilities: list(s, "VeteranAbilities"),
                     elite_abilities: list(s, "EliteAbilities"),
                     soylent: int(s, "Soylent", 0),
@@ -926,6 +932,11 @@ impl Rules {
                     rules.section("General"),
                     "RepairPercent",
                     Ratio::from_value("15%"),
+                ),
+                unit_repair_rate: ratio(
+                    rules.section("General"),
+                    "URepairRate",
+                    Ratio::from_value(".016"),
                 ),
                 veteran_ratio: ratio(
                     rules.section("General"),

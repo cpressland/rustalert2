@@ -1,0 +1,151 @@
+name = "allied-depot-repair"
+description = """
+The Service Depot. The human player (British) builds a power plant, a war
+factory and a Service Depot (the map makes both cheaper, with fewer
+prerequisites), then a Grizzly and an IFV. The Grizzly is ordered to fire
+on the IFV (as a forced attack on one's own unit), then away, and the
+damaged IFV is sent into the depot. Covers a unit's repair at a depot: its
+rate and cost. Nothing else is near: the AI starts in the far corner."""
+map = "parity_allied_depot_repair.yrm"
+end_frame = 2700
+human_start = [35, 35]
+
+[generate]
+name = "allied-depot-repair"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[GAWEAP]
+Prerequisite=POWER,GACNST
+Cost=500
+
+[GADEPT]
+Prerequisite=GAWEAP,GACNST
+Cost=300
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAWEAP"
+
+[[order]]
+frame = 890
+what = "place"
+type = "GAWEAP"
+x = 41
+y = 36
+
+[[order]]
+frame = 900
+what = "produce"
+type = "GADEPT"
+
+[[order]]
+frame = 905
+what = "produce"
+type = "MTNK"
+
+[[order]]
+frame = 910
+what = "produce"
+type = "FV"
+
+[[order]]
+frame = 1300
+what = "place"
+type = "GADEPT"
+x = 37
+y = 38
+
+[[order]]
+frame = 1950
+what = "attack"
+type = "MTNK"
+target = "FV"
+
+[[order]]
+frame = 2000
+what = "move"
+type = "MTNK"
+x = 46
+y = 42
+
+[[order]]
+frame = 2010
+what = "enter"
+type = "FV"
+target = "GADEPT"
+
+# Tolerances: our Grizzly fires as soon as its order lands, where the
+# original's first shell comes about 20 frames later (its turret turning;
+# not modelled), and our units leave the war factory for other cells, so
+# the IFV docks 13 frames later than the original's. The depot itself is
+# checked exactly: one 8-point step 4 frames after docking, the next 85
+# frames on, then one every 15, at 3 credits each, and off the pad 12
+# frames after it's whole.
+
+# One shell: 200 to 152.
+[[check]]
+what = "hp"
+type = "FV"
+owner = 0
+at = 2005
+tolerance = 0
+
+# The first step.
+[[check]]
+what = "hp"
+type = "FV"
+owner = 0
+at = 2150
+tolerance = 0
+
+[[check]]
+what = "credits"
+house = 0
+at = 2150
+tolerance = 0
+
+# Whole after five steps, 15 credits in all.
+[[check]]
+what = "hp"
+type = "FV"
+owner = 0
+at = 2300
+tolerance = 0
+
+[[check]]
+what = "credits"
+house = 0
+at = 2300
+tolerance = 0
+
+# Off the pad, to the cell below the depot's left column.
+[[check]]
+what = "position"
+type = "FV"
+owner = 0
+at = 2700
+tolerance = 0

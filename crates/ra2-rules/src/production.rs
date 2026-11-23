@@ -138,6 +138,19 @@ pub fn repair_frames(rules: &Rules) -> i32 {
         .max(1)
 }
 
+/// Frames between a Service Depot's repair steps: the first whole frame
+/// count of at least `URepairRate=` × 900 (0.016 gives 14.4, so 15).
+/// `[recomp 0x0044BD38]` (`[observed]`: steps 15 frames apart)
+pub fn unit_repair_frames(rules: &Rules) -> i32 {
+    let limit = X80::double(rules.general.unit_repair_rate.value()) * X80::double(900.0);
+    let whole = limit.trunc().max(0);
+    if X80::int(whole) < limit {
+        whole + 1
+    } else {
+        whole.max(1)
+    }
+}
+
 /// What one repair step of `t` costs: its cost × `RepairPercent=` ×
 /// `RepairStep=` ÷ `Strength=`, truncated. `[observed]` (a Bio Reactor,
 /// 600 credits and 700 hit points: 1 credit for each 8)
