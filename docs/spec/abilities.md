@@ -89,10 +89,15 @@ engineers and the IFV is in repair.md; this note links to it.
 - The civilian house a map gives to `Special` the original filed under
   Neutral. `[observed]`
 - The garrison didn't fire by itself on a sleeping Neutral Grizzly, 3
-  cells off or 6, within its `OccupyWeapon=` range (`UCPara`, 6).
-  `[observed]` What it does take on, and the `Occupy…Multiplier=` and
-  `OccupyWeaponRange=` effects, aren't recorded yet; ours doesn't fire
-  either.
+  cells off or 6: a player's units don't take on civilians by themselves
+  (combat.md). `[observed]`
+- Ordered to attack, the building fires its first occupant's
+  `OccupyWeapon=` from the frame after the order, its damage ×
+  `[CombatDamage] OccupyDamageMultiplier=` (1.2) and its reload (`ROF=`
+  plus 0 to 2) ÷ `OccupyROFMultiplier=` (1.2), truncated. `[observed]`
+  (`allied-garrison-fire`: a GI's UCPara, 36, 9 a hit on heavy armour,
+  every 13 to 15 frames) More occupants firing together, and
+  `OccupyWeaponRange=`, aren't recorded yet.
 
 ### Spies
 
@@ -194,7 +199,7 @@ engineers and the IFV is in repair.md; this note links to it.
 
 ## Open questions
 
-- Spies in other buildings, firing from garrisons, the Psychic
+- Spies in other buildings, garrisons of several, the Psychic
   Dominator's and Yuri Prime's control, Boris, the Magnetron, the Battle
   Fortress.
 - Whether Tanya's C4 differs against units, and with `C4=` on other
@@ -213,6 +218,7 @@ engineers and the IFV is in repair.md; this note links to it.
 | `allied-spy-undisguised` | The spy alive before the GI, dead after | exact clear of the timing (the original's GI deployed) |
 | `allied-spy-dog` | The spy's look, alive before the dog, dead after; the dog unhurt | exact clear of the timing |
 | `allied-spy-power` | The spy going in; the Neutral house's power during and after the blackout, the player's untouched | exact clear of the changes; the spy ±40 frames |
+| `allied-garrison-fire` | The house's first hit, the Grizzly's health as it fires, and the Grizzly gone | first hit exact; health one hit (9) |
 | `yuri-cloning` | How many Initiates there are after each comes out, and where the first copy appears | exact |
 | `allied-gi-deploy` | The Grizzly untouched before the attack order, the deployed GI's first hit and the Grizzly's health after, the GI unmoved | first hit ±2 frames; health one hit (10) |
 | `allied-chrono-legion` | Where it warps to attack and to move, the Grizzly untouched while frozen, and when it's gone | positions exact; the erasure ±5 frames |

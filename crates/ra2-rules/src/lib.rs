@@ -344,6 +344,8 @@ pub struct TechnoType {
     /// What goes off when it's destroyed (`DeathWeapon=`), and a factor on
     /// that weapon's damage (`DeathWeaponDamageModifier=`, a float).
     pub death_weapon: Option<WeaponId>,
+    /// What it fires from inside a garrisoned building (`OccupyWeapon=`).
+    pub occupy_weapon: Option<WeaponId>,
     pub death_weapon_damage_modifier: Ratio,
     /// Crew get out when it's destroyed (`Crewed=`).
     pub crewed: bool,
@@ -626,6 +628,10 @@ pub struct CombatDamage {
     pub ion_cannon_damage: i32,
     /// Minutes from planting C4 to the building's end (`C4Delay=`).
     pub c4_delay: Ratio,
+    /// A garrison's damage and rate of fire (`OccupyDamageMultiplier=`,
+    /// `OccupyROFMultiplier=`).
+    pub occupy_damage: Ratio,
+    pub occupy_rof: Ratio,
     pub harvester_immune: bool,
     pub destroyable_bridges: bool,
 }
@@ -833,6 +839,7 @@ impl Rules {
                     secondary: weapon("Secondary"),
                     elite_primary: weapon("ElitePrimary"),
                     death_weapon: weapon("DeathWeapon"),
+                    occupy_weapon: weapon("OccupyWeapon"),
                     weapons: (1..=int(s, "WeaponCount", 0).clamp(0, 32))
                         .map(|n| weapon(&format!("Weapon{n}")))
                         .collect(),
@@ -1257,6 +1264,8 @@ impl Rules {
                 ion_cannon_damage: int(c, "IonCannonDamage", 0),
                 harvester_immune: flag(c, "HarvesterImmune", false),
                 c4_delay: ratio(c, "C4Delay", Ratio::from_value(".03")),
+                occupy_damage: ratio(c, "OccupyDamageMultiplier", Ratio::from_value("1.2")),
+                occupy_rof: ratio(c, "OccupyROFMultiplier", Ratio::from_value("1.2")),
                 destroyable_bridges: flag(c, "DestroyableBridges", true),
             },
             audio_visual: AudioVisual {
