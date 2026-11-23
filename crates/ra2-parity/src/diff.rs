@@ -327,7 +327,15 @@ pub fn compare(s: &Scenario, reference: &Log, candidate: Option<&Log>) -> Vec<Ou
             Check::Ore { at, tolerance } => {
                 let ore = |l: &Log| {
                     l.at(*at)
-                        .map(|f| f.ore.iter().map(|c| i64::from(c[3])).sum())
+                        // Ore and gems only: the observer lists crates
+                        // (overlays 179 and 242) there too.
+                        .map(|f| {
+                            f.ore
+                                .iter()
+                                .filter(|c| c[2] != 179 && c[2] != 242)
+                                .map(|c| i64::from(c[3]))
+                                .sum()
+                        })
                 };
                 let (r, k) = (ore(reference), candidate.and_then(|_| ore(cand)));
                 Outcome {

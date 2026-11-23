@@ -123,8 +123,8 @@ frame.
 
 ## Open questions
 
-- Ore growth and spread (`Growth=`, `Spread=`, `GrowthRate=`), gems, and
-  the Slave Miner.
+- Ore growth and spread (`Growth=`, `Spread=`, `GrowthRate=`), and the
+  Slave Miner.
 - The refinery's side of docking (radio messages, a queue of harvesters,
   Allied refineries), and the refinery's own `Storage=`.
 - The drive locomotor's real speed and turning rules (#40): the War Miner
@@ -132,6 +132,11 @@ frame.
 - What the mission does with a target (`+0x218`) or a weeder.
 
 ## Parity
+
+`parity/scenarios/harvester-gems.toml`: the same round on a field of gems
+(`GEM01`). Gems harvest as ore does, a bail every 19 frames, and pay
+`GemValue=` (50) a bail: 40 bails, 2000 credits. `[observed]` Checks as
+`harvester-ore`'s, the late ones loose for the same drift.
 
 `parity/scenarios/harvester-ore.toml`: 12 checks — cargo at four frames,
 positions on the first and second loads and on the pad, ore left on the
