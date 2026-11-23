@@ -109,7 +109,9 @@ engineers and the IFV is in repair.md; this note links to it.
   (`allied-spy-power`: a Neutral plant's 200 gone from the frame the spy
   went in, back 999 frames on; the spy's own house untouched)
 - Other buildings (a refinery's money, `SpyMoneyStealPercent=`; the radar,
-  the battle lab) aren't modelled yet.
+  the battle lab) aren't modelled yet. A refinery is hard to record: in a
+  skirmish the map can't give the Neutral house money (its `Credits=` is
+  ignored), and a spy sent into the AI's base was shot on the way.
 
 ### The Cloning Vats
 
