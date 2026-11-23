@@ -134,6 +134,10 @@ A scenario is TOML in `parity/scenarios/`:
   - `first_damage`: the first frame matching objects lose hit points;
   - `event`: the first creation or removal of a matching object.
 
+  Objects are matched by `type` and `owner`, and `limbo` (true: out of
+  play, being built or inside something; false: on the map), each any if
+  absent.
+
 Tolerances may only be tightened, unless review agrees on a reason.
 
 ### How a scenario starts in the original

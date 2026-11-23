@@ -286,6 +286,14 @@ pub struct TechnoType {
     /// `OmniCrushResistant=`.
     pub omni_crusher: bool,
     pub omni_crush_resistant: bool,
+    /// The tech a spy must have stolen for its house to field it, by side:
+    /// Allied, Soviet, Third (`RequiresStolenAlliedTech=`,
+    /// `RequiresStolenSovietTech=`, `RequiresStolenThirdTech=`).
+    pub requires_stolen: [bool; 3],
+    /// Buildings: whose tech a spy steals in it, if it's one of
+    /// `[AI] BuildTech=` (`AIBasePlanningSide=`: 0 Allied, 1 Soviet, else
+    /// Third).
+    pub ai_base_planning_side: i32,
     pub locomotor: Option<String>,
     /// Buildings: power produced (positive) or drawn (negative).
     pub power: i32,
@@ -560,6 +568,8 @@ pub struct General {
     /// deploys by itself, by difficulty: hard, medium, easy
     /// (`AIAutoDeployFrameDelay=`).
     pub ai_auto_deploy_delay: Vec<i32>,
+    /// The battle labs, whose tech a spy steals (`[AI] BuildTech=`).
+    pub build_tech: Vec<String>,
     /// A teleporter's wait after a warp: the distance in leptons over
     /// `ChronoDistanceFactor=`, at least `ChronoMinimumDelay=` frames.
     pub chrono_distance_factor: i32,
@@ -909,6 +919,12 @@ impl Rules {
                     crushable: flag(s, "Crushable", kind == Kind::Infantry),
                     omni_crusher: flag(s, "OmniCrusher", false),
                     omni_crush_resistant: flag(s, "OmniCrushResistant", false),
+                    requires_stolen: [
+                        flag(s, "RequiresStolenAlliedTech", false),
+                        flag(s, "RequiresStolenSovietTech", false),
+                        flag(s, "RequiresStolenThirdTech", false),
+                    ],
+                    ai_base_planning_side: int(s, "AIBasePlanningSide", 0),
                     locomotor: text(s, "Locomotor"),
                     power: int(s, "Power", 0),
                     foundation,
@@ -1184,6 +1200,7 @@ impl Rules {
                     .iter()
                     .filter_map(|v| v.trim().parse().ok())
                     .collect(),
+                build_tech: list(rules.section("AI"), "BuildTech"),
                 chrono_distance_factor: int(rules.section("General"), "ChronoDistanceFactor", 32),
                 chrono_minimum_delay: int(rules.section("General"), "ChronoMinimumDelay", 0),
                 spy_money_steal: ratio(

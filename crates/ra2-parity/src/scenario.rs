@@ -103,6 +103,10 @@ pub struct Filter {
     /// A house index; any owner if absent.
     #[serde(default)]
     pub owner: Option<u32>,
+    /// Out of play (being built, inside something) or not; either if
+    /// absent.
+    #[serde(default)]
+    pub limbo: Option<bool>,
 }
 
 /// One comparison.
@@ -253,7 +257,8 @@ tolerance = 64
             Check::Count {
                 filter: Filter {
                     type_id: Some("MTNK".into()),
-                    owner: Some(0)
+                    owner: Some(0),
+                    limbo: None,
                 },
                 at: 600,
                 tolerance: 0

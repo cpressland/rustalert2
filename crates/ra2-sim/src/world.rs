@@ -25,6 +25,9 @@ pub struct House {
     /// What spies brought back: the kinds of unit it now builds as
     /// veterans (a barracks' infiltrated: infantry).
     pub veteran_kinds: Vec<ra2_rules::Kind>,
+    /// The tech its spies have stolen from battle labs, by side: Allied,
+    /// Soviet, Third.
+    pub stolen_tech: [bool; 3],
 }
 
 /// What an object is doing.
@@ -292,6 +295,7 @@ impl World {
             power_drain: 0,
             blackout: None,
             veteran_kinds: Vec::new(),
+            stolen_tech: [false; 3],
         });
         index
     }

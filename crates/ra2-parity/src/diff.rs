@@ -34,13 +34,19 @@ fn matches(f: &Filter, o: &Object) -> bool {
         .as_ref()
         .is_none_or(|t| t.eq_ignore_ascii_case(&o.type_id))
         && f.owner.is_none_or(|w| w == o.owner)
+        && f.limbo.is_none_or(|l| l == o.limbo)
 }
 
 fn label(f: &Filter) -> String {
     format!(
-        "{}{}",
+        "{}{}{}",
         f.type_id.as_deref().unwrap_or("*"),
-        f.owner.map(|o| format!("@{o}")).unwrap_or_default()
+        f.owner.map(|o| format!("@{o}")).unwrap_or_default(),
+        match f.limbo {
+            Some(true) => " in limbo",
+            Some(false) => " on the map",
+            None => "",
+        }
     )
 }
 
@@ -509,6 +515,7 @@ at = 5
             filter: Filter {
                 type_id: Some("MTNK".into()),
                 owner: None,
+                limbo: None,
             },
             at: 5,
             tolerance: 5,
