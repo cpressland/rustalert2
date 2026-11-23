@@ -1,0 +1,74 @@
+name = "grizzly-elite-hunts-mcv"
+description = """
+As grizzly-hunts-mcv, but the Grizzly starts elite (Veterancy 200 in the map), at half health. Covers what
+being elite does: its experience, speed, damage, rate of fire and self-healing."""
+map = "parity_grizzly_elite_hunts_mcv.yrm"
+end_frame = 450
+human_start = [35, 35]
+
+[generate]
+name = "grizzly-elite-hunts-mcv"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 47
+y = 50
+facing = 64
+mission = "Hunt"
+veterancy = 200
+health = 128
+
+# The human has lost once the MCV is destroyed (about 391), and the
+# recording stops soon after; the scenario ends at 450.
+
+# Elite from the map's 200: experience 2.
+[[check]]
+what = "experience"
+type = "MTNK"
+at = 1
+tolerance = 0
+
+# SELF_HEAL: a hit point on each frame of the repair clock (1 + every 14),
+# from 150.
+[[check]]
+what = "hp"
+type = "MTNK"
+owner = 2
+at = 140
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "MTNK"
+owner = 2
+at = 440
+tolerance = 0
+
+# Its elite weapon (105mmE: Burst=2, ROF=50) with ROF: two shells 3 to 5
+# frames apart, then (50 + 0 to 2) × 0.6; FIREPOWER: 71 each.
+[[check]]
+what = "first_damage"
+type = "AMCV"
+owner = 0
+window = 3
+
+[[check]]
+what = "hp"
+type = "AMCV"
+owner = 0
+at = 300
+tolerance = 71
+
+[[check]]
+what = "event"
+type = "AMCV"
+owner = 0
+event = "removed"
+window = 3

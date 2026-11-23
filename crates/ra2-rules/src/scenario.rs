@@ -23,6 +23,9 @@ pub struct Placement {
     pub facing: u8,
     /// The mission it starts on (`Guard`, `Hunt`, `Sleep`…).
     pub mission: String,
+    /// Units, infantry and aircraft: veterancy, 100 a veteran and 200
+    /// elite (the field after the tag).
+    pub veterancy: i32,
 }
 
 fn cell(x: &str, y: &str) -> (i16, i16) {
@@ -62,6 +65,12 @@ pub fn placements(map: &Ini) -> Vec<Placement> {
             if p.len() < need {
                 continue;
             }
+            let veterancy = match kind {
+                Kind::Infantry => p.get(9),
+                Kind::Building => None,
+                _ => p.get(8),
+            }
+            .map_or(0, |v| atoi(v));
             let (sub_cell, facing, mission) = match kind {
                 Kind::Infantry => (byte(p[5]), byte(p[7]), p[6]),
                 Kind::Building => (0, byte(p[5]), "Guard"),
@@ -76,6 +85,7 @@ pub fn placements(map: &Ini) -> Vec<Placement> {
                 health: atoi(p[2]),
                 facing,
                 mission: mission.trim().to_string(),
+                veterancy,
             });
         }
     }

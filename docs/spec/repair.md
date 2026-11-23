@@ -1,11 +1,11 @@
 # Repair, self-healing, veterancy and crates
 
 **Status:** Parity-checked (self-healing, building repair, experience
-from kills). Still to come: veterancy's effects, crates, and repair by
-depots, IFVs and engineers.
+from kills, veterancy's effects on an attacker). Still to come: crates, and
+repair by depots, IFVs and engineers.
 **Crate:** `ra2-rules` (`production::repair_frames`,
 `production::repair_step_cost`, `production::experience_after_kill`),
-`ra2-sim` (`production::heal`, `hunt::credit`)
+`veterancy`), `ra2-sim` (`production::heal`, `hunt::credit`)
 **Issue:** #46
 
 ## Scope
@@ -102,19 +102,49 @@ here too, because the repair scenario damages its building that way.
     everything else is.
   - Both costs are worked out with the victim's house's cost multiplier.
     We use the plain cost.
-- Veterancy's effects are still to come. A veteran Grizzly's
-  (`VeteranAbilities=STRONGER,FIREPOWER,SIGHT,FASTER`) shells hurt a GI
-  for 17, against 16 before. Its reload stayed at 60 to 62 frames, since
-  `ROF` is only among its elite abilities. `[observed]`
+- A map's `Veterancy=` field (after the tag, on units and infantry)
+  starts a unit with experience of that ÷ 100: 100 a veteran, 200 elite.
+  `[observed]`
+
+### What veterancy does
+
+Each ability in the type's `VeteranAbilities=` (and for an elite unit its
+`EliteAbilities=` too) changes one number by a `[General]` factor, truncated
+on the x87. `[recomp 0x0070D0D0]`
+
+| Ability | What it changes | By |
+|---|---|---|
+| `FIREPOWER` | the damage of each shot it fires | × `VeteranCombat=` (1.1) |
+| `STRONGER` | the damage it takes, before `Verses=` (at least 1) | ÷ `VeteranArmor=` (1.5) |
+| `ROF` | its reload after a burst, random part included | × `VeteranROF=` (0.6) |
+| `FASTER` | its full speed (`Speed=` × 256 ÷ 100) | × `VeteranSpeed=` (1.2) |
+| `SELF_HEAL` | heals as `SelfHealing=yes` does | |
+
+- An elite unit fires its `ElitePrimary=`, if it has one. `[community]`
+  `[observed]` (the elite Grizzly's `105mmE` fired in pairs)
+- Shots within a `Burst=` come 3 to 5 frames apart, at random. After the
+  last, the reload is (`ROF=` + 0 to 2) × the `ROF` factor.
+  `[recomp 0x006FD084]`
+- What we saw with a Grizzly hunting an MCV (`[observed]`):
+  - **Veteran** (`STRONGER,FIREPOWER,SIGHT,FASTER`):
+    - 71 a shell, against 65 for a rookie;
+    - a rookie's reload;
+    - in place and firing by frame 149, against 170 for a rookie (speed
+      20 rather than 17).
+  - **Elite** (adds `SELF_HEAL,STRONGER,FIREPOWER,ROF`):
+    - pairs of 71s, 3 to 5 frames apart, every 30 or 31 frames;
+    - a hit point back on each frame of the repair clock from frame 1.
+- `STRONGER` hasn't been seen in a recording yet: the victims so far were
+  rookies. That it comes before `Verses=` follows the order of the
+  original's damage code. `[recomp 0x00701952]`
+- `SIGHT` waits for sight in the simulation.
 
 ## Open questions
 
 - Repair by the Service Depot, the IFV and engineers needs move and enter
   orders, which the scripted orders can't give yet.
-- Veterancy's effects, `VeteranCombat=` and the rest, still need
-  modelling. So does the crew that steps out of a destroyed vehicle or
-  building and the blast that can kill it. Neither has been checked
-  against the original yet.
+- The crew that steps out of a destroyed vehicle or building, and the
+  blast that can kill it, aren't modelled yet.
 - When a unit attacks a building, the original fires while still driving
   up, and stops elsewhere than our hunt does. A Grizzly shelling a
   Construction Yard fired 5 frames sooner than ours.
@@ -125,5 +155,7 @@ here too, because the repair scenario damages its building that way.
 
 | Scenario | Checks | Tolerance |
 |---|---|---|
+| `grizzly-veteran-hunts-mcv` | A veteran from the map: its experience, its position at 120, the MCV's first damage and its health at 600 and 900 | as `grizzly-hunts-mcv`: one shell (71), 3 frames |
+| `grizzly-elite-hunts-mcv` | Elite from the map: its experience, its health (self-healing) at 140 and 440, the MCV's first damage, its health at 300 and when it's destroyed | health exact; one shell, 3 frames |
 | `grizzly-veteran` | The MCV's health at 500, the frame it's destroyed, and the Grizzly's experience at 530 and 560 | exact; the kill ±2 frames |
 | `yuri-heal-repair` | The War Miner's health at 1000 and 2600, and the Rhino's and Conscript's at 2600. The reactor's health at 1138, 1303 and 1639. The house's power at 1138, 1303 and 2600. Its credits at 1303 and 2600. | exact |

@@ -43,6 +43,8 @@ pub struct Motion {
     pub arrived_at: u32,
     /// Frames until its weapon is ready.
     pub reload: i32,
+    /// Shots fired of its weapon's `Burst=`.
+    pub burst: i32,
     /// How much of its full speed it's doing, in millionths; 0 before it
     /// first moves. See [`throttle`].
     pub speed: i32,
@@ -69,7 +71,8 @@ fn micro(r: ra2_rules::Ratio) -> i32 {
 /// type's speed times that, truncated, in the same units as a full-speed
 /// driver. `[recomp 0x004B0F69]` (the speed is a double in the game; we
 /// keep millionths, so a frame now and then may differ by one unit)
-pub(crate) fn throttle(o: &mut Object, t: &ra2_rules::TechnoType, dist: i32) -> i32 {
+pub(crate) fn throttle(rules: &Rules, o: &mut Object, t: &ra2_rules::TechnoType, dist: i32) -> i32 {
+    let top = top_speed(rules, t, o.rank());
     let m = &mut o.motion;
     if t.accelerates {
         if m.speed < CRAWL {
@@ -86,8 +89,15 @@ pub(crate) fn throttle(o: &mut Object, t: &ra2_rules::TechnoType, dist: i32) -> 
     } else {
         m.speed = FULL;
     }
-    let units = i64::from(t.speed_fraction) * i64::from(m.speed) / i64::from(FULL);
+    let units = i64::from(top) * i64::from(m.speed) / i64::from(FULL);
     i32::try_from(units).unwrap_or(0) * DRIVE_SPEED
+}
+
+/// A type's full speed as the game keeps it (see
+/// `TechnoType::speed_fraction`), × `VeteranSpeed=` if its rank has
+/// `FASTER`, truncated. `[recomp 0x004DB1FA]`
+pub(crate) fn top_speed(rules: &Rules, t: &ra2_rules::TechnoType, rank: u8) -> i32 {
+    ra2_rules::veterancy::speed_factor(rules, t, rank).of(t.speed_fraction)
 }
 
 fn isqrt(v: i64) -> i32 {
@@ -186,7 +196,7 @@ pub fn update(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32
 fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: usize) {
     let me = world.objects[i].clone();
     let t = &rules.technos[me.techno];
-    let Some(weapon) = t.primary.map(|w| rules.weapon(w)) else {
+    let Some(weapon) = weapon_of(t, me.rank()).map(|w| rules.weapon(w)) else {
         return;
     };
     // The target: kept while it lives, else the nearest object of another
@@ -293,10 +303,10 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
             if i32::from(o.dir) == want {
                 o.motion.rolling = true;
                 let speed = if infantry {
-                    t.speed_fraction * WALK_SPEED
+                    top_speed(rules, t, o.rank()) * WALK_SPEED
                 } else {
                     let dist = o.motion.goal.map_or(i32::MAX, |g| distance(g, o.coord));
-                    throttle(o, t, dist)
+                    throttle(rules, o, t, dist)
                 };
                 travel(o, speed);
             }
@@ -325,7 +335,8 @@ fn fire(
 ) {
     let o = &world.objects[i];
     let t = &rules.technos[o.techno];
-    let Some(w) = t.primary else { return };
+    let rank = o.rank();
+    let Some(w) = weapon_of(t, rank) else { return };
     let weapon = rules.weapon(w);
     let Some(target_at) = world
         .objects
@@ -344,17 +355,38 @@ fn fire(
         0
     };
     let shooter = o.id;
+    let damage = ra2_rules::veterancy::firepower(rules, t, rank, weapon.damage);
     world.shots.push(Shot {
         shooter,
+        damage,
         target,
         weapon: w,
         lands: frame + 1 + u32::try_from(flight).unwrap_or(0),
     });
-    // The reload: ROF plus a small random part, and infantry a little
-    // more. `[observed]` (intervals 60–62 for ROF 60, 64–67 for 65, 22–25
-    // for 20)
-    let extra = rng.ranged(0, 2) + if infantry { 2 } else { 0 };
-    world.objects[i].motion.reload = weapon.rof + extra;
+    // The reload. Between the shots of a burst, 3 to 5 frames; after the
+    // last, ROF plus 0 to 2, then × `VeteranROF=` if it has `ROF`, and
+    // infantry a little more. `[recomp 0x006FD084, 0x006FD0A6]` (intervals
+    // 60–62 for ROF 60, 64–67 for 65, 22–25 for 20 `[observed]`; the
+    // infantry part is fitted)
+    let o = &mut world.objects[i];
+    o.motion.burst += 1;
+    o.motion.reload = if o.motion.burst < weapon.burst {
+        rng.ranged(3, 5)
+    } else {
+        o.motion.burst = 0;
+        ra2_rules::veterancy::rof(rules, t, rank, weapon.rof + rng.ranged(0, 2))
+            + if infantry { 2 } else { 0 }
+    };
+}
+
+/// The weapon a unit fires: an elite one's `ElitePrimary=`, if it has one.
+/// `[community]`
+fn weapon_of(t: &ra2_rules::TechnoType, rank: u8) -> Option<ra2_rules::WeaponId> {
+    if rank >= 2 {
+        t.elite_primary.or(t.primary)
+    } else {
+        t.primary
+    }
 }
 
 /// Apply the damage of every shell landing this frame; remove the dead.
@@ -371,10 +403,13 @@ fn land(world: &mut World, rules: &Rules, frame: u32) {
         if o.shielded_until > frame || o.health <= 0 {
             continue;
         }
-        let armor = rules.technos[o.techno].armor;
-        let damage = weapon.warhead.map_or(weapon.damage, |wh| {
-            rules.warhead(wh).verses[armor.index()].of(weapon.damage)
-        });
+        // Its veterancy's `STRONGER` first, then the warhead's `Verses=`.
+        // `[recomp 0x007019CB]`
+        let ot = &rules.technos[o.techno];
+        let raw = ra2_rules::veterancy::armor(rules, ot, o.rank(), s.damage);
+        let damage = weapon
+            .warhead
+            .map_or(raw, |wh| rules.warhead(wh).verses[ot.armor.index()].of(raw));
         o.health -= damage;
         if o.health <= 0 {
             let (victim, rank, owner) = (o.techno, o.rank(), o.owner);
@@ -428,26 +463,27 @@ mod tests {
             health: 256,
             facing: 0,
             mission: "Guard".into(),
+            veterancy: 0,
         };
         o.place(&rules, &p, 0);
         let unit = &mut o.objects[0];
         let far = 10_000;
         // Points a frame: 3 at the crawl, one more about every 3 frames.
         let points: Vec<i32> = (0..25)
-            .map(|_| throttle(unit, harv, far) / DRIVE_SPEED)
+            .map(|_| throttle(&rules, unit, harv, far) / DRIVE_SPEED)
             .collect();
         assert_eq!(&points[..5], &[3, 3, 3, 3, 4]);
         assert_eq!(points[24], 10, "full speed after about 23 frames");
         // Within 500 leptons it loses 0.02 a frame, down to the crawl.
         let slowing: Vec<i32> = (0..40)
-            .map(|_| throttle(unit, harv, 300) / DRIVE_SPEED)
+            .map(|_| throttle(&rules, unit, harv, 300) / DRIVE_SPEED)
             .collect();
         assert_eq!(slowing[0], 9);
         assert_eq!(*slowing.last().expect("some"), 3);
         // Units that don't accelerate go at full speed at once.
         let mut tank = o.objects[0].clone();
         tank.motion = Motion::default();
-        assert_eq!(throttle(&mut tank, mtnk, far), 17 * DRIVE_SPEED);
+        assert_eq!(throttle(&rules, &mut tank, mtnk, far), 17 * DRIVE_SPEED);
     }
 
     #[test]
