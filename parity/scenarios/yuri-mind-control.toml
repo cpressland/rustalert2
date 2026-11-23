@@ -3,8 +3,9 @@ description = """
 Mind control. A Neutral Grizzly sleeps (Mission Sleep: it won't fire) west
 of the Yuri player's base. The player builds a Bio Reactor and a barracks
 and trains Yuri (the map makes him cheaper and needs only the barracks),
-then orders him at the Grizzly. Covers the MindControl weapon: its range,
-when the unit changes hands, and Yuri's link. The AI starts in the far
+then orders him at the Grizzly, and later at a sleeping Neutral Rhino. Covers the MindControl weapon: its range,
+when the unit changes hands, and Yuri's one link: taking the Rhino lets
+the Grizzly go. The AI starts in the far
 corner."""
 map = "parity_yuri_mind_control.yrm"
 end_frame = 2000
@@ -30,6 +31,14 @@ owner = "Neutral"
 type = "MTNK"
 x = 22
 y = 36
+facing = 64
+mission = "Sleep"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "HTNK"
+x = 22
+y = 40
 facing = 64
 mission = "Sleep"
 
@@ -73,9 +82,15 @@ what = "attack"
 type = "YURI"
 target = "MTNK"
 
+[[order]]
+frame = 1600
+what = "attack"
+type = "YURI"
+target = "HTNK"
+
 # Tolerances: Yuri comes out of the barracks on the same frame and to the
 # same cell as in the original, but walks faster (see locomotors.md), so he
-# is in range, and the Grizzly his, 21 frames sooner.
+# is in range, and the Grizzly his, 21 frames sooner (the Rhino 5 sooner).
 
 # Still Neutral before Yuri is in range...
 [[check]]
@@ -86,7 +101,7 @@ at = 1400
 tolerance = 0
 
 # ...then his: one shot of MindControl from 7 cells, landing 5 frames after
-# he stops; no damage, and the Grizzly stays where it is.
+# he stops; no damage, and the Grizzly stays asleep where it is.
 [[check]]
 what = "count"
 type = "MTNK"
@@ -101,9 +116,31 @@ owner = 0
 at = 1500
 tolerance = 0
 
+# Taking the Rhino, with his one link, lets the Grizzly go back to Neutral;
+# neither is hurt.
+[[check]]
+what = "count"
+type = "HTNK"
+owner = 0
+at = 1700
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "MTNK"
+owner = 2
+at = 1700
+tolerance = 0
+
+[[check]]
+what = "hp"
+at = 2000
+type = "MTNK"
+tolerance = 0
+
 [[check]]
 what = "position"
-type = "MTNK"
+type = "HTNK"
 owner = 0
 at = 2000
 tolerance = 0

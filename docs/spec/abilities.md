@@ -54,8 +54,11 @@ engineers and the IFV is in repair.md; this note links to it.
   at the first spot within 7 cells of a Neutral Grizzly, fired the frame
   after, and the Grizzly was his 5 frames later, unhurt, where it stood)
 - The weapon's `Damage=` is how many it can hold (Yuri: 1); taking another
-  lets the oldest go back to its house, and a dead controller's go back
-  too. `[hypothesis]` (not recorded yet)
+  lets the oldest go back to its house on the same frame. `[observed]`
+  (Yuri then took a Neutral Rhino and the Grizzly was Neutral again) A
+  dead controller's go back too. `[hypothesis]`
+- What it takes keeps its mission: the sleeping Grizzly stayed asleep and
+  didn't fire on the Rhino beside it. `[observed]`
 - The link's flight is the 5 frames above; its projectile is invisible
   (`PsychicControl`) and its speed isn't traced.
 
@@ -87,5 +90,5 @@ engineers and the IFV is in repair.md; this note links to it.
 | Scenario | Checks | Tolerance |
 |---|---|---|
 | `allied-engineer-capture` | see repair.md | |
-| `yuri-mind-control` | The Grizzly Neutral before Yuri is in range, his after, unhurt and where it stood | the change ±21 frames (infantry speed) |
+| `yuri-mind-control` | The Grizzly Neutral before Yuri is in range and his after; the Rhino his and the Grizzly Neutral again; both unhurt | exact at frames clear of the changes (ours come up to 21 frames sooner: infantry speed) |
 | `allied-tanya-c4` | The plant destroyed, no crew, the Neutral house's power after, Tanya unhurt | the plant's end ±30 frames (infantry speed) |
