@@ -157,6 +157,8 @@ impl Ore {
 pub struct Shot {
     /// Who fired it, to credit the kill.
     pub shooter: u32,
+    /// Its damage, after the shooter's veterancy.
+    pub damage: i32,
     pub target: u32,
     pub weapon: ra2_rules::WeaponId,
     /// The frame it hits on.
@@ -272,7 +274,7 @@ impl World {
             shielded_until: 0,
             dies_at: None,
             repairing: false,
-            experience_bits: 0,
+            experience_bits: ra2_rules::veterancy::from_map(p.veterancy),
         });
         Some(id)
     }
@@ -329,6 +331,7 @@ impl World {
             h.u32(u32::from(o.facing));
             h.u32(u32::from(o.dir));
             h.i32(o.motion.reload);
+            h.i32(o.motion.burst);
             h.i32(o.cargo);
         }
         h.u32(u32::try_from(self.ore.len()).unwrap_or(u32::MAX));

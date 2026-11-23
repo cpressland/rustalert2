@@ -1,0 +1,66 @@
+name = "grizzly-veteran-hunts-mcv"
+description = """
+As grizzly-hunts-mcv, but the Grizzly starts a veteran (Veterancy 100 in the map). Covers what
+being a veteran does: its experience, speed, damage."""
+map = "parity_grizzly_veteran_hunts_mcv.yrm"
+end_frame = 900
+human_start = [35, 35]
+
+[generate]
+name = "grizzly-veteran-hunts-mcv"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 47
+y = 50
+facing = 64
+mission = "Hunt"
+veterancy = 100
+health = 256
+
+# Tolerances as grizzly-hunts-mcv's: damage allows one shell (71 now), and
+# timing a few frames.
+
+# A veteran from the map's 100: experience 1.
+[[check]]
+what = "experience"
+type = "MTNK"
+at = 1
+tolerance = 0
+
+# FASTER: 20 of speed (17 × 1.2) rather than 17, so it's in place and
+# firing by 149, not 170.
+[[check]]
+what = "position"
+type = "MTNK"
+owner = 2
+at = 120
+tolerance = 64
+
+[[check]]
+what = "first_damage"
+type = "AMCV"
+owner = 0
+window = 3
+
+# FIREPOWER: 71 a shell (65 × 1.1); its reload is a rookie's.
+[[check]]
+what = "hp"
+type = "AMCV"
+owner = 0
+at = 600
+tolerance = 71
+
+[[check]]
+what = "hp"
+type = "AMCV"
+owner = 0
+at = 900
+tolerance = 71

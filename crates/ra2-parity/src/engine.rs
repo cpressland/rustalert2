@@ -114,6 +114,7 @@ pub fn setup(scenario: &Scenario, rules: &Rules, map: &Ini) -> World {
                 health: 256,
                 facing: 0,
                 mission: "Guard".into(),
+                veterancy: 0,
             },
             0,
         );

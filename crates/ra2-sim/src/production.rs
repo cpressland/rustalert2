@@ -496,7 +496,9 @@ pub(crate) fn heal(world: &mut World, rules: &Rules, frame: u32) {
             h.credits -= cost;
             let o = &mut world.objects[i];
             o.health = (o.health + rules.general.repair_step).min(t.strength);
-        } else if t.self_healing {
+        } else if t.self_healing || ra2_rules::veterancy::has(t, o.rank(), "SELF_HEAL") {
+            // An elite unit with `SELF_HEAL` heals as `SelfHealing=yes`
+            // does. `[observed]` (an elite Grizzly, from frame 1)
             world.objects[i].health += 1;
         }
     }
@@ -754,10 +756,10 @@ fn walk_out(world: &mut World, rules: &Rules, frame: u32) {
         }
         let t = &rules.technos[o.techno];
         let speed = if o.kind == Kind::Infantry {
-            t.speed_fraction * WALK_SPEED
+            crate::hunt::top_speed(rules, t, o.rank()) * WALK_SPEED
         } else {
             let left = crate::hunt::distance(goal, o.coord);
-            crate::hunt::throttle(o, t, left)
+            crate::hunt::throttle(rules, o, t, left)
         };
         if travel(o, speed) {
             o.motion.goal = None;

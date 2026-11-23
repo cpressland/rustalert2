@@ -107,6 +107,9 @@ pub struct ObjectSpec {
     /// Infantry sub-cell, 0 to 4.
     #[serde(default)]
     pub subcell: u8,
+    /// Units and infantry: veterancy, 100 a veteran and 200 elite.
+    #[serde(default)]
+    pub veterancy: u16,
 }
 
 fn default_mission() -> String {
@@ -250,14 +253,14 @@ pub fn write(spec: &MapSpec) -> String {
     };
     objects(&mut ini, "Units", &spec.units, &|o| {
         format!(
-            "{},{},{},{},{},{},{},None,0,-1,0,-1,0,0",
-            o.owner, o.type_id, o.health, o.x, o.y, o.facing, o.mission
+            "{},{},{},{},{},{},{},None,{},-1,0,-1,0,0",
+            o.owner, o.type_id, o.health, o.x, o.y, o.facing, o.mission, o.veterancy
         )
     });
     objects(&mut ini, "Infantry", &spec.infantry, &|o| {
         format!(
-            "{},{},{},{},{},{},{},{},None,0,-1,0,0,0",
-            o.owner, o.type_id, o.health, o.x, o.y, o.subcell, o.mission, o.facing
+            "{},{},{},{},{},{},{},{},None,{},-1,0,0,0",
+            o.owner, o.type_id, o.health, o.x, o.y, o.subcell, o.mission, o.facing, o.veterancy
         )
     });
     objects(&mut ini, "Structures", &spec.structures, &|o| {

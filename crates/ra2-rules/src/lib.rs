@@ -11,6 +11,7 @@
 
 pub mod production;
 pub mod scenario;
+pub mod veterancy;
 pub mod x87;
 
 use std::collections::BTreeMap;

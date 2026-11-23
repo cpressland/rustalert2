@@ -440,7 +440,7 @@ fn drive(world: &mut World, rules: &Rules, i: usize) {
                 y: i32::from(goal.1) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
                 z: o.coord.z,
             };
-            let speed = throttle(o, t, distance(to_goal, o.coord));
+            let speed = throttle(rules, o, t, distance(to_goal, o.coord));
             o.motion.rolling = true;
             if travel(o, speed) && to_cell(o.coord) == goal {
                 o.harvest.dest = None;
@@ -479,6 +479,7 @@ mod tests {
             health: 256,
             facing: 64,
             mission: "Harvest".into(),
+            veterancy: 0,
         };
         world.place(rules, &p, 0);
         world.objects.len() - 1
