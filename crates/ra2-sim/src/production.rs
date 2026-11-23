@@ -730,6 +730,48 @@ fn leave(world: &mut World, rules: &Rules, frame: u32, f: &Factory) {
         o.placed = frame;
         o.motion.goal = Some(goal);
     }
+    clone(world, rules, frame, f);
+}
+
+/// Cloning Vats (`Cloning=yes`): each infantryman trained comes with a
+/// copy, at the centre of the cell holding the house's first Vats' centre,
+/// on the frame he comes
+/// out. `[observed]` (`yuri-cloning`: two Initiates, two copies) The
+/// copies then walk to a cell nearby; which isn't traced, so ours stand.
+fn clone(world: &mut World, rules: &Rules, frame: u32, f: &Factory) {
+    let Some(vats) = world
+        .objects
+        .iter()
+        .find(|o| o.owner == f.house && !o.limbo && rules.technos[o.techno].cloning)
+        .map(|o| o.coord)
+    else {
+        return;
+    };
+    let Some(country) = world
+        .houses
+        .get(usize::try_from(f.house).unwrap_or(usize::MAX))
+        .map(|h| h.country.clone())
+    else {
+        return;
+    };
+    let p = ra2_rules::scenario::Placement {
+        kind: Kind::Infantry,
+        type_id: rules.technos[f.techno].id.clone(),
+        owner: country,
+        cell: to_cell(vats),
+        sub_cell: 0,
+        health: 256,
+        facing: 0,
+        mission: "Guard".into(),
+        veterancy: 0,
+    };
+    if world.place(rules, &p, 0).is_some()
+        && let Some(o) = world.objects.last_mut()
+    {
+        o.owner = f.house;
+        o.coord = crate::hunt::cell_centre(Coord { z: 0, ..vats });
+        o.placed = frame;
+    }
 }
 
 fn cell_i16(v: i32) -> i16 {

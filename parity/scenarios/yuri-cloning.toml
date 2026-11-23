@@ -1,0 +1,102 @@
+name = "yuri-cloning"
+description = """
+The Cloning Vats. The Yuri player builds a Bio Reactor, a barracks and
+Cloning Vats (the map makes them cheap, without power, after the
+barracks), then trains two Initiates. Covers cloning: each infantryman
+trained comes with a copy out of the Vats. The AI starts in the far
+corner."""
+map = "parity_yuri_cloning.yrm"
+end_frame = 1800
+human_start = [35, 35]
+human_country = "YuriCountry"
+
+[generate]
+name = "yuri-cloning"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[NACLON]
+Prerequisite=YABRCK,YACNST
+Cost=500
+Power=0
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "PCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "YAPOWR"
+
+[[order]]
+frame = 430
+what = "place"
+type = "YAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 440
+what = "produce"
+type = "YABRCK"
+
+[[order]]
+frame = 720
+what = "place"
+type = "YABRCK"
+x = 31
+y = 34
+
+[[order]]
+frame = 730
+what = "produce"
+type = "NACLON"
+
+[[order]]
+frame = 1020
+what = "place"
+type = "NACLON"
+x = 34
+y = 38
+
+[[order]]
+frame = 1030
+what = "produce"
+type = "INIT"
+
+[[order]]
+frame = 1035
+what = "produce"
+type = "INIT"
+
+# Each Initiate comes out of the barracks with a copy at the Vats' centre,
+# on the same frame: one at 1140, another at 1249 (the second in training,
+# in limbo, counts too). The copies then walk to cells nearby that our
+# engine doesn't pick yet, so positions are checked only as they appear.
+[[check]]
+what = "count"
+type = "INIT"
+owner = 0
+at = 1200
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "INIT"
+owner = 0
+at = 1300
+tolerance = 0
+
+[[check]]
+what = "position"
+type = "INIT"
+owner = 0
+at = 1140
+tolerance = 0

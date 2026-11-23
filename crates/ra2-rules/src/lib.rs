@@ -316,6 +316,9 @@ pub struct TechnoType {
     pub rate_down: i32,
     /// Plants C4 on buildings it attacks (`C4=`, Tanya).
     pub c4: bool,
+    /// Buildings: copies each infantryman its house trains (`Cloning=`,
+    /// the Cloning Vats).
+    pub cloning: bool,
     pub passengers: i32,
     pub ifv_mode: i32,
     /// What goes off when it's destroyed (`DeathWeapon=`), and a factor on
@@ -806,6 +809,7 @@ impl Rules {
                     rate_up: int(s, "RateUp", 0),
                     rate_down: int(s, "RateDown", 0),
                     c4: flag(s, "C4", false),
+                    cloning: flag(s, "Cloning", false),
                     passengers: int(s, "Passengers", 0),
                     ifv_mode: int(s, "IFVMode", 0),
                     death_weapon_damage_modifier: s
