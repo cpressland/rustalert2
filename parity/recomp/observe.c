@@ -194,7 +194,16 @@ static void write_frame(uint32_t frame) {
                                   index) at a cell: SPECIAL_PLACE, layout
                                   from 0x004C6B60
      L <rtti> <index> <naval> <x> <y>   place at a cell
-   Layout from the constructors at 0x004C65E0, 0x004C6970, 0x004C6AE0. */
+     M <type> <x> <y>             order house 0's first <type> to move to a
+                                  cell: MEGAMISSION, mission 2 (Move)
+     K <type> <target>            ... to attack the first <target> of any
+                                  house: mission 1 (Attack)
+     E <type> <target>            ... to enter it: mission 7 (Enter)
+     C <type> <target>            ... to capture it: mission 8 (Capture)
+   Layout from the constructors at 0x004C65E0, 0x004C6970, 0x004C6AE0;
+   MEGAMISSION's (0x004C6860): whom at +7, the mission at +0xC, target at
+   +0xE, destination at +0x13, each an id and a type byte (0x34 an object,
+   0x0B a cell whose id is y * 1000 + x: 0x006E6ED0). */
 #define OUTLIST        0xA802C8u
 #define EVENT_SIZE     0x6Fu
 static void queue_event(const uint8_t *ev) {
@@ -204,6 +213,21 @@ static void queue_event(const uint8_t *ev) {
     *(uint32_t *)GUEST_PTR(0xA83A54u + 4u * tail) = 0;
     *(uint32_t *)GUEST_PTR(OUTLIST + 8) = (tail + 1) & 0x7F;
     *(uint32_t *)GUEST_PTR(OUTLIST) = rd32(OUTLIST) + 1;
+}
+
+/* The UniqueID of the first techno of <type>, of house 0 or (any) of any
+   house; 0 if none. */
+static uint32_t find_techno(const char *type, int any) {
+    uint32_t tv = rd32(TECHNOS_VA + DVC_ITEMS), tn = rd32(TECHNOS_VA + DVC_COUNT);
+    for (uint32_t i = 0; i < tn; i++) {
+        uint32_t t = rd32(tv + 4 * i), owner = rd32(t + TECHNO_OWNER);
+        const char *kname; uint32_t type_off;
+        if (!owner || (!any && rd32(owner + HOUSE_INDEX) != 0)) continue;
+        if (!kind_of(class_name(t), &kname, &type_off)) continue;
+        if (strcmp((const char *)GUEST_PTR(rd32(t + type_off) + 0x24), type)) continue;
+        return rd32(t + 0x10);
+    }
+    return 0;
 }
 
 static void run_orders(uint32_t frame) {
@@ -234,6 +258,34 @@ static void run_orders(uint32_t frame) {
                 fprintf(g_out, "# order %u %s %s id %u\n", frame, kind == 'D' ? "deploy" : kind == 'S' ? "sell" : "repair", arg, id);
                 break;
             }
+        } else if (kind == 'M' || kind == 'K' || kind == 'E' || kind == 'C') {
+            char what[64]; int x = 0, y = 0;
+            uint32_t whom = find_techno(arg, 0), target = 0;
+            if (!whom) continue;
+            if (kind == 'M') {
+                if (sscanf(o, "%u %c %63s %d %d", &at, &kind, arg, &x, &y) != 5) continue;
+            } else {
+                if (sscanf(o, "%u %c %63s %63s", &at, &kind, arg, what) != 4) continue;
+                target = find_techno(what, 1);
+                if (!target) continue;
+            }
+            ev[0] = 4;                          /* MEGAMISSION */
+            memcpy(ev + 7, &whom, 4);
+            ev[0xB] = 0x34;
+            ev[0xC] = kind == 'M' ? 2 : kind == 'K' ? 1 : kind == 'E' ? 7 : 8;
+            if (kind == 'M') {
+                uint32_t cell = (uint32_t)(y * 1000 + x);
+                memcpy(ev + 0x13, &cell, 4);
+                ev[0x17] = 0x0B;
+            } else if (kind == 'K') {
+                memcpy(ev + 0xE, &target, 4);
+                ev[0x12] = 0x34;
+            } else {
+                memcpy(ev + 0x13, &target, 4);
+                ev[0x17] = 0x34;
+            }
+            queue_event(ev);
+            fprintf(g_out, "# order %u %c %s id %u target %u cell %d,%d\n", frame, kind, arg, whom, target, x, y);
         } else if (kind == 'F') {
             int sw, x, y;
             if (sscanf(o, "%u %c %d %d %d", &at, &kind, &sw, &x, &y) != 5) continue;

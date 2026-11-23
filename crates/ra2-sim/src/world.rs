@@ -92,6 +92,8 @@ pub struct Object {
     /// Experience, the bits of the float the game keeps (`TechnoClass
     /// +0x150`): 1 makes a veteran, 2 elite. See `Object::experience`.
     pub experience_bits: u32,
+    /// A player's order it's carrying out.
+    pub command: Option<crate::command::Command>,
 }
 
 impl Object {
@@ -275,6 +277,7 @@ impl World {
             dies_at: None,
             repairing: false,
             experience_bits: ra2_rules::veterancy::from_map(p.veterancy),
+            command: None,
         });
         Some(id)
     }
@@ -305,6 +308,7 @@ impl World {
             dies_at: None,
             repairing: false,
             experience_bits: 0,
+            command: None,
         });
         id
     }

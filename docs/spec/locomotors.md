@@ -60,6 +60,22 @@ Choosing the route is pathfinding (#39).
   weapon range: the Grizzly and Rhino stop at (38,39), exactly 5 cells
   from the MCV's cell. `[observed]`
 
+- A unit ordered to move (`MEGAMISSION`, mission Move, to a cell) plans a
+  route there and drives it, stopping on the cell's centre. `[observed]`
+  (`mcv-move`) Our Move mission drives as harvesters do (see below). It
+  ends exactly where the original's does, but on the way:
+  - the original's MCV set off 16 frames after the order landed, against
+    our 12 (its turn to the east). It then gathered speed from a
+    standstill, about half a lepton a frame each frame. We start it at the
+    crawl, as observed for the War Miner, so we run up to 150 leptons
+    ahead. That a standing MCV starts from nothing and a hunting miner at
+    the crawl points to the drive tracks, not yet traced;
+  - from (42,35) to (37,30), a pure diagonal, the original drove straight
+    there. Our corridor of 2×2 zones leaves out the cells beside the
+    diagonal, so our route steps north first (pathfinding.md);
+  - from (37,30) to (33,39) the original went SW, S×4, SW×3, S; we go
+    SW, S×5, SW×3.
+
 ## What we implement
 
 Fitted so the three `*-hunts-mcv` scenarios pass every check; each

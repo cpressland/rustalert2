@@ -1,0 +1,85 @@
+name = "mcv-move"
+description = """
+The human player's MCV is ordered to move: east along a row, then on a
+diagonal, then back past its start. Covers the Move mission: the route,
+acceleration and slowing, turning, and where it stops. Nothing else is
+near: the AI starts in the far corner."""
+map = "parity_mcv_move.yrm"
+end_frame = 1100
+human_start = [35, 35]
+
+[generate]
+name = "mcv-move"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+
+[[generate.house]]
+name = "Neutral"
+
+[[order]]
+frame = 30
+what = "move"
+type = "AMCV"
+x = 42
+y = 35
+
+[[order]]
+frame = 400
+what = "move"
+type = "AMCV"
+x = 37
+y = 30
+
+[[order]]
+frame = 750
+what = "move"
+type = "AMCV"
+x = 33
+y = 39
+
+# Where it stops is exact; the way there is checked loosely. The original
+# sets off 4 frames later than we do and gathers speed more slowly (its
+# drive tracks aren't traced), and on the diagonal leg its planner goes
+# straight where ours steps north first (see locomotors.md).
+[[check]]
+what = "position"
+type = "AMCV"
+owner = 0
+at = 120
+tolerance = 192
+
+[[check]]
+what = "position"
+type = "AMCV"
+owner = 0
+at = 300
+tolerance = 0
+
+[[check]]
+what = "position"
+type = "AMCV"
+owner = 0
+at = 500
+tolerance = 128
+
+[[check]]
+what = "position"
+type = "AMCV"
+owner = 0
+at = 700
+tolerance = 0
+
+[[check]]
+what = "position"
+type = "AMCV"
+owner = 0
+at = 900
+tolerance = 256
+
+[[check]]
+what = "position"
+type = "AMCV"
+owner = 0
+at = 1100
+tolerance = 0

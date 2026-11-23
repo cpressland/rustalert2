@@ -50,6 +50,8 @@ pub struct Motion {
     pub speed: i32,
     /// The cell centre its route ends at.
     pub goal: Option<Coord>,
+    /// The cell a commanded unit's route was planned to.
+    pub planned: Option<(i16, i16)>,
 }
 
 /// Full speed, in the millionths [`Motion::speed`] keeps.

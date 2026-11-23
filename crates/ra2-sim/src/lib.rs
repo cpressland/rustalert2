@@ -12,6 +12,7 @@
 #![forbid(unsafe_code)]
 #![deny(clippy::float_arithmetic)]
 
+pub mod command;
 pub mod coords;
 pub mod harvest;
 pub mod hunt;
