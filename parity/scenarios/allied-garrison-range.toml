@@ -1,0 +1,114 @@
+name = "allied-garrison-range"
+description = """
+A garrison's range. As allied-garrison-fire, with the Neutral Grizzly 7
+cells from the house's centre and a Neutral Rhino 5.5 cells off, both
+asleep. The house is ordered to attack the Grizzly, then the Rhino. Covers
+OccupyWeaponRange= and the footprint bonus. The AI starts in the far
+corner."""
+map = "parity_allied_garrison_range.yrm"
+end_frame = 2400
+human_start = [35, 35]
+
+[generate]
+name = "allied-garrison-range"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.structure]]
+owner = "Neutral"
+type = "CAHSE01"
+x = 28
+y = 36
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 22
+y = 37
+facing = 64
+mission = "Sleep"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "HTNK"
+x = 24
+y = 37
+facing = 64
+mission = "Sleep"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAPILE"
+
+[[order]]
+frame = 900
+what = "place"
+type = "GAPILE"
+x = 38
+y = 37
+
+[[order]]
+frame = 910
+what = "produce"
+type = "E1"
+
+[[order]]
+frame = 1500
+what = "capture"
+type = "E1"
+target = "CAHSE01"
+
+[[order]]
+frame = 1800
+what = "attack"
+type = "CAHSE01"
+target = "MTNK"
+
+[[order]]
+frame = 2000
+what = "attack"
+type = "CAHSE01"
+target = "HTNK"
+
+# The house's range is OccupyWeaponRange=5 plus half its foundation's
+# shorter side (3x2: 1), 6 cells, whatever its occupant's weapon: the
+# Grizzly, 7 cells off, is left alone; the Rhino, 5.5, is shot from the
+# frame after the order.
+[[check]]
+what = "hp"
+type = "MTNK"
+at = 2300
+tolerance = 0
+
+[[check]]
+what = "first_damage"
+type = "HTNK"
+window = 0
+
+[[check]]
+what = "hp"
+type = "HTNK"
+at = 2100
+tolerance = 9
