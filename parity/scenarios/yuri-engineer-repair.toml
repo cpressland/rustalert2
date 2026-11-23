@@ -109,10 +109,10 @@ what = "capture"
 type = "YENGINEER"
 target = "YAPOWR"
 
-# The engineer comes out of the barracks on the same frame as in the
-# original but walks out to another cell (the original's pick of exit cell
-# isn't traced; see production.md), so it reaches the reactor 24 frames
-# later than the original's.
+# The engineer comes out of the barracks on the same frame and to the same
+# cell as in the original, but walks faster and by a straighter route
+# (infantry speed and routes are fitted; see locomotors.md), so it reaches
+# the reactor 40 frames before the original's.
 
 # The Dominator's blast leaves the reactor at 500.
 [[check]]
@@ -127,7 +127,7 @@ what = "event"
 type = "YENGINEER"
 owner = 0
 event = "removed"
-window = 30
+window = 50
 
 # ...and the reactor is whole, at no cost, its output back a frame later.
 [[check]]

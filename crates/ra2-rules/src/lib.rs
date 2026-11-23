@@ -378,6 +378,9 @@ pub struct Warhead {
     pub conventional: bool,
     pub inf_death: i32,
     pub prone_damage: Ratio,
+    /// Takes control of what it hits instead of hurting it
+    /// (`MindControl=`).
+    pub mind_control: bool,
 }
 
 /// A projectile type (named by weapons' `Projectile=`).
@@ -950,6 +953,7 @@ impl Rules {
                     conventional: flag(s, "Conventional", false),
                     inf_death: int(s, "InfDeath", 0),
                     prone_damage: ratio(s, "ProneDamage", Ratio::ONE),
+                    mind_control: flag(s, "MindControl", false),
                 }
             })
             .collect();

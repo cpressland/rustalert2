@@ -255,11 +255,7 @@ on the x87. `[recomp 0x0070D0D0]`
 - Two units leaving a war factory: the original sent the first a cell
   further on, so the second had the door cell; ours send both to the
   door cell.
-- Where infantry go when they leave a barracks: the original's engineer
-  went east of a Yuri barracks, where our rule (the row below, as for the
-  Allied barracks) sends it south.
-- The crew that steps out of a destroyed vehicle or building, and the
-  blast that can kill it, aren't modelled yet.
+- A building's crew and death explosion (see "Crews").
 - When a unit attacks a building, the original fires while still driving
   up, and stops elsewhere than our hunt does. A Grizzly shelling a
   Construction Yard fired 5 frames sooner than ours.
