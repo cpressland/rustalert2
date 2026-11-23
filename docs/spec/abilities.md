@@ -185,7 +185,9 @@ engineers and the IFV is in repair.md; this note links to it.
 - Into a barracks (`Factory=InfantryType`): the house's infantry are
   built veterans from then on, with experience 1 from the start of their
   training; one begun before the spy went in stays a rookie. `[observed]`
-- Into a war factory: its vehicles the same way. `[hypothesis]`
+- Into a war factory: its vehicles the same way. `[observed]`
+  (`allied-spy-war-factory`: a Grizzly begun after the spy went into a
+  Neutral war factory came out with experience 1)
 - Into a power plant: its owner makes no power from that frame for
   `SpyPowerBlackout=` (1000) frames less one. `[observed]`
   (`allied-spy-power`: a Neutral plant's 200 gone from the frame the spy
@@ -301,6 +303,7 @@ engineers and the IFV is in repair.md; this note links to it.
 | `allied-garrison` | The house Neutral, then the player's; unhurt; the GI still counted | exact, clear of the change (ours 30 frames sooner: infantry speed) |
 | `allied-garrison-range` | The Grizzly out of range unhurt; the Rhino's first damage and its health | exact; the health ±9 (one hit) |
 | `allied-spy-barracks` | The spy going in; the GI trained after a veteran | exact; the spy ±40 frames (infantry speed) |
+| `allied-spy-war-factory` | The spy going in; the Grizzly built after a veteran | exact; the spy ±40 frames (infantry speed) |
 | `allied-spy-disguise` | The spy's look before and after the MakeupKit, that it didn't move, and that it survives beside the Neutral GI | exact |
 | `allied-spy-undisguised` | The spy alive before the GI, dead after | exact clear of the timing (the original's GI deployed) |
 | `allied-spy-dog` | The spy's look, alive before the dog, dead after; the dog unhurt | exact clear of the timing |
