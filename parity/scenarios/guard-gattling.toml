@@ -1,0 +1,69 @@
+name = "guard-gattling"
+description = """
+The Gattling. A Neutral Gattling Tank on Guard 3 cells east of the idle
+human player's MCV fires on it for as long as the MCV stands. Covers
+IsGattling: the rate that climbs while it fires (RateUp=), the weapon by
+stage (Stage1=, Stage2=), and what each stage does to heavy armour. The AI
+starts in the far corner."""
+map = "parity_guard_gattling.yrm"
+end_frame = 900
+human_start = [35, 35]
+
+[generate]
+name = "guard-gattling"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "YTNK"
+x = 38
+y = 35
+facing = 192
+mission = "Guard"
+
+# Tolerances: our Gattling takes its target and starts its rate 2 frames
+# later than the original's, so its first hit, and each change of stage,
+# come a couple of frames later; checks after the first stage allow one
+# pair of hits (20).
+
+# Pairs of hits (Burst=2, 3 to 5 frames apart) every 16 to 18 frames: 2
+# each on heavy armour at the first stage (GattWH)...
+[[check]]
+what = "first_damage"
+type = "AMCV"
+owner = 0
+window = 2
+
+[[check]]
+what = "hp"
+type = "AMCV"
+owner = 0
+at = 200
+tolerance = 0
+
+# ...6 once its rate passes Stage1=200 (SA), 10 past Stage2=400 (SSA).
+[[check]]
+what = "hp"
+type = "AMCV"
+owner = 0
+at = 400
+tolerance = 20
+
+[[check]]
+what = "hp"
+type = "AMCV"
+owner = 0
+at = 600
+tolerance = 20
+
+[[check]]
+what = "hp"
+type = "AMCV"
+owner = 0
+at = 900
+tolerance = 20

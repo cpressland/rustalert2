@@ -258,6 +258,7 @@ pub fn update(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32
     land(world, rules, rng, frame);
     crate::death::update(world, rules, frame);
     release(world);
+    spin(world, rules);
 }
 
 /// The first frames a unit on Guard can take a target. `[observed]`
@@ -581,6 +582,22 @@ fn weapon_of(t: &ra2_rules::TechnoType, rank: u8) -> Option<ra2_rules::WeaponId>
 /// empty. `[community]` (`[observed]`: an engineer aboard an IFV mended)
 pub(crate) fn weapon_now(world: &World, rules: &Rules, o: &Object) -> Option<ra2_rules::WeaponId> {
     let t = &rules.technos[o.techno];
+    if t.gattling && !t.weapons.is_empty() {
+        // Its ground weapon of the stage its rate has reached: Weapon1=,
+        // Weapon3=, Weapon5=… (the even ones are for aircraft).
+        let passed = t
+            .gattling_stages
+            .iter()
+            .filter(|&&s| o.gattling_rate >= s)
+            .count();
+        let stage = passed.min(t.gattling_stages.len().saturating_sub(1));
+        let list = if o.rank() >= 2 {
+            &t.elite_weapons
+        } else {
+            &t.weapons
+        };
+        return list.get(2 * stage).copied().flatten().or(t.weapons[0]);
+    }
     if t.gunner && !t.weapons.is_empty() {
         let mode = o
             .passengers
@@ -695,6 +712,25 @@ fn control(world: &mut World, shooter: u32, target: u32, links: i32) {
     o.owner = owner;
     o.command = None;
     o.motion.target = None;
+}
+
+/// Gattlings: the rate climbs `RateUp=` a frame while one has a target, up
+/// to its last stage, and falls `RateDown=` a frame while it hasn't.
+/// `[observed]` (`guard-gattling`: 2 a hit on an MCV from the first shot on
+/// 46, 6 from 254, 10 from 460: stages at 200 and 400)
+fn spin(world: &mut World, rules: &Rules) {
+    for o in &mut world.objects {
+        let t = &rules.technos[o.techno];
+        if !t.gattling {
+            continue;
+        }
+        let top = t.gattling_stages.last().copied().unwrap_or(0);
+        o.gattling_rate = if o.motion.target.is_some() {
+            (o.gattling_rate + t.rate_up).min(top)
+        } else {
+            (o.gattling_rate - t.rate_down).max(0)
+        };
+    }
 }
 
 /// Units a dead controller held go back to their houses. `[hypothesis]`

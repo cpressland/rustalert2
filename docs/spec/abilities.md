@@ -1,7 +1,7 @@
 # Special abilities
 
 **Status:** Started: engineers capturing and repairing, the IFV's weapon
-by passenger, Tanya's C4, Yuri's mind control. Traced but not modelled: the GI deploying on
+by passenger, Tanya's C4, Yuri's mind control, Gattling weapons. Traced but not modelled: the GI deploying on
 Guard. Tried: the Grinder.
 **Crate:** `ra2-sim` (`command`, `hunt`)
 **Issue:** #44
@@ -62,6 +62,20 @@ engineers and the IFV is in repair.md; this note links to it.
 - The link's flight is the 5 frames above; its projectile is invisible
   (`PsychicControl`) and its speed isn't traced.
 
+### Gattling weapons
+
+- A Gattling (`IsGattling=yes`, the Gattling Tank) keeps a rate: it
+  climbs `RateUp=` (1) a frame while it has a target, up to its last
+  `Stage<n>=`, and falls `RateDown=` (50) a frame while it hasn't. Past
+  `Stage1=` (200) it fires its second pair of weapons, past `Stage2=`
+  (400) its third: on the ground `Weapon1=`, `Weapon3=`, `Weapon5=`.
+  `[observed]` (`guard-gattling`: on an MCV, 2 a hit from the first shot,
+  6 from about 200 frames on, 10 from about 400; the warheads GattWH, SA,
+  SSA on heavy armour)
+- Each fires `Burst=2`, the two 3 to 5 frames apart, every 16 to 18
+  frames (see combat.md). `[observed]`
+- Its fall when it loses its target isn't recorded yet.
+
 ### The GI deploying (not modelled)
 
 - Infantry not under human control, with `Deployer=yes` and
@@ -91,4 +105,5 @@ engineers and the IFV is in repair.md; this note links to it.
 |---|---|---|
 | `allied-engineer-capture` | see repair.md | |
 | `yuri-mind-control` | The Grizzly Neutral before Yuri is in range and his after; the Rhino his and the Grizzly Neutral again; both unhurt | exact at frames clear of the changes (ours come up to 21 frames sooner: infantry speed) |
+| `guard-gattling` | The MCV's first damage and its health at 200, 400, 600 and 900 | exact at 200; then one pair (20), the stages coming 2 to 5 frames late |
 | `allied-tanya-c4` | The plant destroyed, no crew, the Neutral house's power after, Tanya unhurt | the plant's end ±30 frames (infantry speed) |
