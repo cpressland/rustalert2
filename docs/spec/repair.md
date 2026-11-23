@@ -1,8 +1,8 @@
 # Repair, self-healing, veterancy and crates
 
-**Status:** Parity-checked (self-healing, building repair, experience
-from kills, veterancy's effects on an attacker). Still to come: crates, and
-repair by depots, IFVs and engineers.
+**Status:** Parity-checked (self-healing, building repair, the Service
+Depot, engineers repairing, experience from kills, veterancy's effects on
+an attacker). Still to come: crates and the IFV's repair turret.
 **Crate:** `ra2-rules` (`production::repair_frames`,
 `production::repair_step_cost`, `production::experience_after_kill`),
 `veterancy`), `ra2-sim` (`production::heal`, `hunt::credit`)
@@ -72,6 +72,29 @@ here too, because the repair scenario damages its building that way.
 - As with repair, the house's power shows it a frame later. `[observed]`
 - We walk it to the building's nearest cell. Capturing an enemy's building
   isn't recorded yet.
+
+### The Service Depot
+
+- A unit ordered into a building with `UnitRepair=yes` (`MEGAMISSION`,
+  mission Enter) drives onto its centre cell. `[observed]`
+  (`allied-depot-repair`: an IFV on a depot at (37,38) parked on (38,39))
+- It's repaired there, `RepairStep=` (8) hit points a step, each costing
+  cost × `RepairPercent=` × `RepairStep=` ÷ `Strength=`, truncated: 3
+  credits for an IFV (600, 200 hit points). `[observed]`
+- The steps run on the depot's own timer, not the repair clock: the first
+  4 frames after the unit docks, the next 85 frames after that (likely the
+  depot's animation), then one every 15. 15 is the first whole frame
+  count of at least `URepairRate=` × 900 (0.016 gives 14.4). The depot
+  keeps a count it compares with that product. `[observed]` `[recomp
+  0x0044BD38]`
+- 12 frames after it's whole the unit drives off the pad, to the cell
+  below the depot's left column. `[observed]`
+- What happens when the house can't pay isn't recorded. We send it off.
+
+A forced attack (`MEGAMISSION`, mission Attack, on one's own unit) is how
+the scenario damages the IFV. The original's Grizzly fired its first shell
+about 20 frames after the order (its turret turning); ours fires when the
+order lands.
 
 ### Power while damaged and repaired
 
@@ -153,8 +176,10 @@ on the x87. `[recomp 0x0070D0D0]`
 
 ## Open questions
 
-- Repair by the Service Depot and the IFV: the orders exist now (`enter`),
-  but a scenario needs a damaged unit of the player's.
+- The IFV's repair turret (an engineer inside) needs passengers.
+- Two units leaving a war factory: the original sent the first a cell
+  further on, so the second had the door cell; ours send both to the
+  door cell.
 - Where infantry go when they leave a barracks: the original's engineer
   went east of a Yuri barracks, where our rule (the row below, as for the
   Allied barracks) sends it south.
@@ -170,6 +195,7 @@ on the x87. `[recomp 0x0070D0D0]`
 
 | Scenario | Checks | Tolerance |
 |---|---|---|
+| `allied-depot-repair` | The IFV's health after the shell, after the first step and once whole, the house's credits at each, and where it parks after | exact |
 | `yuri-engineer-repair` | The reactor's health before and after, the engineer going in, the house's power and credits after | exact; the engineer's arrival ±30 frames |
 | `grizzly-veteran-hunts-mcv` | A veteran from the map: its experience, its position at 120, the MCV's first damage and its health at 600 and 900 | as `grizzly-hunts-mcv`: one shell (71), 3 frames |
 | `grizzly-elite-hunts-mcv` | Elite from the map: its experience, its health (self-healing) at 140 and 440, the MCV's first damage, its health at 300 and when it's destroyed | health exact; one shell, 3 frames |

@@ -94,6 +94,8 @@ pub struct Object {
     pub experience_bits: u32,
     /// A player's order it's carrying out.
     pub command: Option<crate::command::Command>,
+    /// Its stay on a Service Depot.
+    pub depot: Option<crate::command::DepotVisit>,
 }
 
 impl Object {
@@ -278,6 +280,7 @@ impl World {
             repairing: false,
             experience_bits: ra2_rules::veterancy::from_map(p.veterancy),
             command: None,
+            depot: None,
         });
         Some(id)
     }
@@ -309,6 +312,7 @@ impl World {
             repairing: false,
             experience_bits: 0,
             command: None,
+            depot: None,
         });
         id
     }
