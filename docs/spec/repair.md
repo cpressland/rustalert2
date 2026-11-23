@@ -94,8 +94,9 @@ here too, because the repair scenario damages its building that way.
 
 A forced attack (`MEGAMISSION`, mission Attack, on one's own unit) is how
 the scenario damages the IFV. The original's Grizzly fired its first shell
-about 20 frames after the order (its turret turning); ours fires when the
-order lands.
+about 20 frames after the order, its turret turning (combat.md). Ours
+turns too, but our IFV parks on the Grizzly's cell (see below), so the
+first shell's frame differs.
 
 ### Crates
 
