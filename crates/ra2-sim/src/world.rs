@@ -117,6 +117,10 @@ pub struct Object {
     pub gattling_rate: i32,
     /// What it shows as to other houses, and as whose: a spy's disguise.
     pub disguise: Option<(usize, u32)>,
+    /// Deployed infantry (a GI behind sandbags), and the shots it has fired
+    /// on Guard (a computer's GI deploys after its third).
+    pub deployed: bool,
+    pub guard_shots: u32,
 }
 
 impl World {
@@ -358,6 +362,8 @@ impl World {
             controlled_by: None,
             gattling_rate: 0,
             disguise: None,
+            deployed: false,
+            guard_shots: 0,
         });
         let look = self.default_disguise(rules, techno, owner);
         if let Some(o) = self.objects.last_mut() {
@@ -403,6 +409,8 @@ impl World {
             controlled_by: None,
             gattling_rate: 0,
             disguise: None,
+            deployed: false,
+            guard_shots: 0,
         });
         let look = self.default_disguise(rules, techno, owner);
         if let Some(o) = self.objects.last_mut() {

@@ -1,10 +1,9 @@
 # Special abilities
 
 **Status:** Started: engineers capturing and repairing, the IFV's weapon
-by passenger, Tanya's C4, Yuri's mind control, Gattling weapons, the
-Cloning Vats, garrisoning, spies (disguise, dogs, barracks, power
-plants, refineries). Traced but not modelled: the GI deploying on
-Guard. Tried: the Grinder.
+by passenger, Tanya's C4, Yuri's mind control, Gattling weapons, the GI
+deploying, the Cloning Vats, garrisoning, spies (disguise, dogs, barracks,
+power plants, refineries). Tried: the Grinder.
 **Crate:** `ra2-sim` (`command`, `hunt`)
 **Issue:** #44
 
@@ -152,13 +151,20 @@ engineers and the IFV is in repair.md; this note links to it.
 - The copies then walk to a cell nearby (one south-west, one north-east);
   which isn't traced, so ours stand.
 
-### The GI deploying (not modelled)
+### The GI deploying
 
-- Infantry not under human control, with `Deployer=yes` and
-  `DeployFire=yes`, deploy to use `DeployFireWeapon=`. `[recomp
-  0x00522378]` A Neutral GI on Guard hit with its M60 three times, then
-  with its deployed `Para` from 117 on. `[observed]` (`guard-mcv`) The
-  deploy's own timing, from the infantry's sequences, isn't traced.
+- A GI (`Deployer=yes`) ordered to deploy does so where it stands, at
+  once: an attack ordered two frames after hit with its deployed weapon.
+  `[observed]` (`allied-gi-deploy`)
+- Deployed, it fires its `Secondary=` (`Para`: 25, `ROF=15`, `SSA`): 10 a
+  hit on heavy armour every 17 to 19 frames, where its M60 does 3.
+  `[observed]` The elite one's `EliteSecondary=` isn't read yet.
+- Infantry not under a player's control with `DeployFire=yes` deploy by
+  themselves to use it (`[recomp 0x00522378]`): a Neutral GI on Guard hit
+  with its M60 three times, then with Para from the next shot. We deploy
+  it after its third shot; what the game waits for isn't traced.
+  `[observed]` (`guard-mcv`)
+- Undeploying, and its delay, aren't recorded yet.
 
 ### The Grinder (not working yet)
 
@@ -189,4 +195,5 @@ engineers and the IFV is in repair.md; this note links to it.
 | `allied-spy-dog` | The spy's look, alive before the dog, dead after; the dog unhurt | exact clear of the timing |
 | `allied-spy-power` | The spy going in; the Neutral house's power during and after the blackout, the player's untouched | exact clear of the changes; the spy ±40 frames |
 | `yuri-cloning` | How many Initiates there are after each comes out, and where the first copy appears | exact |
+| `allied-gi-deploy` | The Grizzly untouched before the attack order, the deployed GI's first hit and the Grizzly's health after, the GI unmoved | first hit ±2 frames; health one hit (10) |
 | `allied-tanya-c4` | The plant destroyed, no crew, the Neutral house's power after, Tanya unhurt | the plant's end ±30 frames (infantry speed) |

@@ -300,6 +300,7 @@ fn guard(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: 
             && !o.limbo
             && o.health > 0
             && seen_as_enemy(t, owner, o)
+            && takes_on(world, owner, o.owner)
             && distance(o.coord, at) <= weapon.range
     };
     let target = me
@@ -343,7 +344,26 @@ fn guard(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: 
     };
     if aimed && o.motion.reload == 0 {
         fire(world, rules, rng, frame, i, target_id, infantry);
+        // A computer's GI (`Deployer=`, `DeployFire=`) deploys after its
+        // third shot. `[observed]` (`guard-mcv`: a Neutral GI's M60 hit on
+        // 48, 71 and 94, its Para from 117; the trigger isn't traced)
+        let computer = !player(world, world.objects[i].owner);
+        let o = &mut world.objects[i];
+        o.guard_shots += 1;
+        if t.deployer && t.deploy_fire && !o.deployed && o.guard_shots >= 3 && computer {
+            o.deployed = true;
+        }
     }
+}
+
+/// Whether a house is a player's (not Neutral or Special).
+fn player(world: &World, house: u32) -> bool {
+    world
+        .houses
+        .get(usize::try_from(house).unwrap_or(usize::MAX))
+        .is_some_and(|h| {
+            !h.country.eq_ignore_ascii_case("Neutral") && !h.country.eq_ignore_ascii_case("Special")
+        })
 }
 
 #[allow(clippy::too_many_lines)]
@@ -593,6 +613,12 @@ fn weapon_of(t: &ra2_rules::TechnoType, rank: u8) -> Option<ra2_rules::WeaponId>
 /// empty. `[community]` (`[observed]`: an engineer aboard an IFV mended)
 pub(crate) fn weapon_now(world: &World, rules: &Rules, o: &Object) -> Option<ra2_rules::WeaponId> {
     let t = &rules.technos[o.techno];
+    // Deployed infantry fire their `Secondary=` (the GI's Para; elite,
+    // `EliteSecondary=` isn't read yet). `[observed]` (10 a hit on heavy
+    // armour, against the M60's 3)
+    if o.deployed && t.secondary.is_some() {
+        return t.secondary;
+    }
     if t.gattling && !t.weapons.is_empty() {
         // Its ground weapon of the stage its rate has reached: Weapon1=,
         // Weapon3=, Weapon5=… (the even ones are for aircraft).
@@ -773,6 +799,24 @@ fn control(world: &mut World, shooter: u32, target: u32, links: i32) {
 /// house's look; `allied-spy-dog`: a Neutral dog killed the disguised one)
 pub(crate) fn seen_as_enemy(t: &ra2_rules::TechnoType, owner: u32, o: &Object) -> bool {
     t.detect_disguise || o.disguise.is_none_or(|(_, house)| house != owner)
+}
+
+/// Whether a guard of house `owner` takes on `target`'s by itself: a
+/// player's units leave the civilian houses (Neutral, Special) alone; the
+/// civilians take on anyone. `[observed]` (`allied-gi-deploy`: a GI on
+/// Guard beside a sleeping Neutral Grizzly never fired until ordered;
+/// `guard-mcv`: Neutral units fired on a player's MCV)
+fn takes_on(world: &World, owner: u32, target: u32) -> bool {
+    let civil = |h: u32| {
+        world
+            .houses
+            .get(usize::try_from(h).unwrap_or(usize::MAX))
+            .is_some_and(|h| {
+                h.country.eq_ignore_ascii_case("Neutral")
+                    || h.country.eq_ignore_ascii_case("Special")
+            })
+    };
+    civil(owner) || !civil(target)
 }
 
 /// Gattlings: the rate climbs `RateUp=` a frame while one has a target, up

@@ -326,6 +326,11 @@ pub struct TechnoType {
     pub max_occupants: i32,
     /// Infantry that infiltrates enemy buildings (`Infiltrate=`, the spy).
     pub infiltrate: bool,
+    /// Infantry that deploys in place and then fires its `Secondary=`
+    /// (`Deployer=`, the GI), and deploys by itself to fire when not under
+    /// a player's control (`DeployFire=`).
+    pub deployer: bool,
+    pub deploy_fire: bool,
     /// Can show as another unit (`CanDisguise=`, the spy), and sees
     /// through that (`DetectDisguise=`, dogs).
     pub can_disguise: bool,
@@ -836,6 +841,8 @@ impl Rules {
                     cloning: flag(s, "Cloning", false),
                     occupier: flag(s, "Occupier", false),
                     infiltrate: flag(s, "Infiltrate", false),
+                    deployer: flag(s, "Deployer", false),
+                    deploy_fire: flag(s, "DeployFire", false),
                     can_disguise: flag(s, "CanDisguise", false),
                     detect_disguise: flag(s, "DetectDisguise", false),
                     refinery: flag(s, "Refinery", false),

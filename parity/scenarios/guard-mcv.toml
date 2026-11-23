@@ -51,8 +51,7 @@ y = 32
 mission = "Guard"
 
 # The GI deploys after its third shot (Deployer=yes, DeployFire=yes) and
-# fires its deployed weapon from 117; that's a special ability, not yet
-# modelled, so the damage checks stop before it. The scenario ends at 300,
+# fires its deployed weapon, Para (10 a hit), from 117 (ours from 118). The scenario ends at 300,
 # before the MCV falls (the human loses then and the game stops).
 
 # The GI's first hit (3, M60 on heavy armour) lands on 48; the near
@@ -86,3 +85,12 @@ type = "MTNK"
 owner = 2
 at = 300
 tolerance = 0
+
+# The deployed GI's Para and the Grizzly's shells together; one Para hit
+# either way.
+[[check]]
+what = "hp"
+type = "AMCV"
+owner = 0
+at = 250
+tolerance = 10
