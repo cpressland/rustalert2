@@ -192,7 +192,7 @@ fn cell_i16(v: i32) -> i16 {
 /// gains depends on the building. A factory of infantry (a barracks): the
 /// house's infantry are built veterans from then on. `[observed]`
 /// (`allied-spy-barracks`) A factory of vehicles: its vehicles, the same
-/// way. `[hypothesis]` A power plant: its owner makes no power for
+/// way. `[observed]` (`allied-spy-war-factory`) A power plant: its owner makes no power for
 /// `SpyPowerBlackout=` frames less one, from that frame. `[observed]`
 /// (`allied-spy-power`: a Neutral plant's 200 gone from the frame the spy
 /// went in, back 999 frames on) A refinery: see below. Other buildings
