@@ -33,6 +33,11 @@ impl X80 {
         X80::normal(u64::try_from(v.max(0)).unwrap_or(0), 0)
     }
 
+    /// `fld qword` of a double given by its bits.
+    pub fn double_bits(bits: u64) -> X80 {
+        X80::double(f64::from_bits(bits))
+    }
+
     /// `fld qword`: a double, exactly.
     pub fn double(v: f64) -> X80 {
         let bits = v.to_bits();

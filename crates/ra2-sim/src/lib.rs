@@ -15,6 +15,7 @@
 pub mod command;
 pub mod coords;
 pub mod crates;
+pub mod death;
 pub mod harvest;
 pub mod hunt;
 pub mod pathfind;

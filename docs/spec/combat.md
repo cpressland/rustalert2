@@ -30,7 +30,7 @@ Firing, projectiles and damage. Target choice belongs to missions.
 ## What we implement
 
 - **Targets**: a hunter keeps its target while it lives, else takes the
-  nearest object of another house. `[hypothesis]` (threat ratings and
+  nearest living object of another house. `[hypothesis]` (threat ratings and
   alliances not yet weighed)
 - **When**: turreted vehicles fire whenever the target is in range, moving
   or not: the Rhino (range 5.75) fires on frame 170, eight frames before
@@ -48,6 +48,30 @@ Firing, projectiles and damage. Target choice belongs to missions.
 
 All three scenarios match the original's first hit to the frame and its
 hit points at every checked frame.
+
+## Death
+
+- A destroyed vehicle's death weapon goes off where it stood, the frame
+  after. `[recomp 0x0070D690]` `[observed]` (`grizzly-veteran`)
+  - Its own `DeathWeapon=`, at that weapon's `Damage=` ×
+    `DeathWeaponDamageModifier=` (default 1), truncated;
+  - else its primary weapon, the same way;
+  - else `[CombatDamage] DeathWeapon=` (`DefaultDeathWeapon`: warhead
+    `DeathWH`, 100% against everything, `CellSpread=1.5`,
+    `PercentAtMax=.5`) at half its `Strength=` (0.5 at `0x7E1738`).
+- The blast falls off as any area damage does (superweapons.md). Infantry
+  it kills fall and are taken away 15 frames later. `[observed]`
+- A `Crewed=yes` vehicle's crew gets out, on the frame it's destroyed, if
+  a draw from 0 to 2³¹ − 2, × 1 ÷ (2³¹ − 2), is below `CrewEscape=` (50%):
+  one of the side's crew (`AlliedCrew=` E1, `SovietCrew=` E2, `ThirdCrew=`
+  INIT) where the wreck stood, with 5 to half its strength at random.
+  `[recomp 0x007381F7]` With the map's `CrewEscape=100%`, the MCV's
+  crewman stepped out and the blast (500 at his feet) killed him on the
+  next frame. `[observed]`
+- Kills by a wreck's blast aren't credited to the wreck's killer.
+- Not modelled yet: a building's crew (see repair.md, "Crews") and its
+  death explosion; deaths by superweapons leave neither blast nor crew in
+  our engine.
 
 ## Open questions
 

@@ -4,8 +4,10 @@ Veterancy. A Neutral Grizzly on Hunt drives to the idle human player's MCV
 (made weaker by the map's rules, so it falls to the seventh shell) and
 destroys it. The MCV's cost of 3000 earns the Grizzly (cost 700,
 VeteranRatio=3) 3000 ÷ 2100 of experience: a veteran. The human has lost
-then, so the recording ends soon after. The AI starts in the far corner and
-doesn't reach the area in time."""
+then, so the recording ends soon after. The map's rules make the MCV's
+crew sure to escape (CrewEscape=100%): its crewman steps out and the
+wreck's blast (half the MCV's strength, DeathWH) kills him. The AI starts
+in the far corner and doesn't reach the area in time."""
 map = "parity_grizzly_veteran.yrm"
 end_frame = 620
 human_start = [35, 35]
@@ -18,6 +20,9 @@ starts = [[35, 35], [65, 65]]
 rules = """
 [AMCV]
 Strength=400
+
+[General]
+CrewEscape=100%
 """
 
 [[generate.house]]
@@ -35,8 +40,8 @@ mission = "Hunt"
 # gap between them varies with the seed; see grizzly-hunts-mcv).
 
 # The seventh shell kills the MCV, and the kill makes the Grizzly a
-# veteran: 3000 ÷ (700 × 3), as the game's float. (A crew GI steps out of
-# the wreck and dies to the blast; neither is modelled yet.)
+# veteran: 3000 ÷ (700 × 3), as the game's float. The crewman's death
+# isn't the Grizzly's kill.
 [[check]]
 what = "hp"
 type = "AMCV"
@@ -61,3 +66,19 @@ what = "experience"
 type = "MTNK"
 at = 560
 tolerance = 0
+
+# The crewman: out on the frame the MCV is destroyed, killed by the blast
+# the frame after, and taken away 15 frames on.
+[[check]]
+what = "event"
+type = "E1"
+owner = 0
+event = "created"
+window = 2
+
+[[check]]
+what = "event"
+type = "E1"
+owner = 0
+event = "removed"
+window = 2
