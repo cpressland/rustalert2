@@ -45,6 +45,8 @@ Firing, projectiles and damage. Target choice belongs to missions.
   - A GI on Guard deploys after its third shot (`Deployer=yes`,
     `DeployFire=yes`) and fires its deployed weapon. Not modelled yet
     (special abilities, #44).
+- **Infantry deaths**: infantry killed by a shot fall and are taken away
+  15 frames later. `[observed]` (a spy shot dead on 1698, gone on 1713)
 - **Turrets**: a turret (`Turret=yes`) turns toward the target at the
   body's `ROT=` × 256 a frame, from the body's facing at first, and the
   unit fires only once it's on the target. `[observed]` (a Grizzly's

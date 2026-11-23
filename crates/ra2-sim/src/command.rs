@@ -195,9 +195,29 @@ fn cell_i16(v: i32) -> i16 {
 /// way. `[hypothesis]` A power plant: its owner makes no power for
 /// `SpyPowerBlackout=` frames less one, from that frame. `[observed]`
 /// (`allied-spy-power`: a Neutral plant's 200 gone from the frame the spy
-/// went in, back 999 frames on) Other buildings aren't modelled yet.
+/// went in, back 999 frames on) A refinery: see below. Other buildings
+/// aren't modelled yet.
 fn infiltrate(world: &mut World, rules: &Rules, frame: u32, owner: u32, b: usize) {
     let t = &rules.technos[world.objects[b].techno];
+    if t.refinery {
+        // A refinery: `SpyMoneyStealPercent=` of its owner's money,
+        // truncated, goes to the spy's house. `[observed]`
+        // (`allied-spy-refinery`, recorded only: 42574 from the AI, 21287
+        // taken, a spy in a Conscript's look having walked through its base)
+        let victim = usize::try_from(world.objects[b].owner).unwrap_or(usize::MAX);
+        let to = usize::try_from(owner).unwrap_or(usize::MAX);
+        let taken = world
+            .houses
+            .get(victim)
+            .map_or(0, |h| rules.general.spy_money_steal.of(h.credits.max(0)));
+        if let Some(h) = world.houses.get_mut(victim) {
+            h.credits -= taken;
+        }
+        if let Some(h) = world.houses.get_mut(to) {
+            h.credits += taken;
+        }
+        return;
+    }
     if t.power > 0 {
         let victim = usize::try_from(world.objects[b].owner).unwrap_or(usize::MAX);
         let lasts = u32::try_from(rules.general.spy_power_blackout).unwrap_or(0);
@@ -436,4 +456,36 @@ pub(crate) fn drive(
         }
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ra2_rules::Ini;
+
+    /// The original's numbers: the AI had 42574 when a spy in a
+    /// Conscript's look got into its refinery; 21287 went to the spy's
+    /// house (8200 before). `[observed]`
+    #[test]
+    fn a_spy_in_a_refinery_takes_half_its_owners_money() {
+        let rules = Rules::from_ini(
+            &Ini::parse(
+                b"[BuildingTypes]\n1=NAREFN\n[NAREFN]\nRefinery=yes\nStrength=900\n\
+                  [InfantryTypes]\n1=SPY\n[SPY]\nInfiltrate=yes\nStrength=100\n",
+            ),
+            &Ini::parse(b""),
+        );
+        let mut world = World::default();
+        world.add_house("British", 8200);
+        world.add_house("Russians", 42574);
+        let refinery = world.spawn(&rules, 0, 1, Coord::default());
+        let b = world
+            .objects
+            .iter()
+            .position(|o| o.id == refinery)
+            .expect("placed");
+        infiltrate(&mut world, &rules, 100, 0, b);
+        assert_eq!(world.houses[0].credits, 29_487);
+        assert_eq!(world.houses[1].credits, 21_287);
+    }
 }

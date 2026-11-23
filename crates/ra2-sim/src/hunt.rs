@@ -296,7 +296,11 @@ fn guard(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: 
     }
     let (at, owner) = (me.coord, me.owner);
     let in_range = |o: &crate::world::Object| {
-        o.owner != owner && !o.limbo && o.health > 0 && distance(o.coord, at) <= weapon.range
+        o.owner != owner
+            && !o.limbo
+            && o.health > 0
+            && seen_as_enemy(t, owner, o)
+            && distance(o.coord, at) <= weapon.range
     };
     let target = me
         .motion
@@ -377,7 +381,9 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
             world
                 .objects
                 .iter()
-                .filter(|o| o.owner != me.owner && !o.limbo && o.health > 0)
+                .filter(|o| {
+                    o.owner != me.owner && !o.limbo && o.health > 0 && seen_as_enemy(t, me.owner, o)
+                })
                 .min_by_key(|o| (i64::from(distance(o.coord, me.coord)), o.id))
         })
         .map(|o| (o.id, o.coord));
@@ -389,7 +395,12 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
     let o = &mut world.objects[i];
     o.motion.target = Some(target_id);
     o.motion.reload = (o.motion.reload - 1).max(0);
-    let in_range = |c: Coord| distance(c, target_at) <= weapon.range;
+    let reach = if weapon.range < 0 {
+        i32::MAX
+    } else {
+        weapon.range
+    };
+    let in_range = |c: Coord| distance(c, target_at) <= reach;
 
     // Both drive or walk cell to cell along the route toward the target,
     // stopping in the first cell with the target in range. Vehicles stand
@@ -633,6 +644,33 @@ fn land(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
         if o.shielded_until > frame || o.health <= 0 {
             continue;
         }
+        // A disguiser's shot (the spy's MakeupKit) takes the target's look
+        // and house instead of hurting it, and ends the order.
+        // `[observed]` (`allied-spy-disguise`: two frames after the order
+        // landed, from eight cells, the spy showed as a Neutral GI)
+        let disguiser = world
+            .objects
+            .iter()
+            .position(|x| x.id == s.shooter)
+            .filter(|&k| rules.technos[world.objects[k].techno].can_disguise);
+        if let Some(k) = disguiser {
+            let Some(o) = world.objects.iter().find(|o| o.id == s.target) else {
+                continue;
+            };
+            let look = (o.techno, o.owner);
+            let infantry = o.kind == Kind::Infantry;
+            let spy = &mut world.objects[k];
+            if infantry {
+                spy.disguise = Some(look);
+            }
+            spy.command = None;
+            spy.mission = Mission::Guard;
+            spy.motion.target = None;
+            continue;
+        }
+        let Some(o) = world.objects.iter_mut().find(|o| o.id == s.target) else {
+            continue;
+        };
         if weapon
             .warhead
             .is_some_and(|wh| rules.warhead(wh).mind_control)
@@ -659,7 +697,20 @@ fn land(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
         // A mending weapon's negative damage heals, up to full strength.
         // `[hypothesis]`
         o.health = (o.health - damage).min(if damage < 0 { ot.strength } else { i32::MAX });
+        // A dog's bite (a `Parasite=yes` warhead) kills infantry outright.
+        // `[observed]` (`allied-spy-dog`: a spy at 100 dead in one bite of
+        // 30)
+        let parasite = weapon.warhead.is_some_and(|wh| rules.warhead(wh).parasite);
+        if parasite && o.kind == Kind::Infantry && damage > 0 {
+            o.health = 0;
+        }
         if o.health <= 0 {
+            // Infantry fall, and are taken away 15 frames later.
+            // `[observed]` (a spy shot dead on 1698, gone on 1713)
+            if o.kind == Kind::Infantry && o.dies_at.is_none() {
+                o.health = 0;
+                o.dies_at = Some(frame + 15);
+            }
             let (victim, rank, owner, id) = (o.techno, o.rank(), o.owner, o.id);
             credit(world, rules, s.shooter, victim, rank, owner);
             if let Some(k) = world.objects.iter().position(|o| o.id == id) {
@@ -712,6 +763,16 @@ fn control(world: &mut World, shooter: u32, target: u32, links: i32) {
     o.owner = owner;
     o.command = None;
     o.motion.target = None;
+}
+
+/// Whether a unit of type `t` and house `owner` takes `o` for an enemy:
+/// not if `o` is disguised as one of `owner`'s own, unless `t` sees
+/// through disguises (`DetectDisguise=yes`, dogs). `[observed]`
+/// (`allied-spy-disguise`: a Neutral GI let a spy in a Neutral GI's look
+/// stand beside it; `allied-spy-undisguised`: it shot one in its own
+/// house's look; `allied-spy-dog`: a Neutral dog killed the disguised one)
+pub(crate) fn seen_as_enemy(t: &ra2_rules::TechnoType, owner: u32, o: &Object) -> bool {
+    t.detect_disguise || o.disguise.is_none_or(|(_, house)| house != owner)
 }
 
 /// Gattlings: the rate climbs `RateUp=` a frame while one has a target, up

@@ -1,0 +1,113 @@
+name = "allied-spy-dog"
+description = """
+Attack dogs see through disguises. A Neutral attack dog stands on Guard
+west of the human player's (British) base, and a Neutral GI sleeps further
+south. The player trains a spy (the map makes it cheaper and needs only the
+barracks), has it take the sleeping GI's look from afar, then walks it up
+beside the dog (DetectDisguise=yes). The AI starts in the far corner."""
+map = "parity_allied_spy_dog.yrm"
+end_frame = 2100
+human_start = [35, 35]
+
+[generate]
+name = "allied-spy-dog"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[SPY]
+Prerequisite=GAPILE
+Cost=500
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 30
+y = 46
+mission = "Sleep"
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "DOG"
+x = 30
+y = 40
+mission = "Guard"
+
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAPILE"
+
+[[order]]
+frame = 900
+what = "place"
+type = "GAPILE"
+x = 38
+y = 37
+
+[[order]]
+frame = 910
+what = "produce"
+type = "SPY"
+
+[[order]]
+frame = 1500
+what = "attack"
+type = "SPY"
+target = "E1"
+
+[[order]]
+frame = 1560
+what = "move"
+type = "SPY"
+x = 29
+y = 40
+
+# The spy takes the sleeping GI's look, but the dog (DetectDisguise=yes)
+# sees through it: one bite as the spy comes beside it, and the spy is
+# dead (its bite, a Parasite warhead, kills infantry outright). Ours bites
+# as soon as the spy is within 1.5 cells, sooner than the original's.
+[[check]]
+what = "disguise"
+type = "SPY"
+at = 1510
+
+[[check]]
+what = "count"
+type = "SPY"
+at = 1600
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "SPY"
+at = 1900
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "DOG"
+at = 2000
+tolerance = 0

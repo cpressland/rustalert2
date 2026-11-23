@@ -141,6 +141,13 @@ pub enum Check {
         #[serde(default)]
         tolerance: u32,
     },
+    /// The disguises of the matching objects at a frame: each one's type
+    /// and house, in order of type.
+    Disguise {
+        #[serde(flatten)]
+        filter: Filter,
+        at: u32,
+    },
     /// A house's superweapons at a frame: which, charged, on hold, and
     /// frames left to charge (within the tolerance).
     Supers {

@@ -243,6 +243,29 @@ pub fn compare(s: &Scenario, reference: &Log, candidate: Option<&Log>) -> Vec<Ou
                     pass: within(r, k, *tolerance),
                 }
             }
+            Check::Disguise { filter, at } => {
+                let shown = |l: &Log| {
+                    l.at(*at).map(|f| {
+                        let mut v: Vec<String> = selected(Some(f), filter)
+                            .iter()
+                            .map(|o| match (&o.disguise, o.disguise_house) {
+                                (Some(t), Some(h)) => format!("{t}@{h}"),
+                                (Some(t), None) => t.clone(),
+                                _ => "-".into(),
+                            })
+                            .collect();
+                        v.sort();
+                        v.join(",")
+                    })
+                };
+                let (r, k) = (shown(reference), candidate.and_then(|_| shown(cand)));
+                Outcome {
+                    check: format!("disguise of {} at {at}", label(filter)),
+                    reference: r.clone().unwrap_or_else(|| "-".into()),
+                    candidate: k.clone().unwrap_or_else(|| "-".into()),
+                    pass: r.is_some() && r == k,
+                }
+            }
             Check::Supers {
                 house,
                 at,

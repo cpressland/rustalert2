@@ -62,6 +62,11 @@ pub struct Object {
         deserialize_with = "micro::de"
     )]
     pub vet_micros: i64,
+    /// A disguise: the type it shows as, and that house's index.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disguise: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disguise_house: Option<u32>,
 }
 
 #[allow(clippy::trivially_copy_pass_by_ref)]
