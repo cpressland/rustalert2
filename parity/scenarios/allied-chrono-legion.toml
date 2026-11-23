@@ -1,0 +1,114 @@
+name = "allied-chrono-legion"
+description = """
+The Chrono Legionnaire. A Neutral Grizzly sleeps west of the human
+player's (British) base, out of reach of the barracks. The player builds a
+power plant and a barracks, trains a Chrono Legionnaire (the map makes it
+cheaper and needs only the barracks), orders it to attack the Grizzly,
+then to teleport elsewhere. Covers the Teleporter locomotor (the warp's
+delay by distance) and the ChronoBeam: a target frozen and erased over
+time. The AI starts in the far corner."""
+map = "parity_allied_chrono_legion.yrm"
+end_frame = 2200
+human_start = [35, 35]
+
+[generate]
+name = "allied-chrono-legion"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[CLEG]
+Prerequisite=GAPILE
+Cost=500
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 26
+y = 39
+facing = 64
+mission = "Sleep"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAPILE"
+
+[[order]]
+frame = 900
+what = "place"
+type = "GAPILE"
+x = 38
+y = 37
+
+[[order]]
+frame = 910
+what = "produce"
+type = "CLEG"
+
+[[order]]
+frame = 1300
+what = "attack"
+type = "CLEG"
+target = "MTNK"
+
+[[order]]
+frame = 1900
+what = "move"
+type = "CLEG"
+x = 40
+y = 44
+
+# Ordered to attack, the Legionnaire warps the frame after the order lands
+# to 3 cells from the Grizzly (its range less a cell, on a sub-cell spot),
+# waits the warp's distance over ChronoDistanceFactor= (2304 / 48), then
+# beams it: the Grizzly, untouched, is gone when its strength × 10 (3000)
+# has been worn away at the beam's 8 a frame. Ours comes out of the
+# barracks onto another spot, so its first warp is shorter and the
+# Grizzly goes 4 frames sooner. Ordered to move, it warps there the frame
+# after.
+[[check]]
+what = "position"
+type = "CLEG"
+at = 1302
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "MTNK"
+at = 1700
+tolerance = 0
+
+[[check]]
+what = "event"
+type = "MTNK"
+owner = 2
+event = "removed"
+window = 5
+
+[[check]]
+what = "position"
+type = "CLEG"
+at = 1902
+tolerance = 0

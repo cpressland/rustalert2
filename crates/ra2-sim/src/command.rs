@@ -376,6 +376,24 @@ pub(crate) fn drive(
     i: usize,
     goal: (i16, i16),
 ) -> bool {
+    // A teleporter warps there on the frame after the order, onto a
+    // sub-cell spot, and waits before it can act. `[observed]`
+    // (`allied-chrono-legion`)
+    if rules.technos[world.objects[i].techno].teleporter {
+        let o = &mut world.objects[i];
+        if o.motion.planned != Some(goal) {
+            o.motion.planned = Some(goal);
+            return false;
+        }
+        let to = Coord {
+            x: i32::from(goal.0) * LEPTONS_PER_CELL + 192,
+            y: i32::from(goal.1) * LEPTONS_PER_CELL + 64,
+            z: o.coord.z,
+        };
+        o.coord = to;
+        o.motion.planned = None;
+        return true;
+    }
     let cells = &world.cells;
     let o = &mut world.objects[i];
     if o.motion.planned != Some(goal) {
