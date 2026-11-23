@@ -32,6 +32,13 @@ Firing, projectiles and damage. Target choice belongs to missions.
 - **Targets**: a hunter keeps its target while it lives, else takes the
   nearest living object of another house. `[hypothesis]` (threat ratings and
   alliances not yet weighed)
+- **Turrets**: a turret (`Turret=yes`) turns toward the target at the
+  body's `ROT=` × 256 a frame, from the body's facing at first, and the
+  unit fires only once it's on the target. `[observed]` (a Grizzly's
+  turret, 135° off its target, fired 20 frames after a forced attack:
+  24,576 ÷ 1,280, rounded up; the shell landed the frame after) The facing
+  toward a point is exact on the eight principal directions and an
+  integer CORDIC elsewhere; the game's own arctangent isn't traced.
 - **When**: turreted vehicles fire whenever the target is in range, moving
   or not: the Rhino (range 5.75) fires on frame 170, eight frames before
   it stops. Infantry fire only standing, from the frame after they stop.
@@ -76,4 +83,5 @@ hit points at every checked frame.
 ## Open questions
 
 - The reload's random part and the order of draws from the generator.
-- Projectile flight time and turret rotation before the first shot.
+- Projectile flight time.
+- Whether turrets have their own rate (`TurretROT`-like) for other units.

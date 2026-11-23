@@ -101,6 +101,9 @@ pub struct Object {
     pub speed_bonus: ra2_rules::Ratio,
     pub armor_bonus: ra2_rules::Ratio,
     pub firepower_bonus: ra2_rules::Ratio,
+    /// Its turret's facing, 16 bits; `None` until it first turns (then
+    /// it starts from the body's).
+    pub turret: Option<u16>,
 }
 
 impl Object {
@@ -293,6 +296,7 @@ impl World {
             speed_bonus: ra2_rules::Ratio::ONE,
             armor_bonus: ra2_rules::Ratio::ONE,
             firepower_bonus: ra2_rules::Ratio::ONE,
+            turret: None,
         });
         Some(id)
     }
@@ -328,6 +332,7 @@ impl World {
             speed_bonus: ra2_rules::Ratio::ONE,
             armor_bonus: ra2_rules::Ratio::ONE,
             firepower_bonus: ra2_rules::Ratio::ONE,
+            turret: None,
         });
         id
     }

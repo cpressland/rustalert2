@@ -127,6 +127,49 @@ pub(crate) fn step_facing(dx: i32, dy: i32) -> i32 {
     }
 }
 
+/// The facing (16 bits, 0 north, clockwise) from one point toward another,
+/// by an integer CORDIC: exact on the eight principal directions, within a
+/// unit or two elsewhere. `[hypothesis]` (the game takes an arctangent in
+/// doubles)
+pub(crate) fn facing_to(from: Coord, to: Coord) -> i32 {
+    const ATAN: [i64; 15] = [
+        8192, 4836, 2555, 1297, 651, 326, 163, 81, 41, 20, 10, 5, 3, 1, 1,
+    ];
+    // Clockwise from north: x east, y south, so north is (0, -1).
+    let (mut x, mut y) = (i64::from(-(to.y - from.y)), i64::from(to.x - from.x));
+    if x == 0 && y == 0 {
+        return 0;
+    }
+    // The axes and diagonals exactly.
+    if x == 0 || y == 0 || x.abs() == y.abs() {
+        return step_facing(to.x - from.x, to.y - from.y);
+    }
+    let mut angle: i64 = 0;
+    // Into the right half-plane first.
+    if x < 0 {
+        angle = 32_768;
+        x = -x;
+        y = -y;
+    }
+    x <<= 16;
+    y <<= 16;
+    for (k, a) in ATAN.iter().enumerate() {
+        let (nx, ny);
+        if y > 0 {
+            nx = x + (y >> k);
+            ny = y - (x >> k);
+            angle += a;
+        } else {
+            nx = x - (y >> k);
+            ny = y + (x >> k);
+            angle -= a;
+        }
+        x = nx;
+        y = ny;
+    }
+    i32::try_from(angle.rem_euclid(i64::from(FULL_TURN))).unwrap_or(0)
+}
+
 /// Turn `from` toward `to` by at most `rate`, the short way round.
 pub(crate) fn turn(from: i32, to: i32, rate: i32) -> i32 {
     let diff = (to - from).rem_euclid(FULL_TURN);
@@ -328,12 +371,24 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
             }
         }
     }
+    // A turret turns toward the target at the body's `ROT=` and fires
+    // only on it. `[observed]` (`allied-depot-repair`: a Grizzly's turret,
+    // 135° off, fired 20 frames after the order: 24,576 ÷ 1,280, rounded
+    // up)
+    let aimed = if t.turret {
+        let want = facing_to(o.coord, target_at);
+        let now = turn(i32::from(o.turret.unwrap_or(o.dir)), want, t.rot * 256);
+        o.turret = Some(u16::try_from(now).unwrap_or(0));
+        now == want
+    } else {
+        true
+    };
     // Turreted vehicles fire whenever the target is in range, moving or
     // not; infantry only standing, from the frame after they stop.
     let ready = if infantry {
         o.motion.arrived && frame > o.motion.arrived_at
     } else {
-        in_range(o.coord)
+        in_range(o.coord) && aimed
     };
     if ready && o.motion.reload == 0 {
         fire(world, rules, rng, frame, i, target_id, infantry);
@@ -472,6 +527,20 @@ fn credit(world: &mut World, rules: &Rules, shooter: u32, victim: usize, rank: u
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn facings_toward_points() {
+        let c = |x, y| Coord { x, y, z: 0 };
+        let o = c(1000, 1000);
+        assert_eq!(facing_to(o, c(1000, 0)), 0);
+        assert_eq!(facing_to(o, c(2000, 0)), 8192);
+        assert_eq!(facing_to(o, c(2000, 1000)), 16_384);
+        assert_eq!(facing_to(o, c(1000, 2000)), 32_768);
+        assert_eq!(facing_to(o, c(0, 1000)), 49_152);
+        assert_eq!(facing_to(o, c(0, 0)), 57_344);
+        let a = facing_to(o, c(1500, 0));
+        assert!((a - 4836).abs() <= 2, "atan(1/2): {a}");
+    }
 
     #[test]
     fn accelerating_drivers_crawl_off_speed_up_and_slow_near_the_end() {
