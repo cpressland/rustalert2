@@ -1,0 +1,129 @@
+name = "grizzly-crush"
+description = """
+A Grizzly crushing infantry. The human player (British) builds a power
+plant and a war factory (the map makes it cheaper, with fewer
+prerequisites), then a Grizzly, which is moved to a set cell and then
+straight east through two sleeping Neutral GIs, one in the middle of its cell and one
+in a corner. Covers Crusher= against
+Crushable= infantry: when the GI dies, and whether it moves aside first.
+The AI starts in the far corner."""
+map = "parity_grizzly_crush.yrm"
+end_frame = 2400
+human_start = [35, 35]
+
+[generate]
+name = "grizzly-crush"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[GAWEAP]
+Prerequisite=POWER,GACNST
+Cost=500
+
+
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 52
+y = 38
+subcell = 0
+facing = 192
+mission = "Sleep"
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 54
+y = 38
+subcell = 2
+facing = 192
+mission = "Sleep"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAWEAP"
+
+[[order]]
+frame = 890
+what = "place"
+type = "GAWEAP"
+x = 41
+y = 36
+
+[[order]]
+frame = 905
+what = "produce"
+type = "MTNK"
+
+[[order]]
+frame = 1700
+what = "move"
+type = "MTNK"
+x = 48
+y = 38
+
+[[order]]
+frame = 2000
+what = "move"
+type = "MTNK"
+x = 56
+y = 38
+
+# Each GI is gone, at once, the frame the Grizzly reaches the middle of
+# its cell: on 2040 the one in the middle, on 2059 the one in a corner of
+# the next cell, before the Grizzly reaches it. Ours drives up 4 frames
+# later (drive start-up, #40). The Grizzly gets both kills' experience.
+[[check]]
+what = "count"
+type = "E1"
+at = 1990
+tolerance = 0
+
+[[check]]
+what = "event"
+type = "E1"
+owner = 2
+event = "removed"
+window = 4
+
+[[check]]
+what = "count"
+type = "E1"
+at = 2052
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "E1"
+at = 2070
+tolerance = 0
+
+[[check]]
+what = "experience"
+type = "MTNK"
+at = 2300
+tolerance = 0

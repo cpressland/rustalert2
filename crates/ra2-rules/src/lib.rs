@@ -277,6 +277,10 @@ pub struct TechnoType {
     pub elite_secondary: Option<WeaponId>,
     pub turret: bool,
     pub crusher: bool,
+    /// Crushed by a `Crusher=` vehicle driving over it (`Crushable=`; yes
+    /// for infantry unless set, no for the rest). `[hypothesis]` (the
+    /// default)
+    pub crushable: bool,
     pub locomotor: Option<String>,
     /// Buildings: power produced (positive) or drawn (negative).
     pub power: i32,
@@ -890,6 +894,7 @@ impl Rules {
                     elite_secondary: weapon("EliteSecondary"),
                     turret: flag(s, "Turret", false),
                     crusher: flag(s, "Crusher", false),
+                    crushable: flag(s, "Crushable", kind == Kind::Infantry),
                     locomotor: text(s, "Locomotor"),
                     power: int(s, "Power", 0),
                     foundation,
