@@ -903,7 +903,9 @@ fn control(world: &mut World, shooter: u32, target: u32, links: i32) {
 /// `[CombatDamage] OccupyDamageMultiplier=`, and the kill is the firing
 /// occupant's. The reload is `ROF=` plus 0 to 2, over the number of
 /// occupants (whole frames), over `OccupyROFMultiplier=`, truncated.
-/// `[recomp 0x006FD15E]` The building only tries again every other frame
+/// `[recomp 0x006FD15E]` Its range is `[CombatDamage] OccupyWeaponRange=`
+/// plus half its foundation's shorter side, in cells, whatever the weapon.
+/// `[recomp 0x006F7288, 0x00458E00]` The building only tries again every other frame
 /// from the frame after it fires, so the gap is that rounded up to an odd
 /// number. `[observed]` (`allied-garrison-fire`: one GI, 13 or 15 frames;
 /// two, 5 or 7; `allied-garrison-three`: three, always 5; the kill's
@@ -933,9 +935,11 @@ fn garrison(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, 
     };
     let gunner = gunner.id;
     let weapon = rules.weapon(w);
+    let (fw, fh) = rules.technos[b.techno].foundation;
+    let range = (rules.combat_damage.occupy_weapon_range + fw.min(fh) / 2) * LEPTONS_PER_CELL;
     let b = &mut world.objects[i];
     b.motion.reload = (b.motion.reload - 1).max(0);
-    if b.motion.reload > 0 || distance(b.coord, target_at) > weapon.range + 2 * LEPTONS_PER_CELL {
+    if b.motion.reload > 0 || distance(b.coord, target_at) > range {
         return;
     }
     b.firing_occupant = next;

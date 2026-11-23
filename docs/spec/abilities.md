@@ -169,7 +169,12 @@ engineers and the IFV is in repair.md; this note links to it.
   15 frames apart, two 5 or 7, three always 5)
 - A GI inside the building keeps its last position, off the map (the
   object's on-map byte, +0x74, is clear). `[observed]`
-- `OccupyWeaponRange=` isn't recorded yet.
+- Its range is `[CombatDamage] OccupyWeaponRange=` (5) plus half its
+  foundation's shorter side, truncated, in cells, whatever its occupants'
+  weapons. `[recomp 0x006F7288, 0x00458E00]` (`allied-garrison-range`:
+  CAHSE01, 3x2, reaches 6 cells; a Grizzly 7 cells from its centre was
+  never shot, a Rhino 5.5 off was from the frame after the order, though
+  `UCPara` has `Range=6`) `[observed]`
 
 ### Spies
 
@@ -294,6 +299,7 @@ engineers and the IFV is in repair.md; this note links to it.
 | `yuri-mind-control` | The Grizzly Neutral before Yuri is in range and his after; the Rhino his and the Grizzly Neutral again; both unhurt | exact at frames clear of the changes (ours come up to 21 frames sooner: infantry speed) |
 | `guard-gattling` | The MCV's first damage and its health at 200, 400, 600 and 900 | exact at 200; then one pair (20), the stages coming 2 to 5 frames late |
 | `allied-garrison` | The house Neutral, then the player's; unhurt; the GI still counted | exact, clear of the change (ours 30 frames sooner: infantry speed) |
+| `allied-garrison-range` | The Grizzly out of range unhurt; the Rhino's first damage and its health | exact; the health ±9 (one hit) |
 | `allied-spy-barracks` | The spy going in; the GI trained after a veteran | exact; the spy ±40 frames (infantry speed) |
 | `allied-spy-disguise` | The spy's look before and after the MakeupKit, that it didn't move, and that it survives beside the Neutral GI | exact |
 | `allied-spy-undisguised` | The spy alive before the GI, dead after | exact clear of the timing (the original's GI deployed) |

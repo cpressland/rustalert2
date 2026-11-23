@@ -651,6 +651,9 @@ pub struct CombatDamage {
     /// `OccupyROFMultiplier=`).
     pub occupy_damage: Ratio,
     pub occupy_rof: Ratio,
+    /// A garrison's range in cells, before its footprint's bonus
+    /// (`OccupyWeaponRange=`).
+    pub occupy_weapon_range: i32,
     /// Passengers firing out of an open-topped transport: their damage
     /// and extra range in cells (`OpenToppedDamageMultiplier=`,
     /// `OpenToppedRangeBonus=`).
@@ -1299,6 +1302,7 @@ impl Rules {
                 c4_delay: ratio(c, "C4Delay", Ratio::from_value(".03")),
                 occupy_damage: ratio(c, "OccupyDamageMultiplier", Ratio::from_value("1.2")),
                 occupy_rof: ratio(c, "OccupyROFMultiplier", Ratio::from_value("1.2")),
+                occupy_weapon_range: int(c, "OccupyWeaponRange", 5),
                 open_topped_damage: ratio(
                     c,
                     "OpenToppedDamageMultiplier",
