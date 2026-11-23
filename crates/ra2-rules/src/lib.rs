@@ -300,6 +300,12 @@ pub struct TechnoType {
     /// Buildings: repairs units that dock on it (`UnitRepair=`, the
     /// Service Depot).
     pub unit_repair: bool,
+    /// What goes off when it's destroyed (`DeathWeapon=`), and a factor on
+    /// that weapon's damage (`DeathWeaponDamageModifier=`, a float).
+    pub death_weapon: Option<WeaponId>,
+    pub death_weapon_damage_modifier: Ratio,
+    /// Crew get out when it's destroyed (`Crewed=`).
+    pub crewed: bool,
     /// What being a veteran and elite give it (`VeteranAbilities=`,
     /// `EliteAbilities=`; an elite has both).
     pub veteran_abilities: Vec<String>,
@@ -492,6 +498,17 @@ pub struct General {
     pub veteran_speed: Ratio,
     /// The Nuke's blast (`[NukePayload]`).
     pub nuke_payload: Option<WeaponId>,
+    /// What goes off when a unit without its own death weapon or a weapon
+    /// of its own is destroyed (`[CombatDamage] DeathWeapon=`,
+    /// `DefaultDeathWeapon`).
+    pub default_death_weapon: Option<WeaponId>,
+    /// Crew types by side (`AlliedCrew=`, `SovietCrew=`, `ThirdCrew=`), a
+    /// destroyed vehicle's chance of letting its crew out (`CrewEscape=`),
+    /// and the share of a destroyed building's refund each survivor stands
+    /// for (`AlliedSurvivorDivisor=` and the rest).
+    pub crews: [String; 3],
+    pub crew_escape: Ratio,
+    pub survivor_divisors: [i32; 3],
     /// The Genetic Mutator's warhead (`[SpecialWeapons]
     /// MutateExplosionWarhead=`), and the
     /// infantry it turns its victims into (the death animation's
@@ -751,6 +768,11 @@ impl Rules {
                     primary: weapon("Primary"),
                     secondary: weapon("Secondary"),
                     elite_primary: weapon("ElitePrimary"),
+                    death_weapon: weapon("DeathWeapon"),
+                    death_weapon_damage_modifier: s
+                        .and_then(|s| s.get("DeathWeaponDamageModifier"))
+                        .map_or(Ratio::ONE, Ratio::from_value_f32),
+                    crewed: flag(s, "Crewed", false),
                     elite_secondary: weapon("EliteSecondary"),
                     turret: flag(s, "Turret", false),
                     crusher: flag(s, "Crusher", false),
@@ -824,6 +846,10 @@ impl Rules {
         // The nuke's blast, which the game finds by name.
         // `[recomp]` (the string `NukePayload` in `gamemd.exe`)
         let nuke_payload = WeaponId(weapon_names.id("NukePayload"));
+        let default_death_weapon = WeaponId(
+            weapon_names.id(&text(rules.section("CombatDamage"), "DeathWeapon")
+                .unwrap_or_else(|| "DefaultDeathWeapon".into())),
+        );
         // Weapons, then the projectiles and warheads they name.
         let mut weapons = Vec::new();
         let mut i = 0;
@@ -1053,6 +1079,22 @@ impl Rules {
                     Ratio::from_value("1.2"),
                 ),
                 nuke_payload: Some(nuke_payload),
+                default_death_weapon: Some(default_death_weapon),
+                crews: [
+                    text(rules.section("General"), "AlliedCrew").unwrap_or_else(|| "E1".into()),
+                    text(rules.section("General"), "SovietCrew").unwrap_or_else(|| "E2".into()),
+                    text(rules.section("General"), "ThirdCrew").unwrap_or_else(|| "INIT".into()),
+                ],
+                crew_escape: ratio(
+                    rules.section("General"),
+                    "CrewEscape",
+                    Ratio::from_value("50%"),
+                ),
+                survivor_divisors: [
+                    int(rules.section("General"), "AlliedSurvivorDivisor", 500),
+                    int(rules.section("General"), "SovietSurvivorDivisor", 250),
+                    int(rules.section("General"), "ThirdSurvivorDivisor", 750),
+                ],
                 mutate_warhead,
                 dominator_warhead,
                 lightning_warhead,

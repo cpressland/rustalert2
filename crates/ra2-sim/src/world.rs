@@ -190,6 +190,8 @@ pub struct World {
     pub cells: std::collections::BTreeSet<(i16, i16)>,
     /// Ore and gems, by cell.
     pub ore: std::collections::BTreeMap<(i16, i16), Ore>,
+    /// Wrecks whose death blast is still to go off.
+    pub wrecks: Vec<crate::death::Wreck>,
     /// Crates by cell: the powerup each holds (see `crates`).
     pub crates: std::collections::BTreeMap<(i16, i16), u8>,
     /// What each house is building.

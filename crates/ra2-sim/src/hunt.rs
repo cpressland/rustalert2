@@ -194,7 +194,8 @@ pub fn update(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32
         }
         hunt(world, rules, rng, frame, i);
     }
-    land(world, rules, frame);
+    land(world, rules, rng, frame);
+    crate::death::update(world, rules, frame);
 }
 
 #[allow(clippy::too_many_lines)]
@@ -224,7 +225,7 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
             world
                 .objects
                 .iter()
-                .filter(|o| o.owner != me.owner && !o.limbo)
+                .filter(|o| o.owner != me.owner && !o.limbo && o.health > 0)
                 .min_by_key(|o| (i64::from(distance(o.coord, me.coord)), o.id))
         })
         .map(|o| (o.id, o.coord));
@@ -406,7 +407,7 @@ fn weapon_of(t: &ra2_rules::TechnoType, rank: u8) -> Option<ra2_rules::WeaponId>
 }
 
 /// Apply the damage of every shell landing this frame; remove the dead.
-fn land(world: &mut World, rules: &Rules, frame: u32) {
+fn land(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
     let (now, later): (Vec<Shot>, Vec<Shot>) =
         world.shots.drain(..).partition(|s| s.lands <= frame);
     world.shots = later;
@@ -436,8 +437,11 @@ fn land(world: &mut World, rules: &Rules, frame: u32) {
             .map_or(raw, |wh| rules.warhead(wh).verses[ot.armor.index()].of(raw));
         o.health -= damage;
         if o.health <= 0 {
-            let (victim, rank, owner) = (o.techno, o.rank(), o.owner);
+            let (victim, rank, owner, id) = (o.techno, o.rank(), o.owner, o.id);
             credit(world, rules, s.shooter, victim, rank, owner);
+            if let Some(k) = world.objects.iter().position(|o| o.id == id) {
+                crate::death::destroyed(world, rules, rng, k, frame);
+            }
         }
     }
     world

@@ -215,23 +215,17 @@ on the x87. `[recomp 0x0070D0D0]`
   original's damage code. `[recomp 0x00701952]`
 - `SIGHT` waits for sight in the simulation.
 
-### Crews (traced, not yet modelled)
+### Crews
 
-- A destroyed `Crewed=yes` vehicle lets its crew out if a random fraction
-  falls below `CrewEscape=` (50%): one of the side's crew (`AlliedCrew=`
-  E1, `SovietCrew=` E2, `ThirdCrew=` INIT) with random health from 5 to
-  half its strength. `[recomp 0x007381F7]` (an MCV's crewman had 30 of
-  125 `[observed]`)
+- A destroyed vehicle's crew, and the wreck's blast: see combat.md
+  ("Death"). Modelled.
 - A destroyed `Crewed=yes` building lets out its refund ÷ the side's
   `AlliedSurvivorDivisor=` (500), `SovietSurvivorDivisor=` (250) or
   `ThirdSurvivorDivisor=` (750), twice the divisor if captured, between 1
   and 5. `[recomp 0x00451330]` (a Construction Yard, 1500 back: three GIs
   `[observed]`) Their health was 39 to 120 of 125, at random.
-- The wreck's explosion can kill them. The MCV's crewman died the frame
-  after it appeared, and none of the yard's three survived in one
-  recording. Crews and death explosions need modelling together:
-  without the explosion, a hunter would shoot the crewman and gain
-  experience the original's didn't.
+  Not modelled yet, nor a building's death explosion: none of the yard's
+  three survived in one recording, all three in another.
 
 ## Open questions
 

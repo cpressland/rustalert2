@@ -266,8 +266,30 @@ fn area_damage(
     damage: i32,
     warhead: ra2_rules::WarheadId,
 ) {
+    blast(
+        world,
+        rules,
+        frame,
+        cell_centre(cell),
+        damage,
+        warhead,
+        false,
+    );
+}
+
+/// A blast at a point; see [`area_damage`]. With `linger`, infantry it
+/// kills fall and are taken away `INFANTRY_DEATH_FRAMES` later, as a
+/// wreck's blast leaves them. `[observed]` (an MCV's crewman)
+pub(crate) fn blast(
+    world: &mut World,
+    rules: &Rules,
+    frame: u32,
+    at: crate::coords::Coord,
+    damage: i32,
+    warhead: ra2_rules::WarheadId,
+    linger: bool,
+) {
     let wh = rules.warhead(warhead);
-    let at = cell_centre(cell);
     let splash = |full: i32, d: i32| {
         ra2_rules::production::splash(full, d, wh.cell_spread, wh.percent_at_max)
     };
@@ -297,6 +319,10 @@ fn area_damage(
             }
         } else {
             o.health -= splash(full, crate::hunt::distance(o.coord, at));
+            if linger && o.kind == Kind::Infantry && o.health <= 0 && o.dies_at.is_none() {
+                o.health = 0;
+                o.dies_at = Some(frame + INFANTRY_DEATH_FRAMES);
+            }
         }
     }
     world
