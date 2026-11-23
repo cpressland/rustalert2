@@ -331,6 +331,8 @@ pub struct TechnoType {
     /// a player's control (`DeployFire=`).
     pub deployer: bool,
     pub deploy_fire: bool,
+    /// Moves by warping (`Teleporter=`, the Chrono Legionnaire).
+    pub teleporter: bool,
     /// Can show as another unit (`CanDisguise=`, the spy), and sees
     /// through that (`DetectDisguise=`, dogs).
     pub can_disguise: bool,
@@ -413,6 +415,9 @@ pub struct Warhead {
     /// Latches onto what it hits (`Parasite=`): the dog's bite, which kills
     /// infantry outright.
     pub parasite: bool,
+    /// Freezes what it hits and erases it from time (`Temporal=`, the
+    /// `ChronoBeam`).
+    pub temporal: bool,
 }
 
 /// A projectile type (named by weapons' `Projectile=`).
@@ -534,6 +539,10 @@ pub struct General {
     /// (`SpyPowerBlackout=`), and the share of a house's money a spy in
     /// its refinery takes (`SpyMoneyStealPercent=`).
     pub spy_power_blackout: i32,
+    /// A teleporter's wait after a warp: the distance in leptons over
+    /// `ChronoDistanceFactor=`, at least `ChronoMinimumDelay=` frames.
+    pub chrono_distance_factor: i32,
+    pub chrono_minimum_delay: i32,
     pub spy_money_steal: Ratio,
     /// What a spy shows as before it takes a disguise, by side
     /// (`AlliedDisguise=`, `SovietDisguise=`, `ThirdDisguise=`).
@@ -842,6 +851,7 @@ impl Rules {
                     occupier: flag(s, "Occupier", false),
                     infiltrate: flag(s, "Infiltrate", false),
                     deployer: flag(s, "Deployer", false),
+                    teleporter: flag(s, "Teleporter", false),
                     deploy_fire: flag(s, "DeployFire", false),
                     can_disguise: flag(s, "CanDisguise", false),
                     detect_disguise: flag(s, "DetectDisguise", false),
@@ -1014,6 +1024,7 @@ impl Rules {
                     prone_damage: ratio(s, "ProneDamage", Ratio::ONE),
                     mind_control: flag(s, "MindControl", false),
                     parasite: flag(s, "Parasite", false),
+                    temporal: flag(s, "Temporal", false),
                 }
             })
             .collect();
@@ -1130,6 +1141,8 @@ impl Rules {
                     Ratio::from_value("15%"),
                 ),
                 spy_power_blackout: int(rules.section("General"), "SpyPowerBlackout", 1000),
+                chrono_distance_factor: int(rules.section("General"), "ChronoDistanceFactor", 32),
+                chrono_minimum_delay: int(rules.section("General"), "ChronoMinimumDelay", 0),
                 spy_money_steal: ratio(
                     rules.section("General"),
                     "SpyMoneyStealPercent",

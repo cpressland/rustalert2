@@ -2,8 +2,8 @@
 
 **Status:** Started: engineers capturing and repairing, the IFV's weapon
 by passenger, Tanya's C4, Yuri's mind control, Gattling weapons, the GI
-deploying, the Cloning Vats, garrisoning, spies (disguise, dogs, barracks,
-power plants, refineries). Tried: the Grinder.
+deploying, the Chrono Legionnaire, the Cloning Vats, garrisoning, spies
+(disguise, dogs, barracks, power plants, refineries). Tried: the Grinder.
 **Crate:** `ra2-sim` (`command`, `hunt`)
 **Issue:** #44
 
@@ -141,6 +141,25 @@ engineers and the IFV is in repair.md; this note links to it.
   waited until the spy was about 190 leptons off; ours bites at its
   weapon's range (1.5 cells), so sooner.
 
+### The Chrono Legionnaire
+
+- A teleporter (`Teleporter=yes`) doesn't walk: the frame after its order
+  lands it's at its destination, on a sub-cell spot (192, 64), and it then
+  waits the distance in leptons over `ChronoDistanceFactor=` (48) frames,
+  at least `ChronoMinimumDelay=` (16), before it can act. `[observed]`
+  (`allied-chrono-legion`: 2304 leptons, 48 frames) Sent to attack, it
+  warps to its weapon's range less a cell (3 cells from a Grizzly, range
+  5). `[observed]` (one case)
+- Its `NeutronRifle` (warhead `ChronoBeam`, `Temporal=yes`) freezes what
+  it hits, unhurt, and erases it: the target's `Strength=` × 10 to begin
+  with (`[recomp 0x0071AFB2]`), less the beam's `Damage=` (8) a frame;
+  at nothing it's gone, leaving neither wreck nor crew. `[observed]` (a
+  Grizzly, 3000: gone 375 frames after the first hit) If the Legionnaire
+  dies the erasure stops. `[hypothesis]`
+- The Legionnaire comes out of the barracks onto a different spot from
+  other infantry in the original ((192, 64) of the cell, where ours uses
+  (64, 192)); not modelled.
+
 ### The Cloning Vats
 
 - With Cloning Vats (`Cloning=yes`), each infantryman the house trains
@@ -175,9 +194,9 @@ engineers and the IFV is in repair.md; this note links to it.
 
 ## Open questions
 
-- Spies in other buildings, firing from garrisons, the Chrono Legionnaire, the Psychic Dominator's and
-  Yuri Prime's control, Boris, the
-  Magnetron, Gattling weapons, the Cloning Vats, the Battle Fortress.
+- Spies in other buildings, firing from garrisons, the Psychic
+  Dominator's and Yuri Prime's control, Boris, the Magnetron, the Battle
+  Fortress.
 - Whether Tanya's C4 differs against units, and with `C4=` on other
   infantry (Navy SEALs).
 
@@ -196,4 +215,5 @@ engineers and the IFV is in repair.md; this note links to it.
 | `allied-spy-power` | The spy going in; the Neutral house's power during and after the blackout, the player's untouched | exact clear of the changes; the spy ±40 frames |
 | `yuri-cloning` | How many Initiates there are after each comes out, and where the first copy appears | exact |
 | `allied-gi-deploy` | The Grizzly untouched before the attack order, the deployed GI's first hit and the Grizzly's health after, the GI unmoved | first hit ±2 frames; health one hit (10) |
+| `allied-chrono-legion` | Where it warps to attack and to move, the Grizzly untouched while frozen, and when it's gone | positions exact; the erasure ±5 frames |
 | `allied-tanya-c4` | The plant destroyed, no crew, the Neutral house's power after, Tanya unhurt | the plant's end ±30 frames (infantry speed) |

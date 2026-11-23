@@ -235,6 +235,10 @@ pub(crate) fn travel(o: &mut Object, speed_256: i32) -> bool {
 pub fn update(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
     for i in 0..world.objects.len() {
         let o = &world.objects[i];
+        // Frozen in a ChronoBeam, it does nothing.
+        if o.erasing.is_some() {
+            continue;
+        }
         let attacking = matches!(o.command, Some(crate::command::Command::Attack(_)));
         if o.mission == Mission::Guard && o.command.is_none() && !o.limbo {
             guard(world, rules, rng, frame, i);
@@ -259,6 +263,7 @@ pub fn update(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32
     crate::death::update(world, rules, frame);
     release(world);
     spin(world, rules);
+    erase(world, rules);
 }
 
 /// The first frames a unit on Guard can take a target. `[observed]`
@@ -437,6 +442,23 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
             cell
         }
     };
+    // A teleporter warps at once, closing to its weapon's range less a
+    // cell, onto a sub-cell spot, and waits there before it can act.
+    // `[observed]` (`allied-chrono-legion`: a Legionnaire, range 5, warped
+    // to 3 cells from a Grizzly)
+    if t.teleporter && !o.motion.arrived && !fresh {
+        let here = to_cell(cell_centre(o.coord));
+        let goal = pathfind::approach(here, to_cell(target_at), weapon.range - LEPTONS_PER_CELL);
+        let to = stand(Coord {
+            x: i32::from(goal.0) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
+            y: i32::from(goal.1) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
+            z: o.coord.z,
+        });
+        let wait = warp_delay(rules, distance(o.coord, to));
+        o.coord = to;
+        o.motion.arrived = true;
+        o.motion.arrived_at = frame + wait;
+    }
     // Infantry set off the frame after picking a target; vehicles turn
     // that frame.
     if !(o.motion.arrived || infantry && fresh) {
@@ -697,6 +719,13 @@ fn land(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
         let Some(o) = world.objects.iter_mut().find(|o| o.id == s.target) else {
             continue;
         };
+        if weapon.warhead.is_some_and(|wh| rules.warhead(wh).temporal) {
+            if o.erasing.is_none() {
+                let strength = rules.technos[o.techno].strength;
+                o.erasing = Some((s.shooter, strength * 10));
+            }
+            continue;
+        }
         if weapon
             .warhead
             .is_some_and(|wh| rules.warhead(wh).mind_control)
@@ -789,6 +818,47 @@ fn control(world: &mut World, shooter: u32, target: u32, links: i32) {
     o.owner = owner;
     o.command = None;
     o.motion.target = None;
+}
+
+/// A teleporter's wait after a warp of `distance` leptons: that over
+/// `ChronoDistanceFactor=`, at least `ChronoMinimumDelay=`. `[observed]`
+/// (`allied-chrono-legion`: a 2304-lepton warp, then 48 frames before the
+/// beam) `[community]`
+pub(crate) fn warp_delay(rules: &Rules, distance: i32) -> u32 {
+    let g = &rules.general;
+    let d = distance / g.chrono_distance_factor.max(1);
+    u32::try_from(d.max(g.chrono_minimum_delay)).unwrap_or(0)
+}
+
+/// Chrono beams at work: each frame what's left of an erasure falls by the
+/// beam's damage, and at nothing the target is gone, leaving neither wreck
+/// nor crew. If the beam's owner is gone, so is the erasure. `[recomp
+/// 0x0071AFB2]` (strength × 10 to begin with) `[observed]` (a Grizzly,
+/// 3000 at 8 a frame: gone 375 frames after the first hit)
+fn erase(world: &mut World, rules: &Rules) {
+    let mut gone = Vec::new();
+    for k in 0..world.objects.len() {
+        let Some((by, left)) = world.objects[k].erasing else {
+            continue;
+        };
+        let per = world
+            .objects
+            .iter()
+            .find(|o| o.id == by && o.health > 0)
+            .and_then(|o| weapon_of(&rules.technos[o.techno], o.rank()))
+            .map(|w| rules.weapon(w).damage);
+        match per {
+            Some(per) => {
+                let left = left - per.max(1);
+                if left <= 0 {
+                    gone.push(world.objects[k].id);
+                }
+                world.objects[k].erasing = Some((by, left));
+            }
+            None => world.objects[k].erasing = None,
+        }
+    }
+    world.objects.retain(|o| !gone.contains(&o.id));
 }
 
 /// Whether a unit of type `t` and house `owner` takes `o` for an enemy:

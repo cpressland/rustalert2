@@ -121,6 +121,9 @@ pub struct Object {
     /// on Guard (a computer's GI deploys after its third).
     pub deployed: bool,
     pub guard_shots: u32,
+    /// Being erased by a Chrono beam: by whom, and what's left of it (the
+    /// target's strength × 10 to begin with).
+    pub erasing: Option<(u32, i32)>,
 }
 
 impl World {
@@ -364,6 +367,7 @@ impl World {
             disguise: None,
             deployed: false,
             guard_shots: 0,
+            erasing: None,
         });
         let look = self.default_disguise(rules, techno, owner);
         if let Some(o) = self.objects.last_mut() {
@@ -411,6 +415,7 @@ impl World {
             disguise: None,
             deployed: false,
             guard_shots: 0,
+            erasing: None,
         });
         let look = self.default_disguise(rules, techno, owner);
         if let Some(o) = self.objects.last_mut() {
