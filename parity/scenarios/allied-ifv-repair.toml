@@ -1,0 +1,145 @@
+name = "allied-ifv-repair"
+description = """
+The IFV's repair turret. The human player (British) builds a power plant,
+a war factory and a barracks (the map makes the war factory cheaper, with
+fewer prerequisites), then a Grizzly, an IFV and an engineer. The IFV is
+ordered to fire on the Grizzly (a forced attack on one's own unit), the
+engineer to get into the IFV, and the IFV then at the Grizzly again: with
+an engineer aboard it carries RepairBullet, which mends vehicles. Covers
+loading a transport, an IFV's weapon by its passenger, and repairing by
+weapon. Nothing else is near: the AI starts in the far corner."""
+map = "parity_allied_ifv_repair.yrm"
+end_frame = 2800
+human_start = [35, 35]
+
+[generate]
+name = "allied-ifv-repair"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[GAWEAP]
+Prerequisite=POWER,GACNST
+Cost=500
+
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAWEAP"
+
+[[order]]
+frame = 890
+what = "place"
+type = "GAWEAP"
+x = 41
+y = 36
+
+[[order]]
+frame = 900
+what = "produce"
+type = "GAPILE"
+
+[[order]]
+frame = 905
+what = "produce"
+type = "MTNK"
+
+[[order]]
+frame = 910
+what = "produce"
+type = "FV"
+
+[[order]]
+frame = 1300
+what = "place"
+type = "GAPILE"
+x = 37
+y = 38
+
+[[order]]
+frame = 1310
+what = "produce"
+type = "ENGINEER"
+
+[[order]]
+frame = 1950
+what = "attack"
+type = "FV"
+target = "MTNK"
+
+[[order]]
+frame = 2060
+what = "move"
+type = "FV"
+x = 44
+y = 40
+
+[[order]]
+frame = 2150
+what = "enter"
+type = "ENGINEER"
+target = "FV"
+
+[[order]]
+frame = 2400
+what = "attack"
+type = "FV"
+target = "MTNK"
+
+# Tolerances: our units leave the war factory for other cells (see
+# allied-depot-repair), so the first attack comes earlier, and our IFV
+# mends on the move where the original's did so once it stopped, 9 frames
+# later; the health it gets to and where it ends are exact.
+
+# The IFV's HoverMissiles: two pairs of 8 on the Grizzly before it's sent
+# off.
+[[check]]
+what = "hp"
+type = "MTNK"
+owner = 0
+at = 2100
+tolerance = 0
+
+# With the engineer aboard, one RepairBullet (-50) makes the Grizzly whole.
+[[check]]
+what = "hp"
+type = "MTNK"
+owner = 0
+at = 2500
+tolerance = 0
+
+[[check]]
+what = "position"
+type = "FV"
+owner = 0
+at = 2500
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "ENGINEER"
+owner = 0
+at = 2500
+tolerance = 0

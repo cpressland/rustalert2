@@ -104,6 +104,8 @@ pub struct Object {
     /// Its turret's facing, 16 bits; `None` until it first turns (then
     /// it starts from the body's).
     pub turret: Option<u16>,
+    /// The objects inside it (in limbo), first in first.
+    pub passengers: Vec<u32>,
 }
 
 impl Object {
@@ -297,6 +299,7 @@ impl World {
             armor_bonus: ra2_rules::Ratio::ONE,
             firepower_bonus: ra2_rules::Ratio::ONE,
             turret: None,
+            passengers: Vec::new(),
         });
         Some(id)
     }
@@ -333,6 +336,7 @@ impl World {
             armor_bonus: ra2_rules::Ratio::ONE,
             firepower_bonus: ra2_rules::Ratio::ONE,
             turret: None,
+            passengers: Vec::new(),
         });
         id
     }

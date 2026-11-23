@@ -300,6 +300,14 @@ pub struct TechnoType {
     /// Buildings: repairs units that dock on it (`UnitRepair=`, the
     /// Service Depot).
     pub unit_repair: bool,
+    /// `Weapon1=`… and `EliteWeapon1=`… (`WeaponCount=` of them): a
+    /// gunner's weapons, by its passenger's `IFVMode=` (the first when
+    /// empty). `Gunner=`, `Passengers=`, and an infantry's `IFVMode=`.
+    pub weapons: Vec<Option<WeaponId>>,
+    pub elite_weapons: Vec<Option<WeaponId>>,
+    pub gunner: bool,
+    pub passengers: i32,
+    pub ifv_mode: i32,
     /// What goes off when it's destroyed (`DeathWeapon=`), and a factor on
     /// that weapon's damage (`DeathWeaponDamageModifier=`, a float).
     pub death_weapon: Option<WeaponId>,
@@ -769,6 +777,15 @@ impl Rules {
                     secondary: weapon("Secondary"),
                     elite_primary: weapon("ElitePrimary"),
                     death_weapon: weapon("DeathWeapon"),
+                    weapons: (1..=int(s, "WeaponCount", 0).clamp(0, 32))
+                        .map(|n| weapon(&format!("Weapon{n}")))
+                        .collect(),
+                    elite_weapons: (1..=int(s, "WeaponCount", 0).clamp(0, 32))
+                        .map(|n| weapon(&format!("EliteWeapon{n}")))
+                        .collect(),
+                    gunner: flag(s, "Gunner", false),
+                    passengers: int(s, "Passengers", 0),
+                    ifv_mode: int(s, "IFVMode", 0),
                     death_weapon_damage_modifier: s
                         .and_then(|s| s.get("DeathWeaponDamageModifier"))
                         .map_or(Ratio::ONE, Ratio::from_value_f32),
