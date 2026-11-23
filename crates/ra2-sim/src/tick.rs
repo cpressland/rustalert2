@@ -81,6 +81,12 @@ pub enum Order {
         kind: usize,
         cell: (i16, i16),
     },
+    /// Command a house's first object of a type (a techno index).
+    Command {
+        house: u32,
+        techno: usize,
+        command: crate::command::Command,
+    },
 }
 
 /// Something that happened in a frame, for the presentation and the logs.
@@ -149,6 +155,21 @@ impl Sim {
                         crate::production::order(&mut self.world, rules, self.frame + 1, b);
                     }
                 }
+                Order::Command {
+                    house,
+                    techno,
+                    command,
+                } => {
+                    if let Some(id) = self
+                        .world
+                        .objects
+                        .iter()
+                        .find(|o| o.owner == house && o.techno == techno && !o.limbo)
+                        .map(|o| o.id)
+                    {
+                        crate::command::order(&mut self.world, id, command);
+                    }
+                }
                 Order::Fire { house, kind, cell } => {
                     if let Some(rules) = &self.rules {
                         crate::superweapon::fire(
@@ -165,6 +186,7 @@ impl Sim {
         }
         if let Some(rules) = &self.rules {
             crate::hunt::update(&mut self.world, rules, &mut self.rng, self.frame + 1);
+            crate::command::update(&mut self.world, rules, self.frame + 1);
             crate::harvest::update(&mut self.world, rules, &mut self.rng, self.frame + 1);
             crate::production::update(&mut self.world, rules, self.frame + 1);
             crate::superweapon::update(&mut self.world, rules, self.frame + 1);

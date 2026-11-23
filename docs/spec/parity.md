@@ -100,8 +100,13 @@ A scenario is TOML in `parity/scenarios/`:
   map, which the game and our engine load over `rulesmd.ini`, e.g. to make
   something cheaper or quicker to record.
 - **`[[order]]`**: the human player's orders: `frame`, `what` (`deploy`,
-  `produce`, `place`, `sell`, `abandon`, `hold` or `fire`), `type` (for
-  `fire`, the superweapon), and `x`/`y` for placing or firing. The recorder
+  `produce`, `place`, `sell`, `repair`, `abandon`, `hold`, `fire`, `move`,
+  `attack`, `enter` or `capture`), `type` (for `fire`, the superweapon;
+  for a unit order, the player's first unit of that type), `x`/`y` for
+  placing, firing or moving, and `target` (a type: the first object of it,
+  of any house) for attacking, entering or capturing. Unit orders are the
+  game's `MEGAMISSION` event with the mission Move, Attack, Enter or
+  Capture. The recorder
   passes them to the observer, which queues the event the sidebar or a
   click would (`RA2_OBSERVE_ORDERS`; see `parity/recomp/README.md`); our
   engine applies them on the same frames. Each takes effect the frame

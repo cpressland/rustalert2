@@ -191,6 +191,20 @@ pub fn observer_orders(scenario: &Scenario, rules: &Rules) -> String {
                 OrderKind::Deploy => format!("{} D {}", o.frame, o.type_id),
                 OrderKind::Sell => format!("{} S {}", o.frame, o.type_id),
                 OrderKind::Repair => format!("{} R {}", o.frame, o.type_id),
+                OrderKind::Move => format!("{} M {} {} {}", o.frame, o.type_id, o.x, o.y),
+                OrderKind::Attack | OrderKind::Enter | OrderKind::Capture => {
+                    let letter = match o.what {
+                        OrderKind::Attack => 'K',
+                        OrderKind::Enter => 'E',
+                        _ => 'C',
+                    };
+                    format!(
+                        "{} {letter} {} {}",
+                        o.frame,
+                        o.type_id,
+                        o.target.as_deref()?
+                    )
+                }
                 OrderKind::Abandon => {
                     let (kind, index) = type_index(rules, &o.type_id)?;
                     format!("{} A {} {index} 0", o.frame, type_rtti(kind))
@@ -338,6 +352,17 @@ pub fn sim_orders(scenario: &Scenario, rules: &Rules) -> Vec<(u32, Order)> {
                 .technos
                 .iter()
                 .position(|t| t.id.eq_ignore_ascii_case(&o.type_id))?;
+            if o.what == OrderKind::Move {
+                let command = ra2_sim::command::Command::Move(cell);
+                return Some((
+                    o.frame,
+                    Order::Command {
+                        house,
+                        techno,
+                        command,
+                    },
+                ));
+            }
             let b = match o.what {
                 OrderKind::Deploy => Build::Deploy { house, techno },
                 OrderKind::Produce => Build::Produce { house, techno },
@@ -350,7 +375,11 @@ pub fn sim_orders(scenario: &Scenario, rules: &Rules) -> Vec<(u32, Order)> {
                 OrderKind::Repair => Build::Repair { house, techno },
                 OrderKind::Abandon => Build::Abandon { house, techno },
                 OrderKind::Hold => Build::Hold { house, techno },
-                OrderKind::Fire => return None,
+                OrderKind::Fire
+                | OrderKind::Move
+                | OrderKind::Attack
+                | OrderKind::Enter
+                | OrderKind::Capture => return None,
             };
             Some((o.frame, Order::Build(b)))
         })

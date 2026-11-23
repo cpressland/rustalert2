@@ -55,6 +55,9 @@ pub struct OrderSpec {
     pub x: i32,
     #[serde(default)]
     pub y: i32,
+    /// What an attack, enter or capture is aimed at: a rules ID.
+    #[serde(default)]
+    pub target: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -76,6 +79,14 @@ pub enum OrderKind {
     Hold,
     /// Fire the superweapon `type` (a `[SuperWeaponTypes]` ID) at `x`, `y`.
     Fire,
+    /// Order the player's first unit of the type to move to `x`, `y`.
+    Move,
+    /// ... to attack the first object of type `target`, of any house.
+    Attack,
+    /// ... to enter it (a Service Depot, a transport, a refinery).
+    Enter,
+    /// ... to capture it (an engineer).
+    Capture,
 }
 
 /// What objects a check looks at.
