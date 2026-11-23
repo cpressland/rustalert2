@@ -73,6 +73,7 @@ static void dump_vector(FILE *f, const char *what, uint32_t vec, uint32_t bytes)
 #define HOUSE_TYPE     0x34u        /* HouseTypeClass* */
 #define HOUSE_BALANCE  0x30Cu       /* int: credits */
 #define OBJ_HEALTH     0x6Cu        /* int */
+#define OBJ_ON_MAP     0x74u        /* byte: 0 in limbo, e.g. inside a garrison */
 #define TECHNO_VETERANCY 0x150u     /* float */
 #define TECHNO_DISGUISED 0x1D8u     /* byte */
 #define TECHNO_DISGUISE  0x518u     /* ObjectTypeClass* */
@@ -243,6 +244,7 @@ static uint32_t find_techno(const char *type, int any) {
         const char *kname; uint32_t type_off;
         if (!owner || (!any && rd32(owner + HOUSE_INDEX) != 0)) continue;
         if (!kind_of(class_name(t), &kname, &type_off)) continue;
+        if (!*(const uint8_t *)GUEST_PTR(t + OBJ_ON_MAP)) continue;
         if (strcmp((const char *)GUEST_PTR(rd32(t + type_off) + 0x24), type)) continue;
         return rd32(t + 0x10);
     }

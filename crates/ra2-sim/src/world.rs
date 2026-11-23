@@ -109,6 +109,8 @@ pub struct Object {
     pub turret: Option<u16>,
     /// The objects inside it (in limbo), first in first.
     pub passengers: Vec<u32>,
+    /// A garrison's last occupant to fire, by index into `passengers`.
+    pub firing_occupant: usize,
     /// A building with C4 on it: the frame it's destroyed.
     pub c4_at: Option<u32>,
     /// Under mind control: by whom, and the house it belonged to.
@@ -361,6 +363,7 @@ impl World {
             firepower_bonus: ra2_rules::Ratio::ONE,
             turret: None,
             passengers: Vec::new(),
+            firing_occupant: 0,
             c4_at: None,
             controlled_by: None,
             gattling_rate: 0,
@@ -409,6 +412,7 @@ impl World {
             firepower_bonus: ra2_rules::Ratio::ONE,
             turret: None,
             passengers: Vec::new(),
+            firing_occupant: 0,
             c4_at: None,
             controlled_by: None,
             gattling_rate: 0,
