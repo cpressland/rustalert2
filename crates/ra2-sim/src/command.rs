@@ -188,6 +188,49 @@ fn cell_i16(v: i32) -> i16 {
     i16::try_from(v).unwrap_or(0)
 }
 
+/// A C4 carrier (`C4=yes`, Tanya) attacking a building: it walks to the
+/// building's nearest cell as an engineer does, and on arriving plants
+/// its C4; the building goes `production::c4_frames` later, leaving no
+/// crew. It then stands. `[observed]` (`allied-tanya-c4`: Tanya stopped
+/// in a power plant's corner cell; the plant was gone 26 frames on)
+pub(crate) fn sapper(world: &mut World, rules: &Rules, frame: u32, i: usize, id: u32) {
+    let Some(b) = world.objects.iter().position(|o| o.id == id && !o.limbo) else {
+        stand(world, i);
+        return;
+    };
+    let Some(goal) = nearest_cell(world, rules, i, b) else {
+        return;
+    };
+    if drive(world, rules, None, i, goal) {
+        let delay = u32::try_from(ra2_rules::production::c4_frames(rules)).unwrap_or(0);
+        if world.objects[b].c4_at.is_none() {
+            world.objects[b].c4_at = Some(frame + delay);
+        }
+        stand(world, i);
+    }
+}
+
+/// The cell of building `b`'s foundation nearest object `i`'s cell.
+fn nearest_cell(world: &World, rules: &Rules, i: usize, b: usize) -> Option<(i16, i16)> {
+    let (x0, y0) = crate::production::top_left(rules, &world.objects[b]);
+    let (w, h) = rules.technos[world.objects[b].techno].foundation;
+    let here = to_cell(world.objects[i].coord);
+    let mut best: Option<((i16, i16), i64)> = None;
+    for y in y0..y0 + h {
+        for x in x0..x0 + w {
+            let (Ok(cx), Ok(cy)) = (i16::try_from(x), i16::try_from(y)) else {
+                continue;
+            };
+            let (dx, dy) = (i64::from(cx - here.0), i64::from(cy - here.1));
+            let d = dx * dx + dy * dy;
+            if best.is_none_or(|(_, bd)| d < bd) {
+                best = Some(((cx, cy), d));
+            }
+        }
+    }
+    best.map(|(c, _)| c)
+}
+
 /// An engineer on its way to a building: it walks to the building's
 /// nearest cell and goes in when it reaches one. Its own side's building
 /// is repaired to full strength, at no cost, and the engineer is used up.

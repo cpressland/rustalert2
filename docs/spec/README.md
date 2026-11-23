@@ -60,7 +60,7 @@ their art ships in); those are reported, not drawn.
 | Combat | [combat.md](combat.md) | Started |
 | Economy (harvesting, docking, credits) | [economy.md](economy.md) | Parity-checked (one harvester; growth, gems and slaves to come) |
 | Power and production | [production.md](production.md) | Parity-checked (deploy, queues, hold, selling, placing, vehicles, low power) |
-| Special abilities | | Not started |
+| Special abilities | [abilities.md](abilities.md) | Started (engineers, the IFV, Tanya's C4) |
 | Superweapons | [superweapons.md](superweapons.md) | Parity-checked (all nine; random storm bolts, planes and the spy reveal open) |
 | Repair, veterancy and crates | [repair.md](repair.md) | Parity-checked (self-healing, repair, depot, engineers, veterancy, four crate powerups); the IFV and other powerups to come |
 

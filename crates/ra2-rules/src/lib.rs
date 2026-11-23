@@ -306,6 +306,8 @@ pub struct TechnoType {
     pub weapons: Vec<Option<WeaponId>>,
     pub elite_weapons: Vec<Option<WeaponId>>,
     pub gunner: bool,
+    /// Plants C4 on buildings it attacks (`C4=`, Tanya).
+    pub c4: bool,
     pub passengers: i32,
     pub ifv_mode: i32,
     /// What goes off when it's destroyed (`DeathWeapon=`), and a factor on
@@ -570,6 +572,8 @@ pub struct General {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CombatDamage {
     pub ion_cannon_damage: i32,
+    /// Minutes from planting C4 to the building's end (`C4Delay=`).
+    pub c4_delay: Ratio,
     pub harvester_immune: bool,
     pub destroyable_bridges: bool,
 }
@@ -784,6 +788,7 @@ impl Rules {
                         .map(|n| weapon(&format!("EliteWeapon{n}")))
                         .collect(),
                     gunner: flag(s, "Gunner", false),
+                    c4: flag(s, "C4", false),
                     passengers: int(s, "Passengers", 0),
                     ifv_mode: int(s, "IFVMode", 0),
                     death_weapon_damage_modifier: s
@@ -1162,6 +1167,7 @@ impl Rules {
             combat_damage: CombatDamage {
                 ion_cannon_damage: int(c, "IonCannonDamage", 0),
                 harvester_immune: flag(c, "HarvesterImmune", false),
+                c4_delay: ratio(c, "C4Delay", Ratio::from_value(".03")),
                 destroyable_bridges: flag(c, "DestroyableBridges", true),
             },
             audio_visual: AudioVisual {

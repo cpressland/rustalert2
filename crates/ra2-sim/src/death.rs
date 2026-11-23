@@ -121,8 +121,16 @@ fn crew(world: &mut World, rules: &Rules, rng: &mut Randomizer, at: Coord, owner
     }
 }
 
-/// The wrecks' blasts that go off on `frame`.
+/// The wrecks' blasts that go off on `frame`, and buildings whose C4 goes
+/// off.
 pub(crate) fn update(world: &mut World, rules: &Rules, frame: u32) {
+    let before = world.objects.len();
+    world
+        .objects
+        .retain(|o| o.c4_at.is_none_or(|at| at > frame));
+    if world.objects.len() != before {
+        crate::production::power(world, rules, frame);
+    }
     let (now, later): (Vec<_>, Vec<_>) = world.wrecks.drain(..).partition(|w| w.lands <= frame);
     world.wrecks = later;
     for w in now {

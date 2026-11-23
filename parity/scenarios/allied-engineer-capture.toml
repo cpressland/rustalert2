@@ -15,9 +15,6 @@ name = "allied-engineer-capture"
 width = 50
 height = 50
 starts = [[35, 35], [65, 65]]
-rules = """
-
-"""
 
 [[generate.house]]
 name = "Neutral"
