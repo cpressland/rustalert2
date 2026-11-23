@@ -110,6 +110,8 @@ pub struct Object {
     pub c4_at: Option<u32>,
     /// Under mind control: by whom, and the house it belonged to.
     pub controlled_by: Option<(u32, u32)>,
+    /// A Gattling's rate (see `TechnoType::gattling`).
+    pub gattling_rate: i32,
 }
 
 impl Object {
@@ -306,6 +308,7 @@ impl World {
             passengers: Vec::new(),
             c4_at: None,
             controlled_by: None,
+            gattling_rate: 0,
         });
         Some(id)
     }
@@ -345,6 +348,7 @@ impl World {
             passengers: Vec::new(),
             c4_at: None,
             controlled_by: None,
+            gattling_rate: 0,
         });
         id
     }

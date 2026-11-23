@@ -306,6 +306,14 @@ pub struct TechnoType {
     pub weapons: Vec<Option<WeaponId>>,
     pub elite_weapons: Vec<Option<WeaponId>>,
     pub gunner: bool,
+    /// A Gattling (`IsGattling=`): its rate climbs `RateUp=` a frame while
+    /// it fires and falls `RateDown=` while it doesn't; past each of
+    /// `Stage1=`… (`WeaponStages=` of them) it fires the next pair of its
+    /// `Weapon<n>`.
+    pub gattling: bool,
+    pub gattling_stages: Vec<i32>,
+    pub rate_up: i32,
+    pub rate_down: i32,
     /// Plants C4 on buildings it attacks (`C4=`, Tanya).
     pub c4: bool,
     pub passengers: i32,
@@ -791,6 +799,12 @@ impl Rules {
                         .map(|n| weapon(&format!("EliteWeapon{n}")))
                         .collect(),
                     gunner: flag(s, "Gunner", false),
+                    gattling: flag(s, "IsGattling", false),
+                    gattling_stages: (1..=int(s, "WeaponStages", 0).clamp(0, 8))
+                        .map(|n| int(s, &format!("Stage{n}"), 0))
+                        .collect(),
+                    rate_up: int(s, "RateUp", 0),
+                    rate_down: int(s, "RateDown", 0),
                     c4: flag(s, "C4", false),
                     passengers: int(s, "Passengers", 0),
                     ifv_mode: int(s, "IFVMode", 0),
