@@ -82,7 +82,23 @@ engineers and the IFV is in repair.md; this note links to it.
   `Crushable=` unless set, other things not. `[hypothesis]`
 - Infantry don't move aside: GIs on Guard, firing at the Grizzly, were
   crushed as sleeping ones were. `[observed]` (`grizzly-crush-guard`)
-- `OmniCrusher=` (the Battle Fortress over vehicles) isn't modelled yet.
+- An `OmniCrusher=yes` vehicle (the Battle Fortress) crushes vehicles
+  the same way, unless they're `OmniCrushResistant=yes`. A crushed
+  vehicle is gone that frame, leaving no wreck's blast and no crew, and
+  the crusher gets the kill's experience. `[observed]`
+  (`allied-battle-fortress-crush`: the Grizzly gone on the frame the
+  Fortress reached the middle of its cell; the Fortress unhurt, and 0.23
+  a veteran: 700 ÷ (1000 × 3))
+- Ordered to attack a vehicle it can crush, an omni-crusher drives onto
+  that vehicle's cell instead of stopping in range, and fires on the way.
+  `[observed]` (the Fortress, 3 cells off and within its 4-cell range,
+  drove the 3 cells) Ours sends any omni-crusher after a crushable
+  vehicle this way, hunting as well as ordered. `[hypothesis]` The code
+  that decides this isn't traced.
+- On the way, the original's Fortress first fired 23 frames after the
+  order; standing still, it fires after 3 (`allied-battle-fortress`).
+  Ours fires at once either way. What holds it back while moving isn't
+  traced.
 
 ### Tanya's C4
 
@@ -265,7 +281,7 @@ engineers and the IFV is in repair.md; this note links to it.
 
 - Spies in other buildings, the Psychic
   Dominator's and Yuri Prime's control, Boris, the Magnetron.
-- `OmniCrusher=` against vehicles.
+- What holds back a moving Battle Fortress's first shot.
 - The skirmish computer's difficulty, for its GIs' deploy delay.
 - Whether Tanya's C4 differs against units, and with `C4=` on other
   infantry (Navy SEALs).
@@ -287,7 +303,8 @@ engineers and the IFV is in repair.md; this note links to it.
 | `allied-garrison-two` | As above with two GIs inside, and the kill's experience | first hit exact; health one hit (9) |
 | `allied-garrison-three` | As above with three GIs inside | exact |
 | `grizzly-crush` | Both GIs there, the first one's end, each gone in turn, and the Grizzly's experience | removal ±4 frames (drive start-up, #40); experience exact |
-| `grizzly-crush-guard` | The GI's health as the Grizzly fires back, each GI's end, the gap between them | health one hit (16); removal ±5 frames (drive start-up) |
+| `grizzly-crush-guard` | The GI's health as the Grizzly fires back, the Grizzly's health, each GI's end, the gap between them | health one hit (16); removal ±5 frames (drive start-up) |
+| `allied-battle-fortress-crush` | The Grizzly there before the order, gone after; the Fortress's experience and health after | removal ±10 frames (drive start-up and turns, #40); the rest exact |
 | `allied-battle-fortress-far` | The Fortress's first hit and the Grizzly's health with only the Fortress firing | first hit ±2 frames; health one hit (6) |
 | `allied-battle-fortress` | The Grizzly's first hit and health as the Fortress and the GI inside fire, the Grizzly gone, the GI alive | first hit ±1 frame (the Fortress's); health ±18 (a hit of each) |
 | `yuri-cloning` | How many Initiates there are after each comes out, and where the first copy appears | exact |

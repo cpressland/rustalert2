@@ -281,6 +281,11 @@ pub struct TechnoType {
     /// for infantry unless set, no for the rest). `[hypothesis]` (the
     /// default)
     pub crushable: bool,
+    /// Crushes vehicles too, and drives onto one it's ordered to attack
+    /// (`OmniCrusher=`, the Battle Fortress), unless the vehicle is
+    /// `OmniCrushResistant=`.
+    pub omni_crusher: bool,
+    pub omni_crush_resistant: bool,
     pub locomotor: Option<String>,
     /// Buildings: power produced (positive) or drawn (negative).
     pub power: i32,
@@ -899,6 +904,8 @@ impl Rules {
                     turret: flag(s, "Turret", false),
                     crusher: flag(s, "Crusher", false),
                     crushable: flag(s, "Crushable", kind == Kind::Infantry),
+                    omni_crusher: flag(s, "OmniCrusher", false),
+                    omni_crush_resistant: flag(s, "OmniCrushResistant", false),
                     locomotor: text(s, "Locomotor"),
                     power: int(s, "Power", 0),
                     foundation,
