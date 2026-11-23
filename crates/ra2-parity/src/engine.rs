@@ -352,8 +352,27 @@ pub fn sim_orders(scenario: &Scenario, rules: &Rules) -> Vec<(u32, Order)> {
                 .technos
                 .iter()
                 .position(|t| t.id.eq_ignore_ascii_case(&o.type_id))?;
-            if o.what == OrderKind::Move {
-                let command = ra2_sim::command::Command::Move(cell);
+            if matches!(
+                o.what,
+                OrderKind::Move | OrderKind::Attack | OrderKind::Enter | OrderKind::Capture
+            ) {
+                let command = match o.what {
+                    OrderKind::Move => ra2_sim::command::Command::Move(cell),
+                    OrderKind::Attack | OrderKind::Enter | OrderKind::Capture => {
+                        let name = o.target.as_deref()?;
+                        let target = rules
+                            .technos
+                            .iter()
+                            .position(|t| t.id.eq_ignore_ascii_case(name))?;
+                        let target = u32::try_from(target).ok()?;
+                        match o.what {
+                            OrderKind::Attack => ra2_sim::command::Command::Attack(target),
+                            OrderKind::Enter => ra2_sim::command::Command::Enter(target),
+                            _ => ra2_sim::command::Command::Capture(target),
+                        }
+                    }
+                    _ => return None,
+                };
                 return Some((
                     o.frame,
                     Order::Command {

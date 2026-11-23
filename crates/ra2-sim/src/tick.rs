@@ -81,7 +81,9 @@ pub enum Order {
         kind: usize,
         cell: (i16, i16),
     },
-    /// Command a house's first object of a type (a techno index).
+    /// Command a house's first object of a type (a techno index). An
+    /// attack, enter or capture names its target by type too: the first
+    /// object of that type, of any house.
     Command {
         house: u32,
         techno: usize,
@@ -167,7 +169,23 @@ impl Sim {
                         .find(|o| o.owner == house && o.techno == techno && !o.limbo)
                         .map(|o| o.id)
                     {
-                        crate::command::order(&mut self.world, id, command);
+                        use crate::command::Command;
+                        let first = |t: u32| {
+                            self.world
+                                .objects
+                                .iter()
+                                .find(|o| u32::try_from(o.techno).ok() == Some(t) && !o.limbo)
+                                .map(|o| o.id)
+                        };
+                        let command = match command {
+                            Command::Move(c) => Some(Command::Move(c)),
+                            Command::Attack(t) => first(t).map(Command::Attack),
+                            Command::Enter(t) => first(t).map(Command::Enter),
+                            Command::Capture(t) => first(t).map(Command::Capture),
+                        };
+                        if let Some(command) = command {
+                            crate::command::order(&mut self.world, id, command);
+                        }
                     }
                 }
                 Order::Fire { house, kind, cell } => {
@@ -186,7 +204,6 @@ impl Sim {
         }
         if let Some(rules) = &self.rules {
             crate::hunt::update(&mut self.world, rules, &mut self.rng, self.frame + 1);
-            crate::command::update(&mut self.world, rules, self.frame + 1);
             crate::harvest::update(&mut self.world, rules, &mut self.rng, self.frame + 1);
             crate::production::update(&mut self.world, rules, self.frame + 1);
             crate::superweapon::update(&mut self.world, rules, self.frame + 1);
@@ -194,6 +211,10 @@ impl Sim {
             // plant's output follows a frame later. `[observed]`
             // (`yuri-heal-repair`)
             crate::production::heal(&mut self.world, rules, self.frame + 1);
+            // Commanded units after the power count too: an engineer's
+            // repair shows in its house's power a frame later. `[observed]`
+            // (`yuri-engineer-repair`)
+            crate::command::update(&mut self.world, rules, self.frame + 1);
         }
         self.frame += 1;
         events

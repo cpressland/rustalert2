@@ -13,7 +13,7 @@ use crate::world::{Mission, Object, Shot, World};
 /// Leptons a frame, in 1/256ths, per point of a type's stored speed:
 /// vehicles about 1.56, infantry about 1.05. `[observed]`
 pub(crate) const DRIVE_SPEED: i32 = 406;
-const WALK_SPEED: i32 = 277;
+pub(crate) const WALK_SPEED: i32 = 277;
 /// Leptons of distance per frame of an arcing shell's flight. `[observed]`
 const ARC_LEPTONS_PER_FRAME: i32 = 128;
 /// A full turn in the 16-bit facing the game keeps.
@@ -186,7 +186,9 @@ pub(crate) fn travel(o: &mut Object, speed_256: i32) -> bool {
 /// One frame of every hunting object, then the shells that land this frame.
 pub fn update(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
     for i in 0..world.objects.len() {
-        if world.objects[i].mission != Mission::Hunt {
+        let o = &world.objects[i];
+        let attacking = matches!(o.command, Some(crate::command::Command::Attack(_)));
+        if o.mission != Mission::Hunt && !attacking {
             continue;
         }
         hunt(world, rules, rng, frame, i);
@@ -201,6 +203,16 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
     let Some(weapon) = weapon_of(t, me.rank()).map(|w| rules.weapon(w)) else {
         return;
     };
+    // An attack order's target: once it's gone, the unit stands.
+    if let Some(crate::command::Command::Attack(id)) = me.command
+        && !world.objects.iter().any(|o| o.id == id && o.health > 0)
+    {
+        let o = &mut world.objects[i];
+        o.command = None;
+        o.mission = Mission::Guard;
+        o.motion.target = None;
+        return;
+    }
     // The target: kept while it lives, else the nearest object of another
     // house. `[hypothesis]` (threat and house alliances not yet weighed)
     let target = me

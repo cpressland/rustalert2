@@ -61,6 +61,18 @@ here too, because the repair scenario damages its building that way.
 - What happens when the house can't pay isn't recorded. We stop the
   repair. `[hypothesis]`
 
+### Engineers
+
+- An engineer ordered onto its own side's damaged building (`MEGAMISSION`,
+  mission Capture) walks to it and goes in on reaching one of its cells.
+  The building is whole at once, at no cost, and the engineer is used up.
+  `[observed]` (`yuri-engineer-repair`: a Bio Reactor at 500 of 700, whole
+  on the frame the engineer reached its top-left cell; the house's credits
+  didn't change)
+- As with repair, the house's power shows it a frame later. `[observed]`
+- We walk it to the building's nearest cell. Capturing an enemy's building
+  isn't recorded yet.
+
 ### Power while damaged and repaired
 
 - A power plant's output scales with its health (see
@@ -141,8 +153,11 @@ on the x87. `[recomp 0x0070D0D0]`
 
 ## Open questions
 
-- Repair by the Service Depot, the IFV and engineers needs move and enter
-  orders, which the scripted orders can't give yet.
+- Repair by the Service Depot and the IFV: the orders exist now (`enter`),
+  but a scenario needs a damaged unit of the player's.
+- Where infantry go when they leave a barracks: the original's engineer
+  went east of a Yuri barracks, where our rule (the row below, as for the
+  Allied barracks) sends it south.
 - The crew that steps out of a destroyed vehicle or building, and the
   blast that can kill it, aren't modelled yet.
 - When a unit attacks a building, the original fires while still driving
@@ -155,6 +170,7 @@ on the x87. `[recomp 0x0070D0D0]`
 
 | Scenario | Checks | Tolerance |
 |---|---|---|
+| `yuri-engineer-repair` | The reactor's health before and after, the engineer going in, the house's power and credits after | exact; the engineer's arrival ±30 frames |
 | `grizzly-veteran-hunts-mcv` | A veteran from the map: its experience, its position at 120, the MCV's first damage and its health at 600 and 900 | as `grizzly-hunts-mcv`: one shell (71), 3 frames |
 | `grizzly-elite-hunts-mcv` | Elite from the map: its experience, its health (self-healing) at 140 and 440, the MCV's first damage, its health at 300 and when it's destroyed | health exact; one shell, 3 frames |
 | `grizzly-veteran` | The MCV's health at 500, the frame it's destroyed, and the Grizzly's experience at 530 and 560 | exact; the kill ±2 frames |

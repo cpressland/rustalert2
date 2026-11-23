@@ -1,0 +1,149 @@
+name = "yuri-engineer-repair"
+description = """
+Engineers repairing. The Yuri player builds a Bio Reactor, a (cheap)
+Psychic Dominator and a barracks, fires the Dominator seven cells from the
+reactor to damage it, trains an engineer and sends it into the damaged
+reactor. Covers an engineer's repair of its own side's building (and what
+becomes of the engineer), and walking to a building."""
+map = "parity_yuri_engineer_repair.yrm"
+end_frame = 2000
+human_start = [35, 35]
+human_country = "YuriCountry"
+super_weapons = true
+
+[generate]
+name = "yuri-engineer-repair"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[YAPPET]
+Prerequisite=YACNST
+Cost=500
+Power=0
+
+[PsychicDominatorSpecial]
+RechargeTime=.3
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "HARV"
+x = 45
+y = 22
+health = 128
+
+[[generate.unit]]
+owner = "Neutral"
+type = "HTNK"
+x = 48
+y = 22
+health = 128
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E2"
+x = 46
+y = 25
+health = 128
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "PCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "YAPOWR"
+
+[[order]]
+frame = 430
+what = "place"
+type = "YAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 440
+what = "produce"
+type = "YAPPET"
+
+[[order]]
+frame = 720
+what = "place"
+type = "YAPPET"
+x = 34
+y = 38
+
+[[order]]
+frame = 730
+what = "produce"
+type = "YABRCK"
+
+[[order]]
+frame = 1100
+what = "fire"
+type = "PsychicDominatorSpecial"
+x = 46
+y = 35
+
+[[order]]
+frame = 1110
+what = "place"
+type = "YABRCK"
+x = 31
+y = 34
+
+[[order]]
+frame = 1120
+what = "produce"
+type = "YENGINEER"
+
+[[order]]
+frame = 1600
+what = "capture"
+type = "YENGINEER"
+target = "YAPOWR"
+
+# The engineer comes out of the barracks on the same frame as in the
+# original but walks out to another cell (the original's pick of exit cell
+# isn't traced; see production.md), so it reaches the reactor 24 frames
+# later than the original's.
+
+# The Dominator's blast leaves the reactor at 500.
+[[check]]
+what = "hp"
+type = "YAPOWR"
+at = 1600
+tolerance = 0
+
+# The engineer goes in and is used up...
+[[check]]
+what = "event"
+type = "YENGINEER"
+owner = 0
+event = "removed"
+window = 30
+
+# ...and the reactor is whole, at no cost, its output back a frame later.
+[[check]]
+what = "hp"
+type = "YAPOWR"
+at = 1800
+tolerance = 0
+
+[[check]]
+what = "power"
+house = 0
+at = 1800
+tolerance = 0
+
+[[check]]
+what = "credits"
+house = 0
+at = 2000
+tolerance = 0
