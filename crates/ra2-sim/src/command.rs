@@ -2,7 +2,7 @@
 //! See `docs/spec/locomotors.md` (moving) and `docs/spec/repair.md`
 //! (entering a Service Depot).
 
-use ra2_rules::Rules;
+use ra2_rules::{Kind, Rules};
 
 use crate::coords::{Coord, LEPTONS_PER_CELL};
 use crate::hunt::{cell_centre, distance, step_facing, throttle, to_cell, travel, turn};
@@ -98,6 +98,10 @@ fn enter(world: &mut World, rules: &Rules, frame: u32, i: usize, id: u32) {
         board(world, rules, i, b);
         return;
     }
+    if depot.grinding {
+        grind(world, rules, i, b);
+        return;
+    }
     if !depot.unit_repair {
         stand(world, i);
         return;
@@ -154,6 +158,46 @@ fn enter(world: &mut World, rules: &Rules, frame: u32, i: usize, id: u32) {
             whole_at: None,
         });
     }
+}
+
+/// Infantry sent into its own house's Grinder (`Grinding=`; the game's
+/// mission Eaten) walks toward the building's centre, and is ground on
+/// stepping onto any of its cells: gone, and its house paid its refund. `[recomp
+/// 0x00519630]` (the infantry's arrival on a cell grinds it if its
+/// mission is Eaten and the cell's building is the one it was sent to)
+/// `[observed]` (`yuri-grinder`)
+fn grind(world: &mut World, rules: &Rules, i: usize, b: usize) {
+    let o = &world.objects[i];
+    if o.kind != Kind::Infantry || world.objects[b].owner != o.owner {
+        stand(world, i);
+        return;
+    }
+    let goal = to_cell(world.objects[b].coord);
+    let (x0, y0) = crate::production::top_left(rules, &world.objects[b]);
+    let (w, h) = rules.technos[world.objects[b].techno].foundation;
+    let here = to_cell(world.objects[i].coord);
+    let inside =
+        (x0..x0 + w).contains(&i32::from(here.0)) && (y0..y0 + h).contains(&i32::from(here.1));
+    if inside || drive(world, rules, None, i, goal) {
+        let o = &world.objects[i];
+        let refund = grind_refund(rules, &rules.technos[o.techno]);
+        let owner = usize::try_from(o.owner).unwrap_or(usize::MAX);
+        if let Some(h) = world.houses.get_mut(owner) {
+            h.credits += refund;
+        }
+        // Gone: taken away with the frame's dead.
+        let o = &mut world.objects[i];
+        o.health = 0;
+        o.dies_at = None;
+        o.command = None;
+    }
+}
+
+/// What a Grinder pays for an infantryman: his `Soylent=` (an Initiate's
+/// 100, not his `Cost=200`), else his cost. `[observed]` for `Soylent=`;
+/// the fallback is a `[hypothesis]`.
+fn grind_refund(_rules: &Rules, t: &ra2_rules::TechnoType) -> i32 {
+    if t.soylent > 0 { t.soylent } else { t.cost }
 }
 
 /// Infantry boarding a transport (`Passengers=`): it walks to the

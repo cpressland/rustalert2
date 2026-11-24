@@ -213,6 +213,9 @@ static void write_frame(uint32_t frame) {
                                   house: mission 1 (Attack)
      E <type> <target>            ... to enter it: mission 7 (Enter)
      C <type> <target>            ... to capture it: mission 8 (Capture)
+     G <type> <target>            ... to be ground in it: mission 9 (Eaten),
+                                  which InfantryClass's arrival on a cell
+                                  (0x00519630) checks to grind it
      X <x> <y> <kind>             move the game's first crate to a cell (a
                                   skirmish drops a map's crates and puts its
                                   own at random): its overlay, and its entry
@@ -280,7 +283,7 @@ static void run_orders(uint32_t frame) {
                 fprintf(g_out, "# order %u %s %s id %u\n", frame, kind == 'D' ? "deploy" : kind == 'S' ? "sell" : "repair", arg, id);
                 break;
             }
-        } else if (kind == 'M' || kind == 'K' || kind == 'E' || kind == 'C') {
+        } else if (kind == 'M' || kind == 'K' || kind == 'E' || kind == 'C' || kind == 'G') {
             char what[64]; int x = 0, y = 0;
             uint32_t whom = find_techno(arg, 0), target = 0;
             if (!whom) continue;
@@ -294,7 +297,7 @@ static void run_orders(uint32_t frame) {
             ev[0] = 4;                          /* MEGAMISSION */
             memcpy(ev + 7, &whom, 4);
             ev[0xB] = 0x34;
-            ev[0xC] = kind == 'M' ? 2 : kind == 'K' ? 1 : kind == 'E' ? 7 : 8;
+            ev[0xC] = kind == 'M' ? 2 : kind == 'K' ? 1 : kind == 'E' ? 7 : kind == 'G' ? 9 : 8;
             if (kind == 'M') {
                 uint32_t cell = (uint32_t)(y * 1000 + x);
                 memcpy(ev + 0x13, &cell, 4);

@@ -3,7 +3,7 @@
 **Status:** Started: engineers capturing and repairing, the IFV's weapon
 by passenger, the Battle Fortress's passengers, crushing infantry, Tanya's C4, Yuri's mind control, Gattling weapons, the GI
 deploying, the Chrono Legionnaire, the Cloning Vats, garrisoning, spies
-(disguise, dogs, barracks, power plants, refineries). Tried: the Grinder.
+(disguise, dogs, barracks, power plants, refineries). 
 **Crate:** `ra2-sim` (`command`, `hunt`)
 **Issue:** #44
 
@@ -370,21 +370,21 @@ Deploys by landing, then fires its secondary: see locomotors.md,
   Ours stands; the backing off isn't modelled.
 - `MagneShake` (the Magnetron's weapon against buildings) isn't recorded.
 
-### The Grinder (not working yet)
+### The Grinder
 
-- An Initiate ordered to enter a Grinder (`MEGAMISSION`, mission Enter)
-  walked onto its centre cell and stood there. It wasn't ground and paid
-  nothing. `[observed]` The same with the capture mission (he stopped
-  beside it), with the Grinder powered (its `Power=-50` drawn), and over
-  1,100 frames.
-- The cursor over one's own Grinder gives action 11, the service depot's,
-  whose Enter order works for the depot. `[recomp 0x0051F0E3]` The
-  building takes him through its radio if it has room and his `Size=` is
-  within its `SizeLimit=`. `[recomp 0x0043C4F8]`
-- So he docks, and the grind itself doesn't come: possibly it waits on
-  the building's animation, which the headless observer may not advance.
-  To trace (`Grinding=`, `BuildingType +0x16AD`, read at 0x00441283,
-  0x004487E6, 0x0044E9AA, 0x00464DB4).
+- Infantry sent into their own house's Grinder (`Grinding=yes`) are ground:
+  the cursor's action on it (11, as on a service depot) gives the mission
+  Eaten (9), and the infantry's arrival on a cell grinds it when its
+  mission is Eaten and the cell's building is the one it was sent to.
+  `[recomp 0x0051F0E3, 0x00519630]`
+- An Initiate walked toward the Grinder's centre and was ground on
+  stepping onto its first cell: gone that frame, and his house paid his
+  `Soylent=` (100; his `Cost=` is 200). `[observed]` (`yuri-grinder`)
+  Without `Soylent=` we pay the cost. `[hypothesis]`
+- Sent with Enter (7) or Capture (8) instead, he docked or stood beside
+  it and wasn't ground: the earlier recordings' puzzle. `[observed]`
+- Its grinding animation (`0x0044E9AA`) and vehicles in the Grinder
+  aren't modelled.
 
 ## Open questions
 
@@ -405,6 +405,7 @@ Deploys by landing, then fires its secondary: see locomotors.md,
 | `yuri-mind-control` | The Grizzly Neutral before Yuri is in range and his after; the Rhino his and the Grizzly Neutral again; both unhurt | exact at frames clear of the changes (ours come up to 21 frames sooner: infantry speed) |
 | `yuri-prime-building` | The power plant his house's from the frame, unhurt, its power with it | exact |
 | `yuri-prime-wave` | Both GIs gone the frame the wave lands, the Grizzly's damage, Yuri Prime unhurt | exact |
+| `yuri-grinder` | The Initiate ground, and his Soylent= paid | the credits exact; the grinding ±40 frames (infantry speed) |
 | `guard-gattling` | The MCV's first damage and its health at 200, 400, 600 and 900 | exact at 200; then one pair (20), the stages coming 2 to 5 frames late |
 | `allied-garrison` | The house Neutral, then the player's; unhurt; the GI still counted | exact, clear of the change (ours 30 frames sooner: infantry speed) |
 | `allied-garrison-range` | The Grizzly out of range unhurt; the Rhino's first damage and its health | exact; the health ±9 (one hit) |

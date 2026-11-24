@@ -336,6 +336,9 @@ pub struct TechnoType {
     /// Buildings: repairs units that dock on it (`UnitRepair=`, the
     /// Service Depot).
     pub unit_repair: bool,
+    /// Buildings: grinds infantry that come in, for its refund
+    /// (`Grinding=`, Yuri's Grinder).
+    pub grinding: bool,
     /// `Weapon1=`… and `EliteWeapon1=`… (`WeaponCount=` of them): a
     /// gunner's weapons, by its passenger's `IFVMode=` (the first when
     /// empty). `Gunner=`, `Passengers=`, and an infantry's `IFVMode=`.
@@ -1013,6 +1016,7 @@ impl Rules {
                     self_healing: flag(s, "SelfHealing", false),
                     trainable: flag(s, "Trainable", kind != Kind::Building),
                     unit_repair: flag(s, "UnitRepair", false),
+                    grinding: flag(s, "Grinding", false),
                     veteran_abilities: list(s, "VeteranAbilities"),
                     elite_abilities: list(s, "EliteAbilities"),
                     soylent: int(s, "Soylent", 0),
