@@ -134,6 +134,8 @@ pub struct Object {
     pub erasing: Option<(u32, i32)>,
     /// Held up by a Magnetron's beam (see `magnetron`).
     pub lift: Option<crate::magnetron::Lift>,
+    /// A jumpjet coming down to deploy, from this frame.
+    pub landing: Option<u32>,
 }
 
 impl World {
@@ -388,6 +390,7 @@ impl World {
             mission_since: 0,
             erasing: None,
             lift: None,
+            landing: None,
         });
         let look = self.default_disguise(rules, techno, owner);
         if let Some(o) = self.objects.last_mut() {
@@ -440,6 +443,7 @@ impl World {
             mission_since: 0,
             erasing: None,
             lift: None,
+            landing: None,
         });
         let look = self.default_disguise(rules, techno, owner);
         if let Some(o) = self.objects.last_mut() {

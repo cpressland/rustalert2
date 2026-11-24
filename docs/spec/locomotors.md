@@ -80,6 +80,30 @@ Choosing the route is pathfinding (#39).
   - from (37,30) to (33,39) the original went SW, S×4, SW×3, S; we go
     SW, S×5, SW×3.
 
+## Jumpjets
+
+What's recorded of the jumpjet locomotor (`{92612C46-…}`,
+`JumpjetLocomotionClass`, Process dispatching on its state at `+0x50`
+through six handlers at `0x0054B980`…`0x0054CA90`, not traced through).
+Its defaults are `[JumpjetControls]`; a unit's own `Jumpjet…` keys override
+them.
+
+- **The Siege Chopper** (`JumpJet=yes`, `JumpjetClimb=10`,
+  `JumpjetHeight=500`). `[observed]` (`soviet-siege-chopper`)
+  - Out of the war factory it climbs 10 a frame from 46 frames after it
+    appears at the factory's centre. The original rises over the factory's
+    roof to 1030, sets off east once at about 890 (gaining 2 a frame), and
+    comes down to 500 over the cell east of the door, 212 frames after it
+    appeared. Ours drives out on the ground while it climbs, and is on the
+    cell at 500 well before.
+  - Ordered to deploy (`IsSimpleDeployer=yes`), it comes down 10 a frame
+    from 3 frames after the order, and is deployed on landing: it fires its
+    `Secondary=` (`DeployFire=yes`): 160mm, 45 a hit on a Grizzly every
+    100 to 102 frames, the first 28 frames after the attack order (the
+    original's 29). It faces `DeployDir=` (2, east) deployed. `[observed]`
+    for the firing; the facing from the rules.
+- **Things the Magnetron lifts** move as jumpjets too (abilities.md).
+
 ## What we implement
 
 Fitted so the three `*-hunts-mcv` scenarios pass every check; each
@@ -132,3 +156,4 @@ at frame 120 and exact at 300; the GI within 53 and 30.
 | Hunter positions at frames 120 and 300 | `grizzly-hunts-mcv`, `rhino-hunts-mcv`, `gi-hunts-mcv` | 64 and 32 leptons |
 | An accelerating hunter slowing and standing, at 300 and 400 | `harv-hunts-mcv` | 64 leptons |
 | A harvester's round, cell hops at a crawl | `harvester-ore` (economy.md) | see there |
+| The Siege Chopper hovering, coming down to deploy, and firing deployed | `soviet-siege-chopper` | exact; the first hit ±1 frame |

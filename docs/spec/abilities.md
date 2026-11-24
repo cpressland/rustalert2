@@ -265,6 +265,11 @@ engineers and the IFV is in repair.md; this note links to it.
 - The copies then walk to a cell nearby (one south-west, one north-east);
   which isn't traced, so ours stand.
 
+### The Siege Chopper
+
+Deploys by landing, then fires its secondary: see locomotors.md,
+"Jumpjets". `[observed]` (`soviet-siege-chopper`)
+
 ### The GI deploying
 
 - A GI (`Deployer=yes`) ordered to deploy does so where it stands, at
@@ -356,8 +361,17 @@ engineers and the IFV is in repair.md; this note links to it.
 
 - An Initiate ordered to enter a Grinder (`MEGAMISSION`, mission Enter)
   walked onto its centre cell and stood there. It wasn't ground and paid
-  nothing. `[observed]` A Grinder is fed some other way (its docking radio
-  messages, likely); to trace.
+  nothing. `[observed]` The same with the capture mission (he stopped
+  beside it), with the Grinder powered (its `Power=-50` drawn), and over
+  1,100 frames.
+- The cursor over one's own Grinder gives action 11, the service depot's,
+  whose Enter order works for the depot. `[recomp 0x0051F0E3]` The
+  building takes him through its radio if it has room and his `Size=` is
+  within its `SizeLimit=`. `[recomp 0x0043C4F8]`
+- So he docks, and the grind itself doesn't come: possibly it waits on
+  the building's animation, which the headless observer may not advance.
+  To trace (`Grinding=`, `BuildingType +0x16AD`, read at 0x00441283,
+  0x004487E6, 0x0044E9AA, 0x00464DB4).
 
 ## Open questions
 

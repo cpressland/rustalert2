@@ -302,6 +302,21 @@ pub fn order(world: &mut World, rules: &Rules, frame: u32, build: Build) {
                 o.deployed = true;
                 return;
             }
+            // A simple deployer that flies (the Siege Chopper) comes down
+            // to deploy, from 3 frames after the order. `[observed]`
+            // (`soviet-siege-chopper`)
+            if let Some(o) = world.objects.iter_mut().find(|o| {
+                o.owner == house
+                    && o.techno == techno
+                    && !o.limbo
+                    && !o.deployed
+                    && rules.technos[techno].simple_deployer
+                    && rules.technos[techno].jumpjet_unit
+            }) {
+                o.landing
+                    .get_or_insert(frame + crate::jumpjet::LANDING_DELAY);
+                return;
+            }
             let unit = world.objects.iter().find(|o| {
                 o.owner == house
                     && o.techno == techno

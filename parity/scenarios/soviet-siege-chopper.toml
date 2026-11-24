@@ -1,0 +1,128 @@
+name = "soviet-siege-chopper"
+description = """
+The Siege Chopper. The Russian player deploys, builds a power plant and a
+war factory (the map makes it cheaper, with fewer prerequisites, and the
+Siege Chopper cheaper and buildable from the war factory alone), then a
+Siege Chopper, which is ordered to deploy, then to attack a sleeping
+Neutral Grizzly. Covers its flight out of the factory (JumpJet=, its
+Jumpjet… keys), deploying (IsSimpleDeployer=, DeployDir=, landing) and
+firing deployed (DeployFire=, Secondary=160mm). The AI starts in the far
+corner."""
+map = "parity_soviet_siege_chopper.yrm"
+end_frame = 2600
+human_start = [35, 35]
+human_country = "Russians"
+
+[generate]
+name = "soviet-siege-chopper"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[NAWEAP]
+Prerequisite=POWER,NACNST
+Cost=500
+
+[SCHP]
+Prerequisite=NAWEAP
+Cost=500
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 46
+y = 30
+facing = 64
+mission = "Sleep"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "SMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "NAPOWR"
+
+[[order]]
+frame = 430
+what = "place"
+type = "NAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 440
+what = "produce"
+type = "NAWEAP"
+
+[[order]]
+frame = 720
+what = "place"
+type = "NAWEAP"
+x = 41
+y = 36
+
+[[order]]
+frame = 730
+what = "produce"
+type = "SCHP"
+
+[[order]]
+frame = 1500
+what = "deploy"
+type = "SCHP"
+
+[[order]]
+frame = 1800
+what = "attack"
+type = "SCHP"
+target = "MTNK"
+
+# Out of the war factory it climbs JumpjetClimb= (10) a frame, from 46
+# frames after it appears, and hovers at JumpjetHeight= (500) over the cell
+# east of the door (ours drives out on the ground while it climbs; the
+# original goes up over the factory's roof first)...
+[[check]]
+what = "position"
+type = "SCHP"
+at = 1300
+tolerance = 0
+
+# ...ordered to deploy, it comes down at the same rate from 3 frames after
+# the order and lands...
+[[check]]
+what = "position"
+type = "SCHP"
+at = 1530
+tolerance = 0
+
+[[check]]
+what = "position"
+type = "SCHP"
+at = 1560
+tolerance = 0
+
+# ...and deployed fires its Secondary=160mm: 45 a hit on the Grizzly, every
+# 100 to 102 frames.
+[[check]]
+what = "first_damage"
+type = "MTNK"
+window = 1
+
+[[check]]
+what = "hp"
+type = "MTNK"
+at = 2100
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "MTNK"
+at = 2400
+tolerance = 0
