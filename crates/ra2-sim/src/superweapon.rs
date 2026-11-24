@@ -29,6 +29,16 @@ pub enum Later {
         house: u32,
         cell: (i16, i16),
     },
+    /// A deployed weapon fired at its firer's feet (Yuri Prime's psychic
+    /// wave): a blast sparing the firer's house if its warhead doesn't
+    /// affect allies.
+    Wave {
+        at: u32,
+        house: u32,
+        coord: crate::coords::Coord,
+        damage: i32,
+        warhead: ra2_rules::WarheadId,
+    },
 }
 
 /// One of a house's superweapons.
@@ -113,9 +123,10 @@ fn effects(world: &mut World, rules: &Rules, frame: u32) {
     }
     let due: Vec<Later> = {
         let (now, rest): (Vec<_>, Vec<_>) = world.later.drain(..).partition(|l| match l {
-            Later::Spawn { at, .. } | Later::Dominate { at, .. } | Later::Jump { at, .. } => {
-                *at <= frame
-            }
+            Later::Spawn { at, .. }
+            | Later::Dominate { at, .. }
+            | Later::Jump { at, .. }
+            | Later::Wave { at, .. } => *at <= frame,
         });
         world.later = rest;
         now
@@ -131,6 +142,16 @@ fn effects(world: &mut World, rules: &Rules, frame: u32) {
                 world.spawn(rules, techno, owner, coord);
             }
             Later::Dominate { house, cell, .. } => dominate(world, rules, frame, house, cell),
+            Later::Wave {
+                house,
+                coord,
+                damage,
+                warhead,
+                ..
+            } => {
+                let spare = (!rules.warhead(warhead).affects_allies).then_some(house);
+                blast_sparing(world, rules, frame, coord, damage, warhead, false, spare);
+            }
             Later::Jump { id, coord, .. } => {
                 if let Some(o) = world.objects.iter_mut().find(|o| o.id == id) {
                     o.limbo = false;
@@ -289,12 +310,27 @@ pub(crate) fn blast(
     warhead: ra2_rules::WarheadId,
     linger: bool,
 ) {
+    blast_sparing(world, rules, frame, at, damage, warhead, linger, None);
+}
+
+/// [`blast`], leaving house `spare`'s objects alone.
+#[allow(clippy::too_many_arguments)]
+fn blast_sparing(
+    world: &mut World,
+    rules: &Rules,
+    frame: u32,
+    at: crate::coords::Coord,
+    damage: i32,
+    warhead: ra2_rules::WarheadId,
+    linger: bool,
+    spare: Option<u32>,
+) {
     let wh = rules.warhead(warhead);
     let splash = |full: i32, d: i32| {
         ra2_rules::production::splash(full, d, wh.cell_spread, wh.percent_at_max)
     };
     for o in &mut world.objects {
-        if o.limbo || o.shielded_until > frame {
+        if o.limbo || o.shielded_until > frame || spare == Some(o.owner) {
             continue;
         }
         let t = &rules.technos[o.techno];

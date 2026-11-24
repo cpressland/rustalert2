@@ -836,7 +836,14 @@ fn land(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
             .is_some_and(|wh| rules.warhead(wh).mind_control)
         {
             let target = o.id;
-            control(world, s.shooter, target, weapon.damage);
+            // Buildings only if the warhead's `Verses=` reach their armor
+            // (Yuri Prime's `ControllerBuilding`, not Yuri's `Controller`).
+            // `[observed]` (`yuri-prime-building`)
+            let reaches = weapon.warhead.is_some_and(|wh| {
+                rules.warhead(wh).verses[rules.technos[o.techno].armor.index()]
+                    != ra2_rules::Ratio::from_value("0%")
+            });
+            control(world, s.shooter, target, weapon.damage, reaches);
             continue;
         }
         // Its veterancy's `STRONGER` first, then the warhead's `Verses=`.
@@ -887,11 +894,12 @@ fn land(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
 }
 
 /// A mind control link: the target becomes the shooter's house's, unless
-/// it's a building or already its own; past the weapon's `Damage=` links
+/// it's already its own, or a building the warhead can't take (`buildings`:
+/// Yuri Prime's can, his power plant's output coming with it); past the weapon's `Damage=` links
 /// (Yuri's 1), the oldest is let go, back to its house, on the same frame.
 /// `[observed]` (`yuri-mind-control`: a Neutral Grizzly became the Yuri
 /// player's, and went back when Yuri took a Rhino)
-fn control(world: &mut World, shooter: u32, target: u32, links: i32) {
+fn control(world: &mut World, shooter: u32, target: u32, links: i32, buildings: bool) {
     let Some(owner) = world
         .objects
         .iter()
@@ -903,7 +911,7 @@ fn control(world: &mut World, shooter: u32, target: u32, links: i32) {
     let Some(t) = world.objects.iter().position(|o| o.id == target) else {
         return;
     };
-    if world.objects[t].kind == Kind::Building || world.objects[t].owner == owner {
+    if world.objects[t].kind == Kind::Building && !buildings || world.objects[t].owner == owner {
         return;
     }
     let mut held: Vec<usize> = (0..world.objects.len())

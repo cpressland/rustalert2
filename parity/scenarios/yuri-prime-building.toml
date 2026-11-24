@@ -1,0 +1,101 @@
+name = "yuri-prime-building"
+description = """
+Yuri Prime taking a building. The Yuri player builds a Bio Reactor and a
+barracks, trains Yuri Prime (the map makes him cheaper and needs only the
+barracks) and orders him to attack a Neutral Allied power plant. Covers
+his SuperMindControl (warhead ControllerBuilding, MindControl= with Verses=
+on building armour): what taking a building does, here to its power. The
+AI starts in the far corner."""
+map = "parity_yuri_prime_building.yrm"
+end_frame = 1900
+human_start = [35, 35]
+human_country = "YuriCountry"
+
+[generate]
+name = "yuri-prime-building"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[YURIPR]
+Prerequisite=YABRCK
+Cost=500
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.structure]]
+owner = "Neutral"
+type = "GAPOWR"
+x = 27
+y = 38
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "PCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "YAPOWR"
+
+[[order]]
+frame = 430
+what = "place"
+type = "YAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 440
+what = "produce"
+type = "YABRCK"
+
+[[order]]
+frame = 720
+what = "place"
+type = "YABRCK"
+x = 31
+y = 34
+
+[[order]]
+frame = 730
+what = "produce"
+type = "YURIPR"
+
+[[order]]
+frame = 1300
+what = "attack"
+type = "YURIPR"
+target = "GAPOWR"
+
+# Yuri Prime fires the frame after the order, from where he stands (within
+# Range=7), and the plant is his 5 frames later, unhurt, its 200 power with
+# it (Yuri's Controller couldn't: its Verses= are 0 on building armour).
+[[check]]
+what = "count"
+type = "GAPOWR"
+owner = 0
+at = 1307
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "GAPOWR"
+owner = 0
+at = 1308
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "GAPOWR"
+at = 1400
+tolerance = 0
+
+[[check]]
+what = "power"
+house = 0
+at = 1400
+tolerance = 0
