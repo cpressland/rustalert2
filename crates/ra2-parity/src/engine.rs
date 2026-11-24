@@ -127,6 +127,12 @@ pub fn setup(scenario: &Scenario, rules: &Rules, map: &Ini) -> World {
     // The map's cells, for route planning.
     if let Ok(m) = ra2_formats::map::Map::from_ini(map) {
         world.cells = m.tiles.iter().map(|t| (t.x, t.y)).collect();
+        if let Some(l) = m.local_size {
+            world.top_edge = Some(ra2_sim::airstrike::Edge::top(
+                m.size.width,
+                (l.x, l.y, l.width, l.height),
+            ));
+        }
         // Ore and gems, from the overlay packs (`y * 512 + x`).
         if let (Some(overlay), Some(data)) = (&m.overlay, &m.overlay_data) {
             for (idx, (&o, &d)) in overlay.iter().zip(data).enumerate() {

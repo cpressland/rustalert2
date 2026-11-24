@@ -1,0 +1,118 @@
+name = "soviet-boris-airstrike"
+description = """
+Boris's airstrike. The Russian player deploys, builds a power plant and a
+barracks, trains Boris (the map makes him cheaper and needs only the
+barracks), walks him toward the house and orders him to attack a Neutral civilian house (CAHSE01, made
+sturdier so every hit shows). Covers the flare (Secondary=Flare, an
+Airstrike= warhead) and the MiGs it calls in (AirstrikeTeam=2 of
+AirstrikeTeamType=BPLN): where they come from, their flight, their
+missiles' damage, and Boris's recharge. The AI starts in the far corner."""
+map = "parity_soviet_boris_airstrike.yrm"
+end_frame = 2600
+human_start = [35, 35]
+human_country = "Russians"
+
+[generate]
+name = "soviet-boris-airstrike"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[BORIS]
+Prerequisite=NAHAND
+Cost=500
+
+[CAHSE01]
+Strength=10000
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.structure]]
+owner = "Neutral"
+type = "CAHSE01"
+x = 27
+y = 36
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "SMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "NAPOWR"
+
+[[order]]
+frame = 430
+what = "place"
+type = "NAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 440
+what = "produce"
+type = "NAHAND"
+
+[[order]]
+frame = 720
+what = "place"
+type = "NAHAND"
+x = 38
+y = 37
+
+[[order]]
+frame = 730
+what = "produce"
+type = "BORIS"
+
+# Boris walks to about 7 cells from the house first, well within the
+# flare's 12.
+[[order]]
+frame = 1150
+what = "move"
+type = "BORIS"
+x = 34
+y = 37
+
+[[order]]
+frame = 1300
+what = "attack"
+type = "BORIS"
+target = "CAHSE01"
+
+# Boris fires his flare; two MiGs come in at once on the top edge, on a
+# cell chosen at random (in ours a frame later: Boris fires the frame
+# after he stops)...
+[[check]]
+what = "event"
+type = "BPLN"
+owner = 0
+event = "created"
+window = 1
+
+[[check]]
+what = "count"
+type = "BPLN"
+at = 1310
+tolerance = 0
+
+# ...each fires Maverick3's burst of two (750 a missile on wood) and
+# leaves. Where they come in sets when they hit (1380 to 1481 over six
+# seeds), but every recording had one run's 3000 off the house by 1600
+# and three runs' by 2350: Boris calls again with his next flare once the
+# last plane has gone and AirstrikeRechargeTime= (100) has passed.
+[[check]]
+what = "hp"
+type = "CAHSE01"
+at = 1600
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "CAHSE01"
+at = 2350
+tolerance = 0

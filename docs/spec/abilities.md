@@ -288,6 +288,40 @@ engineers and the IFV is in repair.md; this note links to it.
     houses isn't.
 - Undeploying, and its delay, aren't recorded yet.
 
+### Boris's airstrike
+
+- Ordered to attack a building, Boris fires his `Secondary=` flare
+  (`Flare`, warhead `AirstrikeFlare`, `Airstrike=yes`), though his AKM does
+  as little to buildings (1%). `[observed]` (`soviet-boris-airstrike`)
+  Against other targets, and how the game picks the weapon, isn't traced.
+- The flare calls in `AirstrikeTeam=` (2) planes of `AirstrikeTeamType=`
+  (BPLN, the MiG), `Elite…` for an elite Boris. They appear together on the
+  frame after the flare, on a cell of the map's top edge, at
+  `FlightLevel=` (1500), facing north. `[observed]` (six seeds)
+  - The top edge is the row x + y = map width + 1 + 2 × `LocalSize=`'s top,
+    across its width. `[observed]` (every plane in and out)
+  - Which cell is random. A strike's first pair tended to come in near the
+    target's column, later ones anywhere; ours picks uniformly along the
+    edge. How the game picks isn't traced (`AirstrikeClass`, around
+    `0x0041D860`).
+- Each plane stands 3 frames, then gains 4 leptons a frame up to about 40
+  (`Speed=16`). `[observed]`
+- Each fires its weapon's burst (`Maverick3`, 750, `Burst=2`) once
+  (`Ammo=1`) and flies back off the top edge, where it's removed. A pair's
+  four missiles hit within 6 frames: 3000 off a wood building.
+  `[observed]`
+  - How they fly between (circling, overshooting before a pass) isn't
+    traced: ours turn toward the target at `ROT=` × 256 a frame and fire
+    within range and pointed at it. Where they come in decides when they
+    hit: 1380 to 1481 over six seeds, ours 1555.
+- Boris keeps firing his flare at its reload (`ROF=60` plus 0 to 2) while
+  he keeps the order. A flare calls a new pair once the last plane of the
+  previous one has gone and `AirstrikeRechargeTime=` (100) has passed.
+  `[observed]` (the next pair came 100 to 159 frames after the last plane
+  left, on a flare frame, in every recording)
+- Boris fires the frame after he stops, as other infantry, so our planes
+  come in a frame after the game's.
+
 ### The Grinder (not working yet)
 
 - An Initiate ordered to enter a Grinder (`MEGAMISSION`, mission Enter)
@@ -298,7 +332,9 @@ engineers and the IFV is in repair.md; this note links to it.
 ## Open questions
 
 - A spy in a radar, the Psychic
-  Dominator's and Yuri Prime's control, Boris, the Magnetron.
+  Dominator's and Yuri Prime's control, the Magnetron.
+- How airstrike planes fly and pick their way in (the flying locomotor,
+  the aircraft attack mission, `AirstrikeClass`).
 - What holds back a moving Battle Fortress's first shot.
 - The skirmish computer's difficulty, for its GIs' deploy delay.
 - Whether Tanya's C4 differs against units, and with `C4=` on other
@@ -316,6 +352,7 @@ engineers and the IFV is in repair.md; this note links to it.
 | `allied-spy-barracks` | The spy going in; the GI trained after a veteran | exact; the spy ±40 frames (infantry speed) |
 | `allied-spy-war-factory` | The spy going in; the Grizzly built after a veteran | exact; the spy ±40 frames (infantry speed) |
 | `allied-spy-battle-lab` | The spy going in; the Chrono Commando ordered before built, paid for and held; out on the map two frames after the second order, and only one | exact; the spy ±40 frames (infantry speed) |
+| `soviet-boris-airstrike` | The MiGs coming in, two of them; one run's damage done by 1600 and three by 2350 | ±1 frame on the planes; the damage exact (true of six seeds; when each run hits isn't checked) |
 | `allied-spy-disguise` | The spy's look before and after the MakeupKit, that it didn't move, and that it survives beside the Neutral GI | exact |
 | `allied-spy-undisguised` | The spy alive before the GI, dead after | exact clear of the timing (the original's GI deployed) |
 | `allied-spy-dog` | The spy's look, alive before the dog, dead after; the dog unhurt | exact clear of the timing |

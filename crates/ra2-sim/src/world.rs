@@ -275,6 +275,11 @@ pub struct World {
     pub supers: Vec<crate::superweapon::Super>,
     /// Superweapon strikes on their way.
     pub strikes: Vec<Strike>,
+    /// Airstrikes called in (Boris's planes).
+    pub airstrikes: Vec<crate::airstrike::Airstrike>,
+    /// The map's top edge, where airstrike planes come and go; `None` if
+    /// unknown.
+    pub top_edge: Option<crate::airstrike::Edge>,
     /// Units on their way through the Chronosphere: the unit, the frame it
     /// arrives, and where.
     pub warps: Vec<(u32, u32, Coord)>,
