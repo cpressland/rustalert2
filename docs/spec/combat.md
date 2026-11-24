@@ -67,6 +67,11 @@ Firing, projectiles and damage. Target choice belongs to missions.
   or not: the Rhino (range 5.75) fires on frame 170, eight frames before
   it stops. Infantry fire only standing, from the frame after they stop.
   `[observed]`
+- **Prone**: infantry hurt go prone, and while prone each hit is the
+  warhead's `ProneDamage=` of what it would be. `[observed]`
+  (`allied-gi-prone`: a sleeping Conscript took 12 from a GI's first M60
+  shot, then 8 a shot, 12 × SA's 70%, until he died) When they stand up
+  again isn't recorded; ours stay down.
 - **Minimum range**: a unit doesn't fire on a target closer than its
   weapon's `MinimumRange=`, though it still closes to its range.
   `[observed]` (`yuri-magnetron`: a Grizzly dropped 1.4 cells from the
@@ -122,4 +127,5 @@ hit points at every checked frame.
 |---|---|---|
 | `*-hunts-mcv` | see locomotors.md | one shot, a few frames |
 | `guard-mcv` | the MCV's first damage, its health at 60 and 110, the Grizzlies' positions at 300 | exact |
+| `allied-gi-prone` | the first hit full, the rest × `ProneDamage=`, the death | exact; later hits ±1 shot |
 | `grizzly-veteran` | the kill, the crewman out and killed by the wreck's blast | ±2 frames |

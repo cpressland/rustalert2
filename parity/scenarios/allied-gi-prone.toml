@@ -1,0 +1,92 @@
+name = "allied-gi-prone"
+description = """
+Prone infantry. A sleeping Neutral Conscript stands west of the human
+player's (British) base. The player builds a power plant and a barracks,
+trains a GI and orders it to attack the Conscript. Covers infantry going
+prone under fire and the warhead's ProneDamage= (the M60's SA, 70%). The
+AI starts in the far corner."""
+map = "parity_allied_gi_prone.yrm"
+end_frame = 1900
+human_start = [35, 35]
+
+[generate]
+name = "allied-gi-prone"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E2"
+x = 34
+y = 40
+mission = "Sleep"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "AMCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "GAPOWR"
+
+[[order]]
+frame = 600
+what = "place"
+type = "GAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 610
+what = "produce"
+type = "GAPILE"
+
+[[order]]
+frame = 900
+what = "place"
+type = "GAPILE"
+x = 38
+y = 37
+
+[[order]]
+frame = 910
+what = "produce"
+type = "E1"
+
+[[order]]
+frame = 1400
+what = "attack"
+type = "E1"
+target = "E2"
+
+# The first M60 shot takes 12 off the Conscript; he goes prone, and every
+# shot after takes 12 × the SA warhead's ProneDamage=70%, 8. Each shot's
+# frame varies by a frame or two with the reload's random part.
+[[check]]
+what = "first_damage"
+type = "E2"
+window = 0
+
+[[check]]
+what = "hp"
+type = "E2"
+at = 1420
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "E2"
+at = 1600
+tolerance = 8
+
+[[check]]
+what = "event"
+type = "E2"
+event = "removed"
+window = 4

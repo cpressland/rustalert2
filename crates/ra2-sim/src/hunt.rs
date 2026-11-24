@@ -861,6 +861,20 @@ fn land(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
         let damage = weapon
             .warhead
             .map_or(raw, |wh| rules.warhead(wh).verses[ot.armor.index()].of(raw));
+        // Infantry hurt go prone, and while prone take the warhead's
+        // `ProneDamage=` of each hit. `[observed]` (`allied-gi-prone`: a
+        // Conscript took 12 from a GI's first M60 shot, then 8 a shot,
+        // 12 × 70%, to the end)
+        let damage = if o.kind == Kind::Infantry && damage > 0 {
+            let prone = o.prone;
+            o.prone = true;
+            match weapon.warhead {
+                Some(wh) if prone => rules.warhead(wh).prone_damage.of(damage),
+                _ => damage,
+            }
+        } else {
+            damage
+        };
         // A mending weapon's negative damage heals, up to full strength.
         // `[hypothesis]`
         o.health = (o.health - damage).min(if damage < 0 { ot.strength } else { i32::MAX });
