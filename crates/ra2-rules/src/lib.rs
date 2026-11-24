@@ -290,6 +290,16 @@ pub struct TechnoType {
     /// Allied, Soviet, Third (`RequiresStolenAlliedTech=`,
     /// `RequiresStolenSovietTech=`, `RequiresStolenThirdTech=`).
     pub requires_stolen: [bool; 3],
+    /// The planes its airstrike flare calls in, how many, and the frames
+    /// after they've all gone before it can call again (`AirstrikeTeam=`,
+    /// `AirstrikeTeamType=`, `AirstrikeRechargeTime=`, and the `Elite…`
+    /// ones; Boris).
+    pub airstrike_team: i32,
+    pub elite_airstrike_team: i32,
+    pub airstrike_team_type: Option<String>,
+    pub elite_airstrike_team_type: Option<String>,
+    pub airstrike_recharge: i32,
+    pub elite_airstrike_recharge: i32,
     /// Buildings: whose tech a spy steals in it, if it's one of
     /// `[AI] BuildTech=` (`AIBasePlanningSide=`: 0 Allied, 1 Soviet, else
     /// Third).
@@ -443,6 +453,9 @@ pub struct Warhead {
     /// Freezes what it hits and erases it from time (`Temporal=`, the
     /// `ChronoBeam`).
     pub temporal: bool,
+    /// Calls in its firer's airstrike on what it hits (`Airstrike=`, Boris's
+    /// flare).
+    pub airstrike: bool,
 }
 
 /// A projectile type (named by weapons' `Projectile=`).
@@ -925,6 +938,12 @@ impl Rules {
                         flag(s, "RequiresStolenThirdTech", false),
                     ],
                     ai_base_planning_side: int(s, "AIBasePlanningSide", 0),
+                    airstrike_team: int(s, "AirstrikeTeam", 0),
+                    elite_airstrike_team: int(s, "EliteAirstrikeTeam", 0),
+                    airstrike_team_type: text(s, "AirstrikeTeamType"),
+                    elite_airstrike_team_type: text(s, "EliteAirstrikeTeamType"),
+                    airstrike_recharge: int(s, "AirstrikeRechargeTime", 0),
+                    elite_airstrike_recharge: int(s, "EliteAirstrikeRechargeTime", 0),
                     locomotor: text(s, "Locomotor"),
                     power: int(s, "Power", 0),
                     foundation,
@@ -1080,6 +1099,7 @@ impl Rules {
                     mind_control: flag(s, "MindControl", false),
                     parasite: flag(s, "Parasite", false),
                     temporal: flag(s, "Temporal", false),
+                    airstrike: flag(s, "Airstrike", false),
                 }
             })
             .collect();
@@ -1338,6 +1358,11 @@ impl Rules {
     }
 
     /// A techno type by its ID, ignoring case.
+    /// A techno type's index, by its ID.
+    pub fn techno_index(&self, id: &str) -> Option<usize> {
+        self.by_id.get(&id.to_ascii_uppercase()).copied()
+    }
+
     pub fn techno(&self, id: &str) -> Option<&TechnoType> {
         self.by_id
             .get(&id.to_ascii_uppercase())

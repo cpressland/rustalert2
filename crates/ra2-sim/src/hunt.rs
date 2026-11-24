@@ -667,13 +667,17 @@ fn fire(
     let shooter = o.id;
     let damage =
         ra2_rules::veterancy::firepower(rules, t, rank, o.firepower_bonus.of(weapon.damage));
-    world.shots.push(Shot {
-        shooter,
-        damage,
-        target,
-        weapon: w,
-        lands: frame + 1 + u32::try_from(flight).unwrap_or(0),
-    });
+    if crate::airstrike::is_flare(rules, w) {
+        crate::airstrike::call(world, rules, rng, frame, i, target);
+    } else {
+        world.shots.push(Shot {
+            shooter,
+            damage,
+            target,
+            weapon: w,
+            lands: frame + 1 + u32::try_from(flight).unwrap_or(0),
+        });
+    }
     // The reload. Between the shots of a burst, 3 to 5 frames; after the
     // last, ROF plus 0 to 2, then × `VeteranROF=` if it has `ROF`, and
     // infantry a little more. `[recomp 0x006FD084, 0x006FD0A6]` (intervals
@@ -709,6 +713,19 @@ pub(crate) fn weapon_now(world: &World, rules: &Rules, o: &Object) -> Option<ra2
     // `EliteSecondary=` isn't read yet). `[observed]` (10 a hit on heavy
     // armour, against the M60's 3)
     if o.deployed && t.secondary.is_some() {
+        return t.secondary;
+    }
+    // Against a building, a flare (Boris's): he calls in his planes.
+    // `[observed]` (`soviet-boris-airstrike`)
+    let target = match o.command {
+        Some(crate::command::Command::Attack(id)) => Some(id),
+        _ => o.motion.target,
+    };
+    if let Some(kind) = target
+        .and_then(|id| world.objects.iter().find(|x| x.id == id))
+        .map(|x| x.kind)
+        && crate::airstrike::flare_for(rules, t, kind)
+    {
         return t.secondary;
     }
     if t.gattling && !t.weapons.is_empty() {
