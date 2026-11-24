@@ -19,6 +19,7 @@ pub mod crates;
 pub mod death;
 pub mod harvest;
 pub mod hunt;
+pub mod magnetron;
 pub mod pathfind;
 pub mod production;
 pub mod rng;

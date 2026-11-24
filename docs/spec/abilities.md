@@ -322,6 +322,36 @@ engineers and the IFV is in repair.md; this note links to it.
 - Boris fires the frame after he stops, as other infantry, so our planes
   come in a frame after the game's.
 
+### The Magnetron
+
+- Its beam (`MagneticBeam`, warhead `LocomotorBeam`, `IsLocomotor=yes`,
+  `Locomotor=` the jumpjet's) doesn't hurt: it lifts what it hits, a
+  vehicle (its `Verses=` are 0 against everything else), and carries it as
+  a jumpjet, by `[JumpjetControls]`. `[observed]` (`yuri-magnetron`: a
+  sleeping Neutral Grizzly 8 cells off)
+  - It rises `Climb=` (5) a frame from 2 frames after the beam hits, up to
+    `CruiseHeight=` (500), from where it wobbles by `WobbleDeviation=`
+    (40), `WobblesPerSecond=` (0.15) times a second of 15 frames, so over
+    100 frames.
+  - Once higher than half the cruise height it sets off in a straight line
+    toward a cell beside the Magnetron, gaining `Acceleration=` (2) a frame
+    while that keeps it under `Speed=` (14): 1, 3, … 13.
+  - Within about 180 leptons of the cell it slows (10, 7, 4, then 6 a
+    frame) and sinks 5 a frame, then drops onto the cell's centre: 10 a
+    frame, one more each frame up to 28. It sinks into the ground by its
+    last step and comes back up 5 a frame. `[observed]` (the approach is
+    fitted, the rest exact)
+  - It isn't hurt (`FallingDamageMultiplier=`, `CurrentStrengthDamage=` did
+    nothing from this height), and lands awake: the Grizzly, asleep before,
+    fired back.
+- Which cell: in the one lift, from due west of the Magnetron, the cell
+  south-west of it; ours takes the cell 45° counter-clockwise of the way
+  to the target. `[hypothesis]`
+- Then too close for the beam (`MinimumRange=3`), the original's Magnetron
+  backed off and lifted the Grizzly again, three times in the recording.
+  Ours stands; the backing off isn't modelled.
+- `MagneShake` (the Magnetron's weapon against buildings) isn't recorded.
+
 ### The Grinder (not working yet)
 
 - An Initiate ordered to enter a Grinder (`MEGAMISSION`, mission Enter)
@@ -332,7 +362,8 @@ engineers and the IFV is in repair.md; this note links to it.
 ## Open questions
 
 - A spy in a radar, the Psychic
-  Dominator's and Yuri Prime's control, the Magnetron.
+  Dominator's and Yuri Prime's control, the Magnetron's backing off and
+  MagneShake.
 - How airstrike planes fly and pick their way in (the flying locomotor,
   the aircraft attack mission, `AirstrikeClass`).
 - What holds back a moving Battle Fortress's first shot.
@@ -353,6 +384,7 @@ engineers and the IFV is in repair.md; this note links to it.
 | `allied-spy-war-factory` | The spy going in; the Grizzly built after a veteran | exact; the spy ±40 frames (infantry speed) |
 | `allied-spy-battle-lab` | The spy going in; the Chrono Commando ordered before built, paid for and held; out on the map two frames after the second order, and only one | exact; the spy ±40 frames (infantry speed) |
 | `soviet-boris-airstrike` | The MiGs coming in, two of them; one run's damage done by 1600 and three by 2350 | ±1 frame on the planes; the damage exact (true of six seeds; when each run hits isn't checked) |
+| `yuri-magnetron` | The Grizzly lifted (exact at 1850), carried (within 10 and 20 leptons), dropped on the cell, unhurt; one hit back on the Magnetron | exact clear of the approach |
 | `allied-spy-disguise` | The spy's look before and after the MakeupKit, that it didn't move, and that it survives beside the Neutral GI | exact |
 | `allied-spy-undisguised` | The spy alive before the GI, dead after | exact clear of the timing (the original's GI deployed) |
 | `allied-spy-dog` | The spy's look, alive before the dog, dead after; the dog unhurt | exact clear of the timing |

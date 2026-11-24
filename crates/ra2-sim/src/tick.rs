@@ -212,6 +212,7 @@ impl Sim {
         if let Some(rules) = &self.rules {
             crate::hunt::update(&mut self.world, rules, &mut self.rng, self.frame + 1);
             crate::airstrike::update(&mut self.world, rules, self.frame + 1);
+            crate::magnetron::update(&mut self.world, rules, self.frame + 1);
             crate::harvest::update(&mut self.world, rules, &mut self.rng, self.frame + 1);
             crate::production::update(&mut self.world, rules, self.frame + 1);
             crate::superweapon::update(&mut self.world, rules, self.frame + 1);

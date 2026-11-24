@@ -67,6 +67,12 @@ Firing, projectiles and damage. Target choice belongs to missions.
   or not: the Rhino (range 5.75) fires on frame 170, eight frames before
   it stops. Infantry fire only standing, from the frame after they stop.
   `[observed]`
+- **Minimum range**: a unit doesn't fire on a target closer than its
+  weapon's `MinimumRange=`, though it still closes to its range.
+  `[observed]` (`yuri-magnetron`: a Grizzly dropped 1.4 cells from the
+  Magnetron, whose beam has 3, wasn't lifted again where it lay;
+  `allied-ifv-repair`: the IFV's HoverMissile, 1, fired from exactly a
+  cell) Backing off to fire again isn't modelled.
 - **Flight**: an arcing shell lands `1 + distance / 128` frames after it's
   fired (distance in leptons, truncated): 11 frames at 1,280, 12 at 1,454.
   Other projectiles land the next frame. `[observed]`

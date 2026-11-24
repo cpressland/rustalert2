@@ -180,7 +180,7 @@ pub(crate) fn call(
 
 /// The step `len` leptons long along a facing (65,536ths of a turn,
 /// clockwise from north), by CORDIC rotation.
-fn ahead(dir: i32, len: i32) -> (i32, i32) {
+pub(crate) fn ahead(dir: i32, len: i32) -> (i32, i32) {
     const ATAN: [i64; 15] = [
         8192, 4836, 2555, 1297, 651, 326, 163, 81, 41, 20, 10, 5, 3, 1, 1,
     ];
