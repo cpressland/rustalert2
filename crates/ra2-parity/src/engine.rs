@@ -205,10 +205,11 @@ pub fn observer_orders(scenario: &Scenario, rules: &Rules) -> String {
                     o.y,
                     ra2_rules::crate_kind(&o.type_id)?
                 ),
-                OrderKind::Attack | OrderKind::Enter | OrderKind::Capture => {
+                OrderKind::Attack | OrderKind::Enter | OrderKind::Capture | OrderKind::Grind => {
                     let letter = match o.what {
                         OrderKind::Attack => 'K',
                         OrderKind::Enter => 'E',
+                        OrderKind::Grind => 'G',
                         _ => 'C',
                     };
                     format!(
@@ -374,11 +375,18 @@ pub fn sim_orders(scenario: &Scenario, rules: &Rules) -> Vec<(u32, Order)> {
                 .position(|t| t.id.eq_ignore_ascii_case(&o.type_id))?;
             if matches!(
                 o.what,
-                OrderKind::Move | OrderKind::Attack | OrderKind::Enter | OrderKind::Capture
+                OrderKind::Move
+                    | OrderKind::Attack
+                    | OrderKind::Enter
+                    | OrderKind::Capture
+                    | OrderKind::Grind
             ) {
                 let command = match o.what {
                     OrderKind::Move => ra2_sim::command::Command::Move(cell),
-                    OrderKind::Attack | OrderKind::Enter | OrderKind::Capture => {
+                    OrderKind::Attack
+                    | OrderKind::Enter
+                    | OrderKind::Capture
+                    | OrderKind::Grind => {
                         let name = o.target.as_deref()?;
                         let target = rules
                             .technos
@@ -387,7 +395,9 @@ pub fn sim_orders(scenario: &Scenario, rules: &Rules) -> Vec<(u32, Order)> {
                         let target = u32::try_from(target).ok()?;
                         match o.what {
                             OrderKind::Attack => ra2_sim::command::Command::Attack(target),
-                            OrderKind::Enter => ra2_sim::command::Command::Enter(target),
+                            OrderKind::Enter | OrderKind::Grind => {
+                                ra2_sim::command::Command::Enter(target)
+                            }
                             _ => ra2_sim::command::Command::Capture(target),
                         }
                     }
@@ -419,7 +429,8 @@ pub fn sim_orders(scenario: &Scenario, rules: &Rules) -> Vec<(u32, Order)> {
                 | OrderKind::Move
                 | OrderKind::Attack
                 | OrderKind::Enter
-                | OrderKind::Capture => return None,
+                | OrderKind::Capture
+                | OrderKind::Grind => return None,
             };
             Some((o.frame, Order::Build(b)))
         })

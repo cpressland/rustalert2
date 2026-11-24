@@ -1,0 +1,101 @@
+name = "yuri-grinder"
+description = """
+The Grinder. The Yuri player builds a Bio Reactor, a barracks and a
+Grinder (the map makes it cheap, after the barracks), trains an Initiate
+and sends him into the Grinder (mission Eaten, as the cursor's action on
+one's own Grinder gives). Covers grinding (Grinding=yes): what becomes of
+the infantryman and what his house is paid. The AI starts in the far
+corner."""
+map = "parity_yuri_grinder.yrm"
+end_frame = 1800
+human_start = [35, 35]
+human_country = "YuriCountry"
+
+[generate]
+name = "yuri-grinder"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[YAGRND]
+Prerequisite=YABRCK,YACNST
+Cost=500
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "PCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "YAPOWR"
+
+[[order]]
+frame = 430
+what = "place"
+type = "YAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 440
+what = "produce"
+type = "YABRCK"
+
+[[order]]
+frame = 720
+what = "place"
+type = "YABRCK"
+x = 31
+y = 34
+
+[[order]]
+frame = 730
+what = "produce"
+type = "YAGRND"
+
+[[order]]
+frame = 1020
+what = "place"
+type = "YAGRND"
+x = 34
+y = 38
+
+[[order]]
+frame = 1030
+what = "produce"
+type = "INIT"
+
+[[order]]
+frame = 1300
+what = "grind"
+type = "INIT"
+target = "YAGRND"
+
+# Sent in (mission Eaten), the Initiate walks to the Grinder and is ground
+# the moment he steps onto its first cell: gone, and his house paid his
+# Soylent= (100, not his Cost=200). Ours walks faster (see locomotors.md),
+# so he's ground 33 frames sooner.
+[[check]]
+what = "event"
+type = "INIT"
+owner = 0
+event = "removed"
+window = 40
+
+[[check]]
+what = "credits"
+house = 0
+at = 1300
+tolerance = 0
+
+[[check]]
+what = "credits"
+house = 0
+at = 1500
+tolerance = 0

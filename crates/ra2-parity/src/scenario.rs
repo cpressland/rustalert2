@@ -87,6 +87,9 @@ pub enum OrderKind {
     Enter,
     /// ... to capture it (an engineer).
     Capture,
+    /// ... to be ground in it (a Grinder): mission 9, `MISSION_EATEN`,
+    /// which the infantry's arrival on the building's cell checks for.
+    Grind,
     /// Move the game's crate to `x`, `y` (a skirmish puts its crates at
     /// random; the map's are dropped) and make it the powerup `type`
     /// (`Money`, `Veteran`…, or `Random` for a pick by weight).

@@ -34,6 +34,10 @@ pub struct MapSpec {
     /// Ore and gem fields.
     #[serde(default)]
     pub ore: Vec<OreSpec>,
+    /// Let ore grow and spread (`TiberiumGrows=`, `TiberiumSpreads=`); off
+    /// by default, so a scenario's ore stays as laid.
+    #[serde(default)]
+    pub ore_grows: bool,
     /// INI text added to the map as written: rules sections the game (and
     /// our engine) loads over `rulesmd.ini`, e.g. shorter recharge times so
     /// a scenario records quickly.
@@ -182,6 +186,10 @@ fn write_terrain(ini: &mut String, w: i32, h: i32, ore: &[OreSpec]) {
     packed_section(ini, "OverlayDataPack", &data, Compression::Lcw);
 }
 
+fn yes_no(v: bool) -> &'static str {
+    if v { "yes" } else { "no" }
+}
+
 /// Write the map as INI text.
 pub fn write(spec: &MapSpec) -> String {
     let mut ini = String::new();
@@ -191,10 +199,11 @@ pub fn write(spec: &MapSpec) -> String {
         "; Written by rustalert2's parity lab. No game content.\n\n\
          [Basic]\nName={}\nPercent=0\nGameMode=standard\nMultiplayerOnly=1\nMinPlayer=2\nMaxPlayer={}\n\
          Official=no\nEndOfGame=no\nSkipScore=yes\nOneTimeOnly=no\nSkipMapSelect=no\nTruckCrate=no\nTrainCrate=no\n\
-         NewINIFormat=4\nInitTime=10000\nFreeRadar=no\nTiberiumGrowthEnabled=no\nVeinGrowthEnabled=no\n\
+         NewINIFormat=4\nInitTime=10000\nFreeRadar=no\nTiberiumGrowthEnabled={}\nVeinGrowthEnabled=no\n\
          IceGrowthEnabled=no\nTiberiumDeathToVisceroid=no\n\n",
         spec.name,
-        spec.starts.len()
+        spec.starts.len(),
+        yes_no(spec.ore_grows)
     );
     let _ = write!(
         ini,
@@ -203,12 +212,14 @@ pub fn write(spec: &MapSpec) -> String {
         w - 4,
         h - 8
     );
-    ini.push_str(
-        "[SpecialFlags]\nTiberiumGrows=no\nTiberiumSpreads=no\nTiberiumExplosive=no\nDestroyableBridges=yes\n\
+    let _ = write!(
+        ini,
+        "[SpecialFlags]\nTiberiumGrows={g}\nTiberiumSpreads={g}\nTiberiumExplosive=no\nDestroyableBridges=yes\n\
          MCVDeploy=no\nInitialVeteran=no\nFixedAlliance=no\nHarvesterImmune=no\nFogOfWar=no\nInert=no\n\
          IonStorms=no\nMeteorites=no\nVisceroids=no\n\n\
          [Lighting]\nAmbient=1.000000\nRed=1.000000\nGreen=1.000000\nBlue=1.000000\nGround=0.000000\nLevel=0.000000\n\
          IonAmbient=1.000000\nIonRed=1.000000\nIonGreen=1.000000\nIonBlue=1.000000\nIonGround=0.000000\nIonLevel=0.000000\n\n",
+        g = yes_no(spec.ore_grows)
     );
 
     ini.push_str("[Waypoints]\n");
