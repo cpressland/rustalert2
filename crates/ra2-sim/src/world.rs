@@ -136,6 +136,8 @@ pub struct Object {
     pub lift: Option<crate::magnetron::Lift>,
     /// A jumpjet coming down to deploy, from this frame.
     pub landing: Option<u32>,
+    /// Infantry lying down, hurt: hits take the warhead's `ProneDamage=`.
+    pub prone: bool,
 }
 
 impl World {
@@ -391,6 +393,7 @@ impl World {
             erasing: None,
             lift: None,
             landing: None,
+            prone: false,
         });
         let look = self.default_disguise(rules, techno, owner);
         if let Some(o) = self.objects.last_mut() {
@@ -444,6 +447,7 @@ impl World {
             erasing: None,
             lift: None,
             landing: None,
+            prone: false,
         });
         let look = self.default_disguise(rules, techno, owner);
         if let Some(o) = self.objects.last_mut() {
