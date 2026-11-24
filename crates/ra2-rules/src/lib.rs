@@ -290,6 +290,15 @@ pub struct TechnoType {
     /// Allied, Soviet, Third (`RequiresStolenAlliedTech=`,
     /// `RequiresStolenSovietTech=`, `RequiresStolenThirdTech=`).
     pub requires_stolen: [bool; 3],
+    /// Flies as a jumpjet (`JumpJet=`, the Siege Chopper), climbing
+    /// `JumpjetClimb=` a frame to `JumpjetHeight=` (by default
+    /// `[JumpjetControls]`'s `Climb=` and `CruiseHeight=`).
+    pub jumpjet_unit: bool,
+    pub jumpjet_climb: i32,
+    pub jumpjet_height: i32,
+    /// Deploys where it is, without becoming something else
+    /// (`IsSimpleDeployer=`).
+    pub simple_deployer: bool,
     /// The planes its airstrike flare calls in, how many, and the frames
     /// after they've all gone before it can call again (`AirstrikeTeam=`,
     /// `AirstrikeTeamType=`, `AirstrikeRechargeTime=`, and the `Elite…`
@@ -597,6 +606,9 @@ pub struct General {
     /// deploys by itself, by difficulty: hard, medium, easy
     /// (`AIAutoDeployFrameDelay=`).
     pub ai_auto_deploy_delay: Vec<i32>,
+    /// The way a simple deployer (the Siege Chopper) faces to deploy, in
+    /// eighths of a turn from north (`DeployDir=`).
+    pub deploy_dir: i32,
     /// The battle labs, whose tech a spy steals (`[AI] BuildTech=`).
     pub build_tech: Vec<String>,
     /// A teleporter's wait after a warp: the distance in leptons over
@@ -957,6 +969,18 @@ impl Rules {
                         flag(s, "RequiresStolenThirdTech", false),
                     ],
                     ai_base_planning_side: int(s, "AIBasePlanningSide", 0),
+                    jumpjet_unit: flag(s, "JumpJet", false),
+                    jumpjet_climb: int(
+                        s,
+                        "JumpjetClimb",
+                        int(rules.section("JumpjetControls"), "Climb", 5),
+                    ),
+                    jumpjet_height: int(
+                        s,
+                        "JumpjetHeight",
+                        int(rules.section("JumpjetControls"), "CruiseHeight", 500),
+                    ),
+                    simple_deployer: flag(s, "IsSimpleDeployer", false),
                     airstrike_team: int(s, "AirstrikeTeam", 0),
                     elite_airstrike_team: int(s, "EliteAirstrikeTeam", 0),
                     airstrike_team_type: text(s, "AirstrikeTeamType"),
@@ -1241,6 +1265,7 @@ impl Rules {
                     .filter_map(|v| v.trim().parse().ok())
                     .collect(),
                 build_tech: list(rules.section("AI"), "BuildTech"),
+                deploy_dir: int(rules.section("General"), "DeployDir", 2),
                 chrono_distance_factor: int(rules.section("General"), "ChronoDistanceFactor", 32),
                 chrono_minimum_delay: int(rules.section("General"), "ChronoMinimumDelay", 0),
                 spy_money_steal: ratio(
