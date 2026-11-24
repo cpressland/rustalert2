@@ -2,7 +2,7 @@
 
 **Status:** Parity-checked for one harvester on a field of ore (search,
 bails, depletion, a full load, docking at a Soviet refinery, payment, the
-trip back). Growth and spread, gems, slave miners and dock queues are still
+trip back). Growth and spread, gems and slave miners are still
 to come.
 **Crate:** `ra2-sim` (`harvest`, `world::Ore`)
 **Issue:** #42
@@ -108,6 +108,19 @@ refinery's side of the radio conversation is traced:
 4. 31 frames later it drives back to the cell it remembered, and looks for
    ore again.
 
+With two harvesters (`harvester-queue`) `[observed]`:
+
+- Setting off together for the same field, the second took the ore cell
+  beside the first's: a cell a harvester is heading for counts as taken
+  when looking for ore.
+- Home together, the second waited on the cell south of the queueing cell
+  while the first backed onto the pad, unloaded and left, then went on: it
+  was paid 160 frames after the first. Ours does the same, 28 frames early
+  for the first and 33 late for the second (our two share a cell on the
+  way in: there's no cell occupancy yet).
+- Their second loads came 120 to 200 frames later in the original than in
+  ours: why their second trip was slower isn't known.
+
 ### Driving
 
 As locomotors.md describes: the War Miner accelerates (it doesn't set
@@ -125,7 +138,7 @@ frame.
 
 - Ore growth and spread (`Growth=`, `Spread=`, `GrowthRate=`), and the
   Slave Miner.
-- The refinery's side of docking (radio messages, a queue of harvesters,
+- The refinery's side of docking (radio messages,
   Allied refineries), and the refinery's own `Storage=`.
 - The drive locomotor's real speed and turning rules (#40): the War Miner
   stops at corners for about 5 frames; we turn on the move.
@@ -144,3 +157,4 @@ map, and credits before and after the payment. Our timing runs up to about 20
 frames ahead of the original by the first unload (1509 against 1530),
 from the corner stops we don't make yet. The Russian AI's own War Miner reaches the field after frame
 2200, so checks stop there.
+| Two miners sharing a field and a refinery | `harvester-queue` | 64 leptons; the credits exact at 1600 and 1800 |
