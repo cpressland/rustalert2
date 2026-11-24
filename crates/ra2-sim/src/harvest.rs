@@ -248,7 +248,7 @@ pub fn find_ore(world: &World, rules: &Rules, i: usize, radius: i32) -> Option<(
 }
 
 /// Whether another object stands on a cell (a building on any cell of its
-/// foundation).
+/// foundation), or a harvester is heading for it.
 fn occupied(world: &World, rules: &Rules, cell: (i16, i16), me: u32) -> bool {
     world.objects.iter().any(|o| {
         if o.id == me || o.limbo {
@@ -265,7 +265,10 @@ fn occupied(world: &World, rules: &Rules, cell: (i16, i16), me: u32) -> bool {
             (x0..x0 + w * LEPTONS_PER_CELL).contains(&cx)
                 && (y0..y0 + h * LEPTONS_PER_CELL).contains(&cy)
         } else {
-            to_cell(o.coord) == cell
+            // Or a harvester's on its way there. `[observed]`
+            // (`harvester-queue`: of two miners setting off together, the
+            // second went to the cell beside the first's)
+            to_cell(o.coord) == cell || o.harvest.dest == Some(cell)
         }
     })
 }
@@ -330,11 +333,42 @@ fn visit(world: &mut World, rules: &Rules, frame: u32, i: usize) {
     };
     let t = &rules.technos[world.objects[i].techno];
     let owner = world.objects[i].owner;
+    // The dock is busy while another harvester is on its way onto the pad,
+    // on it, or leaving it; one arriving then waits on the cell south of the
+    // queueing cell, and goes on once it's free. `[observed]`
+    // (`harvester-queue`: the second of two miners waited at (49,47) until
+    // the first had left the pad, and was paid 160 frames after it)
+    let me = world.objects[i].id;
+    let busy = world.objects.iter().any(|o| {
+        o.id != me
+            && o.harvest.visit.is_some_and(|(r, v)| {
+                r == refinery
+                    && matches!(
+                        v,
+                        Visit::TurnRound | Visit::Reverse | Visit::Unload(_) | Visit::Paid(_)
+                    )
+            })
+    });
+    let waiting_cell = (queue.0, queue.1 + 1);
     let o = &mut world.objects[i];
     let next = match step {
         Visit::Asked(at) if frame >= at => {
             o.harvest.dest = Some(queue);
             Visit::Approach
+        }
+        Visit::Approach if busy => {
+            if o.harvest.dest == Some(queue) {
+                o.harvest.dest = Some(waiting_cell);
+            }
+            step
+        }
+        Visit::Approach
+            if o.harvest.dest == Some(waiting_cell) || to_cell(o.coord) == waiting_cell =>
+        {
+            if o.motion.leg.is_none() {
+                o.harvest.dest = Some(queue);
+            }
+            step
         }
         Visit::Approach if o.harvest.dest.is_none() => Visit::TurnRound,
         Visit::TurnRound => {
