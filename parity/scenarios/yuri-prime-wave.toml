@@ -1,0 +1,129 @@
+name = "yuri-prime-wave"
+description = """
+Yuri Prime's psychic wave. The Yuri player builds a Bio Reactor and a
+barracks, trains Yuri Prime (the map makes him cheaper and needs only the
+barracks), walks him beside sleeping Neutral GIs and a Grizzly and deploys him.
+Covers deploying (Deployer=, DeployFire=) and SuperPsiWave (AreaFire=,
+warhead SuperPsiPulse: CellSpread=5, PercentAtMax=.85, half on vehicles,
+AffectsAllies=no). The AI starts in the far corner."""
+map = "parity_yuri_prime_wave.yrm"
+end_frame = 1900
+human_start = [35, 35]
+human_country = "YuriCountry"
+
+[generate]
+name = "yuri-prime-wave"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[YURIPR]
+Prerequisite=YABRCK
+Cost=500
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 29
+y = 40
+mission = "Sleep"
+
+[[generate.infantry]]
+owner = "Neutral"
+type = "E1"
+x = 32
+y = 40
+mission = "Sleep"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 30
+y = 42
+facing = 64
+mission = "Sleep"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "PCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "YAPOWR"
+
+[[order]]
+frame = 430
+what = "place"
+type = "YAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 440
+what = "produce"
+type = "YABRCK"
+
+[[order]]
+frame = 720
+what = "place"
+type = "YABRCK"
+x = 31
+y = 34
+
+[[order]]
+frame = 730
+what = "produce"
+type = "YURIPR"
+
+[[order]]
+frame = 1150
+what = "move"
+type = "YURIPR"
+x = 30
+y = 40
+
+[[order]]
+frame = 1500
+what = "deploy"
+type = "YURIPR"
+
+
+# Deployed, Yuri Prime's SuperPsiWave goes off at his feet 8 frames after
+# the order: 250, falling off over 5 cells to 85%, half on vehicles. Both
+# GIs (one and two cells off) die and are gone that frame; the Grizzly two
+# cells off takes 117; Yuri Prime himself is spared (AffectsAllies=no).
+[[check]]
+what = "count"
+type = "E1"
+at = 1507
+tolerance = 0
+
+[[check]]
+what = "count"
+type = "E1"
+at = 1508
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "MTNK"
+at = 1508
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "YURIPR"
+at = 1600
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "MTNK"
+at = 1850
+tolerance = 0

@@ -40,6 +40,10 @@ const FREE_UNIT_FRAMES: u32 = 50;
 /// than on open ground, so it arrives a few frames late in ours)
 const VEHICLE_DOOR_FRAMES: u32 = 48;
 
+/// Frames from applying Yuri Prime's deploy to his psychic wave: it shows in
+/// the log 8 frames after the order's frame. `[observed]`
+const WAVE_FRAMES: u32 = 7;
+
 /// Frames from an order for a finished, held unit to its leaving.
 const RELEASE_FRAMES: u32 = 1;
 
@@ -300,6 +304,26 @@ pub fn order(world: &mut World, rules: &Rules, frame: u32, build: Build) {
                 o.owner == house && o.techno == techno && !o.limbo && rules.technos[techno].deployer
             }) {
                 o.deployed = true;
+                // One that fires deployed at its own feet (Yuri Prime's
+                // psychic wave, `AreaFire=`): the blast lands 8 frames after
+                // the order, sparing his house (`AffectsAllies=no`).
+                // `[observed]` (`yuri-prime-wave`: GIs one and two cells off
+                // killed and gone that frame, a Grizzly two cells off hurt
+                // 117)
+                let t = &rules.technos[techno];
+                if let Some(w) = t.secondary.filter(|_| t.deploy_fire)
+                    && rules.weapon(w).area_fire
+                    && let Some(wh) = rules.weapon(w).warhead
+                {
+                    let (coord, damage) = (o.coord, rules.weapon(w).damage);
+                    world.later.push(crate::superweapon::Later::Wave {
+                        at: frame + WAVE_FRAMES,
+                        house,
+                        coord,
+                        damage,
+                        warhead: wh,
+                    });
+                }
                 return;
             }
             // A simple deployer that flies (the Siege Chopper) comes down

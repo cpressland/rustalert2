@@ -128,6 +128,19 @@ engineers and the IFV is in repair.md; this note links to it.
   didn't fire on the Rhino beside it. `[observed]`
 - The link's flight is the 5 frames above; its projectile is invisible
   (`PsychicControl`) and its speed isn't traced.
+- Yuri Prime's `SuperMindControl` (warhead `ControllerBuilding`, whose
+  `Verses=` reach building armour, where Yuri's `Controller`'s are 0) takes
+  buildings too: a Neutral power plant was his house's 8 frames after the
+  order, unhurt, and its 200 power with it. `[observed]`
+  (`yuri-prime-building`) So a building is taken when the warhead's
+  `Verses=` on its armour aren't 0. `[hypothesis]`
+- Deployed (`Deployer=`, `DeployFire=`), Yuri Prime fires his
+  `SuperPsiWave` (`AreaFire=`) at his feet once: it goes off 8 frames after
+  the order, `Damage=250` with `SuperPsiPulse` (`CellSpread=5`,
+  `PercentAtMax=.85`, half on vehicles), sparing his own house
+  (`AffectsAllies=no`). GIs one and two cells off died and were gone that
+  frame; a Grizzly two cells off took 117. `[observed]` (`yuri-prime-wave`)
+  Undeploying (`UndeployDelay=75`) isn't recorded.
 
 ### Gattling weapons
 
@@ -375,8 +388,7 @@ Deploys by landing, then fires its secondary: see locomotors.md,
 
 ## Open questions
 
-- A spy in a radar, the Psychic
-  Dominator's and Yuri Prime's control, the Magnetron's backing off and
+- A spy in a radar, the Magnetron's backing off and
   MagneShake.
 - How airstrike planes fly and pick their way in (the flying locomotor,
   the aircraft attack mission, `AirstrikeClass`).
@@ -391,6 +403,8 @@ Deploys by landing, then fires its secondary: see locomotors.md,
 |---|---|---|
 | `allied-engineer-capture` | see repair.md | |
 | `yuri-mind-control` | The Grizzly Neutral before Yuri is in range and his after; the Rhino his and the Grizzly Neutral again; both unhurt | exact at frames clear of the changes (ours come up to 21 frames sooner: infantry speed) |
+| `yuri-prime-building` | The power plant his house's from the frame, unhurt, its power with it | exact |
+| `yuri-prime-wave` | Both GIs gone the frame the wave lands, the Grizzly's damage, Yuri Prime unhurt | exact |
 | `guard-gattling` | The MCV's first damage and its health at 200, 400, 600 and 900 | exact at 200; then one pair (20), the stages coming 2 to 5 frames late |
 | `allied-garrison` | The house Neutral, then the player's; unhurt; the GI still counted | exact, clear of the change (ours 30 frames sooner: infantry speed) |
 | `allied-garrison-range` | The Grizzly out of range unhurt; the Rhino's first damage and its health | exact; the health ±9 (one hit) |

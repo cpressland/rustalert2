@@ -437,6 +437,9 @@ pub struct WeaponType {
     pub burst: i32,
     pub projectile: Option<ProjectileId>,
     pub warhead: Option<WarheadId>,
+    /// Fired at the ground under its firer (`AreaFire=`, Yuri Prime's
+    /// psychic wave).
+    pub area_fire: bool,
 }
 
 /// A `[Warheads]` entry: how damage lands.
@@ -468,6 +471,8 @@ pub struct Warhead {
     /// Takes over how what it hits moves instead of hurting it
     /// (`IsLocomotor=`, the Magnetron's beam).
     pub is_locomotor: bool,
+    /// Hurts its firer's own house too (`AffectsAllies=`, by default yes).
+    pub affects_allies: bool,
 }
 
 /// `[JumpjetControls]`.
@@ -1074,6 +1079,7 @@ impl Rules {
                 minimum_range: s.and_then(|s| s.get("MinimumRange")).map_or(0, leptons),
                 speed: int(s, "Speed", 0),
                 burst: int(s, "Burst", 1),
+                area_fire: flag(s, "AreaFire", false),
                 projectile: text(s, "Projectile").map(|p| ProjectileId(projectile_names.id(&p))),
                 warhead: text(s, "Warhead").map(|w| WarheadId(warhead_names.id(&w))),
                 id,
@@ -1144,6 +1150,7 @@ impl Rules {
                     temporal: flag(s, "Temporal", false),
                     airstrike: flag(s, "Airstrike", false),
                     is_locomotor: flag(s, "IsLocomotor", false),
+                    affects_allies: flag(s, "AffectsAllies", true),
                 }
             })
             .collect();
