@@ -732,9 +732,26 @@ fn leave(world: &mut World, rules: &Rules, frame: u32, f: &Factory) {
     }
     if f.kind != Kind::Infantry {
         let at = world.objects[fi].coord;
+        // East of the door, or the first cell south of that with no
+        // vehicle standing or heading there. `[observed]`
+        // (`allied-ifv-repair`: with a Grizzly out on the door's cell, the
+        // IFV after it stopped on the cell below)
+        let taken = |c: (i32, i32)| {
+            let c = (cell_i16(c.0), cell_i16(c.1));
+            world.objects.iter().any(|o| {
+                o.kind == Kind::Vehicle
+                    && !o.limbo
+                    && Some(o.id) != f.object
+                    && (to_cell(o.coord) == c || o.motion.goal.is_some_and(|g| to_cell(g) == c))
+            })
+        };
+        let cell = (y0 + h / 2..y0 + h / 2 + 8)
+            .map(|y| (x0 + w, y))
+            .find(|&c| !taken(c))
+            .unwrap_or((x0 + w, y0 + h / 2));
         let goal = Coord {
-            x: (x0 + w) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
-            y: (y0 + h / 2) * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
+            x: cell.0 * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
+            y: cell.1 * LEPTONS_PER_CELL + LEPTONS_PER_CELL / 2,
             z: 0,
         };
         if let Some(o) = world.objects.iter_mut().find(|o| Some(o.id) == f.object) {

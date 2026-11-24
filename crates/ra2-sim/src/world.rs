@@ -132,6 +132,8 @@ pub struct Object {
     /// Being erased by a Chrono beam: by whom, and what's left of it (the
     /// target's strength × 10 to begin with).
     pub erasing: Option<(u32, i32)>,
+    /// Held up by a Magnetron's beam (see `magnetron`).
+    pub lift: Option<crate::magnetron::Lift>,
 }
 
 impl World {
@@ -385,6 +387,7 @@ impl World {
             last_mission: Mission::parse(&p.mission),
             mission_since: 0,
             erasing: None,
+            lift: None,
         });
         let look = self.default_disguise(rules, techno, owner);
         if let Some(o) = self.objects.last_mut() {
@@ -436,6 +439,7 @@ impl World {
             last_mission: Mission::Guard,
             mission_since: 0,
             erasing: None,
+            lift: None,
         });
         let look = self.default_disguise(rules, techno, owner);
         if let Some(o) = self.objects.last_mut() {

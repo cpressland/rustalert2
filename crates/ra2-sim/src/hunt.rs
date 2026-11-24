@@ -247,8 +247,9 @@ pub(crate) fn travel(o: &mut Object, speed_256: i32) -> bool {
 pub fn update(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
     for i in 0..world.objects.len() {
         let o = &world.objects[i];
-        // Frozen in a ChronoBeam, it does nothing.
-        if o.erasing.is_some() {
+        // Frozen in a ChronoBeam, or held up by a Magnetron, it does
+        // nothing.
+        if o.erasing.is_some() || o.lift.is_some() {
             continue;
         }
         let attacking = matches!(o.command, Some(crate::command::Command::Attack(_)));
@@ -482,6 +483,11 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
     } else {
         weapon.range
     };
+    // Closer than the weapon's `MinimumRange=`, it can't fire (the
+    // Magnetron's beam, 3 cells). `[observed]` (`yuri-magnetron`: the
+    // Grizzly dropped 1.4 cells off wasn't lifted again where it lay)
+    let least = weapon.minimum_range;
+    let too_close = |c: Coord| distance(c, target_at) < least;
     let in_range = |c: Coord| distance(c, target_at) <= reach;
     // An omni-crusher drives onto a vehicle it can crush, firing on the
     // way. `[observed]` (`allied-battle-fortress-crush`)
@@ -620,7 +626,7 @@ fn hunt(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32, i: u
     let ready = if infantry {
         o.motion.arrived && frame > o.motion.arrived_at
     } else {
-        in_range(o.coord) && aimed
+        in_range(o.coord) && !too_close(o.coord) && aimed
     };
     if ready && o.motion.reload == 0 {
         fire(world, rules, rng, frame, i, target_id, infantry);
@@ -808,6 +814,13 @@ fn land(world: &mut World, rules: &Rules, rng: &mut Randomizer, frame: u32) {
             .iter()
             .find(|x| x.id == s.shooter)
             .map(|x| x.owner);
+        if weapon
+            .warhead
+            .is_some_and(|wh| rules.warhead(wh).is_locomotor)
+        {
+            crate::magnetron::grab(world, frame, s.shooter, s.target);
+            continue;
+        }
         let Some(o) = world.objects.iter_mut().find(|o| o.id == s.target) else {
             continue;
         };

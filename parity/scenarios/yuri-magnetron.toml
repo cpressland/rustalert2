@@ -1,0 +1,139 @@
+name = "yuri-magnetron"
+description = """
+The Magnetron. The human plays Yuri: deploys, builds a Bio Reactor and a
+war factory (the map makes it cheaper with fewer prerequisites, and the
+Magnetron cheaper and buildable from the war factory alone), then a
+Magnetron, moves it to a set cell and orders it to attack a sleeping
+Neutral Grizzly 8 cells off. Covers the MagneticBeam (LocomotorBeam,
+IsLocomotor=): lifting the Grizzly, pulling it, and what dropping it does
+(FallingDamageMultiplier=, CurrentStrengthDamage=). The AI starts in the
+far corner."""
+map = "parity_yuri_magnetron.yrm"
+end_frame = 2800
+human_start = [35, 35]
+human_country = "YuriCountry"
+
+[generate]
+name = "yuri-magnetron"
+width = 50
+height = 50
+starts = [[35, 35], [65, 65]]
+rules = """
+[YAWEAP]
+Prerequisite=POWER,YACNST
+Cost=500
+
+[TELE]
+Prerequisite=YAWEAP
+Cost=500
+"""
+
+[[generate.house]]
+name = "Neutral"
+
+[[generate.unit]]
+owner = "Neutral"
+type = "MTNK"
+x = 32
+y = 44
+facing = 64
+mission = "Sleep"
+
+[[order]]
+frame = 30
+what = "deploy"
+type = "PCV"
+
+[[order]]
+frame = 100
+what = "produce"
+type = "YAPOWR"
+
+[[order]]
+frame = 430
+what = "place"
+type = "YAPOWR"
+x = 38
+y = 34
+
+[[order]]
+frame = 440
+what = "produce"
+type = "YAWEAP"
+
+[[order]]
+frame = 720
+what = "place"
+type = "YAWEAP"
+x = 41
+y = 36
+
+[[order]]
+frame = 730
+what = "produce"
+type = "TELE"
+
+# Two moves, the last due west, so it ends facing the Grizzly.
+[[order]]
+frame = 1400
+what = "move"
+type = "TELE"
+x = 44
+y = 44
+
+[[order]]
+frame = 1600
+what = "move"
+type = "TELE"
+x = 40
+y = 44
+
+[[order]]
+frame = 1800
+what = "attack"
+type = "TELE"
+target = "MTNK"
+
+# The beam lifts the Grizzly 5 a frame (Climb=), sets it off toward the
+# cell beside the Magnetron once it's above half of CruiseHeight= (500),
+# gaining 2 a frame (Acceleration=) up to 13, wobbling ±40 at the top...
+[[check]]
+what = "position"
+type = "MTNK"
+at = 1850
+tolerance = 0
+
+[[check]]
+what = "position"
+type = "MTNK"
+at = 1910
+tolerance = 10
+
+[[check]]
+what = "position"
+type = "MTNK"
+at = 1970
+tolerance = 20
+
+# ...and drops it onto that cell, unhurt (the approach and the fall are
+# fitted, hence the tolerance on the way down)...
+[[check]]
+what = "position"
+type = "MTNK"
+at = 2040
+tolerance = 0
+
+[[check]]
+what = "hp"
+type = "MTNK"
+at = 2040
+tolerance = 0
+
+# ...where, awake, it fires back: one hit on the Magnetron (48) by 2080.
+# Too close for the beam (MinimumRange=3), the original's Magnetron then
+# backs off to lift it again; ours doesn't yet.
+[[check]]
+what = "hp"
+type = "TELE"
+at = 2080
+tolerance = 0

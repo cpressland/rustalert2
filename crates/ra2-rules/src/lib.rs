@@ -456,6 +456,22 @@ pub struct Warhead {
     /// Calls in its firer's airstrike on what it hits (`Airstrike=`, Boris's
     /// flare).
     pub airstrike: bool,
+    /// Takes over how what it hits moves instead of hurting it
+    /// (`IsLocomotor=`, the Magnetron's beam).
+    pub is_locomotor: bool,
+}
+
+/// `[JumpjetControls]`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Jumpjet {
+    pub turn_rate: i32,
+    /// Leptons a frame.
+    pub speed: i32,
+    pub climb: i32,
+    pub cruise_height: i32,
+    pub acceleration: i32,
+    pub wobbles_per_second: Ratio,
+    pub wobble_deviation: i32,
 }
 
 /// A projectile type (named by weapons' `Projectile=`).
@@ -728,6 +744,9 @@ pub struct Rules {
     pub sides: Vec<(String, Vec<String>)>,
     pub general: General,
     pub combat_damage: CombatDamage,
+    /// `[JumpjetControls]`: jumpjets' defaults, and how the Magnetron's
+    /// beam carries what it lifts.
+    pub jumpjet: Jumpjet,
     pub audio_visual: AudioVisual,
     pub crates: Crates,
     by_id: BTreeMap<String, usize>,
@@ -1100,6 +1119,7 @@ impl Rules {
                     parasite: flag(s, "Parasite", false),
                     temporal: flag(s, "Temporal", false),
                     airstrike: flag(s, "Airstrike", false),
+                    is_locomotor: flag(s, "IsLocomotor", false),
                 }
             })
             .collect();
@@ -1332,6 +1352,18 @@ impl Rules {
                     "WallBuildSpeedCoefficient",
                     Ratio::from_value("1"),
                 ),
+            },
+            jumpjet: {
+                let j = rules.section("JumpjetControls");
+                Jumpjet {
+                    turn_rate: int(j, "TurnRate", 4),
+                    speed: int(j, "Speed", 14),
+                    climb: int(j, "Climb", 5),
+                    cruise_height: int(j, "CruiseHeight", 500),
+                    acceleration: int(j, "Acceleration", 2),
+                    wobbles_per_second: ratio(j, "WobblesPerSecond", Ratio::from_value(".15")),
+                    wobble_deviation: int(j, "WobbleDeviation", 40),
+                }
             },
             combat_damage: CombatDamage {
                 ion_cannon_damage: int(c, "IonCannonDamage", 0),

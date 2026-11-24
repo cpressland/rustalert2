@@ -145,6 +145,9 @@ A finished vehicle appears at its war factory's centre the frame after the
 factory's middle row: a Grizzly from a war factory at (41,36) stops at
 (46,37). It drives a little slower than on open ground there, so ours keeps
 pace to within a few frames on the way and arrives on the same frame.
+With a vehicle already on that cell, or heading there, the next one
+stops on the first free cell below it: an IFV after the Grizzly stopped
+at (46,38). `[observed]` (`allied-ifv-repair`)
 
 A finished GI appears the frame after the 54th step. It comes out of the
 house's first barracks at its top-left + (320, 448) leptons, and stands a
